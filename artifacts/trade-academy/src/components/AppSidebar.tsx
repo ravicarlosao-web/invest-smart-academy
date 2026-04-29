@@ -10,6 +10,7 @@ import {
   BookMarked,
   Settings,
   Swords,
+  Compass,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,12 +29,13 @@ import { useAppStore } from "@/store/useAppStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
 const mainItems = [
-  { title: "Dashboard",  url: "/",          icon: LayoutDashboard },
-  { title: "Aprender",   url: "/aprender",  icon: GraduationCap },
-  { title: "Simular",    url: "/simular",   icon: LineChart },
-  { title: "Duelos",     url: "/duelo",     icon: Swords },
-  { title: "Biblioteca", url: "/biblioteca",icon: BookMarked },
-  { title: "Perfil",     url: "/perfil",    icon: User2 },
+  { title: "Dashboard",   url: "/",             icon: LayoutDashboard },
+  { title: "Aprender",    url: "/aprender",     icon: GraduationCap },
+  { title: "Simular",     url: "/simular",      icon: LineChart },
+  { title: "Estratégias", url: "/estrategias",  icon: Compass },
+  { title: "Duelos",      url: "/duelo",        icon: Swords },
+  { title: "Biblioteca",  url: "/biblioteca",   icon: BookMarked },
+  { title: "Perfil",      url: "/perfil",       icon: User2 },
 ];
 
 const extraItems = [

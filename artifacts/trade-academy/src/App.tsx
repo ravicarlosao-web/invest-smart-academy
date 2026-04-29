@@ -15,6 +15,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Duelo from "./pages/Duelo";
 import Biblioteca from "./pages/Biblioteca";
 import BookReader from "./pages/BookReader";
+import Estrategias from "./pages/Estrategias";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/duelo" element={<Duelo />} />
             <Route path="/biblioteca" element={<Biblioteca />} />
             <Route path="/biblioteca/:bookId" element={<BookReader />} />
+            <Route path="/estrategias" element={<Estrategias />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
