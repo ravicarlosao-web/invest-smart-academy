@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import type { Question } from "@/data/curriculum";
 import { useAppStore } from "@/store/useAppStore";
 import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { ChartMarkExercise, evaluateMarks, type MarkLine } from "@/components/ChartMarkExercise";
+
+type Answer = number | boolean | MarkLine[];
 
 type Phase = "content" | "quiz" | "result";
 
@@ -27,7 +30,7 @@ export default function Licao() {
   const [phase, setPhase] = useState<Phase>("content");
   const [contentIdx, setContentIdx] = useState(0);
   const [qIdx, setQIdx] = useState(0);
-  const [selected, setSelected] = useState<number | boolean | null>(null);
+  const [selected, setSelected] = useState<Answer | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
 
@@ -125,9 +128,26 @@ export default function Licao() {
   );
 }
 
-function isCorrect(q: Question, ans: number | boolean): boolean {
+function isCorrect(q: Question, ans: Answer): boolean {
   if (q.type === "multiple") return ans === q.correctIndex;
-  return ans === q.correct;
+  if (q.type === "truefalse") return ans === q.correct;
+  if (q.type === "markChart") {
+    if (!Array.isArray(ans)) return false;
+    const tol = (q.tolerancePct / 100) * computePriceRange(q.candles);
+    return evaluateMarks(ans as MarkLine[], q.supports, q.resistances, tol).correct;
+  }
+  return false;
+}
+
+function computePriceRange(candles: { l: number; h: number }[]) {
+  let lo = Infinity, hi = -Infinity;
+  for (const c of candles) {
+    if (c.l < lo) lo = c.l;
+    if (c.h > hi) hi = c.h;
+  }
+  // mesmo padding usado no componente (8% top/bottom)
+  const pad = (hi - lo) * 0.08;
+  return (hi + pad) - (lo - pad);
 }
 
 function ContentStep({
@@ -169,14 +189,22 @@ function QuizStep({
 }: {
   question: Question;
   stepLabel: string;
-  selected: number | boolean | null;
+  selected: Answer | null;
   revealed: boolean;
-  onSelect: (v: number | boolean) => void;
+  onSelect: (v: Answer) => void;
   onSubmit: () => void;
   onNext: () => void;
   isLast: boolean;
 }) {
   const correct = selected !== null && isCorrect(question, selected);
+  const canSubmit =
+    selected !== null &&
+    (question.type !== "markChart" || (Array.isArray(selected) && selected.length > 0));
+
+  // estável p/ evitar setState em loop dentro do ChartMarkExercise
+  const handleMarkChange = useCallback((lines: MarkLine[]) => {
+    onSelect(lines);
+  }, [onSelect]);
 
   return (
     <Card className="p-6 lg:p-8">
@@ -185,7 +213,7 @@ function QuizStep({
       </p>
       <h2 className="mb-5 text-lg font-semibold leading-snug">{question.prompt}</h2>
 
-      {question.type === "multiple" ? (
+      {question.type === "multiple" && (
         <div className="space-y-2">
           {question.options.map((opt, i) => {
             const isSel = selected === i;
@@ -209,7 +237,9 @@ function QuizStep({
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {question.type === "truefalse" && (
         <div className="grid grid-cols-2 gap-3">
           {[true, false].map((v) => {
             const isSel = selected === v;
@@ -233,6 +263,17 @@ function QuizStep({
         </div>
       )}
 
+      {question.type === "markChart" && (
+        <ChartMarkExercise
+          candles={question.candles}
+          supports={question.supports}
+          resistances={question.resistances}
+          tolerancePct={question.tolerancePct}
+          revealed={revealed}
+          onChange={handleMarkChange}
+        />
+      )}
+
       {revealed && (
         <div className={`mt-4 rounded-lg border p-4 ${correct ? "border-bull/30 bg-bull/5" : "border-bear/30 bg-bear/5"}`}>
           <p className={`mb-1 text-xs font-bold uppercase tracking-wider ${correct ? "text-bull" : "text-bear"}`}>
@@ -244,7 +285,7 @@ function QuizStep({
 
       <div className="mt-6 flex justify-end">
         {!revealed ? (
-          <Button size="lg" disabled={selected === null} onClick={onSubmit}>
+          <Button size="lg" disabled={!canSubmit} onClick={onSubmit}>
             Confirmar
           </Button>
         ) : (

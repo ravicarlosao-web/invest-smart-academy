@@ -5,6 +5,13 @@ export type LessonContent =
   | { type: "tip"; body: string }
   | { type: "example"; title: string; body: string };
 
+export interface MarkChartCandle {
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+}
+
 export type Question =
   | {
       type: "multiple";
@@ -17,6 +24,19 @@ export type Question =
       type: "truefalse";
       prompt: string;
       correct: boolean;
+      explanation: string;
+    }
+  | {
+      type: "markChart";
+      prompt: string;
+      /** Candles a serem desenhados (índice = posição no eixo X). */
+      candles: MarkChartCandle[];
+      /** Níveis-alvo de suporte (preço). */
+      supports: number[];
+      /** Níveis-alvo de resistência (preço). */
+      resistances: number[];
+      /** Tolerância em % (do range de preço) para considerar a marcação correta. Ex: 1.5 */
+      tolerancePct: number;
       explanation: string;
     };
 
@@ -255,6 +275,17 @@ export const LEVELS: LevelDef[] = [
             ],
             correctIndex: 0,
             explanation: "Suporte = piso. Resistência = teto.",
+          },
+          {
+            type: "markChart",
+            prompt: "Marque o suporte e a resistência principais deste gráfico arrastando as linhas até os níveis testados várias vezes.",
+            candles: [
+              {"o":120,"h":120.38,"l":117.83,"c":118},{"o":118,"h":118.18,"l":113.61,"c":114},{"o":114,"h":114.46,"l":109.39,"c":110},{"o":110,"h":110.68,"l":105.58,"c":106},{"o":106,"h":106.29,"l":103.53,"c":104.2},{"o":104.2,"h":105.66,"l":103.6,"c":105},{"o":105,"h":108.53,"l":104.79,"c":108},{"o":108,"h":112.17,"l":107.41,"c":112},{"o":112,"h":116.52,"l":111.37,"c":116},{"o":116,"h":120.24,"l":115.79,"c":120},{"o":120,"h":124.53,"l":119.39,"c":124},{"o":124,"h":126.4,"l":123.45,"c":125.8},{"o":125.8,"h":125.98,"l":123.42,"c":124},{"o":124,"h":124.52,"l":120.63,"c":121},{"o":121,"h":121.12,"l":117.42,"c":118},{"o":118,"h":118.2,"l":113.33,"c":114},{"o":114,"h":114.64,"l":109.84,"c":110},{"o":110,"h":110.63,"l":105.51,"c":106},{"o":106,"h":106.34,"l":104.29,"c":104.5},{"o":104.5,"h":107.17,"l":104.32,"c":107},{"o":107,"h":111.16,"l":106.56,"c":111},{"o":111,"h":115.51,"l":110.53,"c":115},{"o":115,"h":119.64,"l":114.53,"c":119},{"o":119,"h":122.64,"l":118.58,"c":122},{"o":122,"h":125.84,"l":121.7,"c":125.5},{"o":125.5,"h":125.87,"l":122.9,"c":123},{"o":123,"h":123.62,"l":118.41,"c":119},{"o":119,"h":119.24,"l":114.44,"c":115},{"o":115,"h":115.2,"l":110.52,"c":111},{"o":111,"h":111.22,"l":106.62,"c":107},{"o":107,"h":107.66,"l":103.78,"c":104.3},{"o":104.3,"h":108.69,"l":103.75,"c":108},{"o":108,"h":113.69,"l":107.63,"c":113},{"o":113,"h":118.37,"l":112.86,"c":118},{"o":118,"h":122.4,"l":117.77,"c":122},{"o":122,"h":126.01,"l":121.88,"c":125.9},{"o":125.9,"h":126.02,"l":123.72,"c":124},{"o":124,"h":124.6,"l":119.39,"c":120},{"o":120,"h":120.15,"l":115.39,"c":116},{"o":116,"h":116.3,"l":112.35,"c":113},{"o":113,"h":116.62,"l":112.54,"c":116},{"o":116,"h":120.11,"l":115.71,"c":120},{"o":120,"h":124.63,"l":119.76,"c":124},{"o":124,"h":126.2,"l":123.53,"c":125.7},{"o":125.7,"h":125.93,"l":122.7,"c":123},{"o":123,"h":123.59,"l":117.48,"c":118},{"o":118,"h":118.13,"l":113.82,"c":114},{"o":114,"h":114.19,"l":109.35,"c":110},{"o":110,"h":110.32,"l":105.54,"c":106},{"o":106,"h":106.18,"l":104.22,"c":104.4},{"o":104.4,"h":108.65,"l":103.82,"c":108},{"o":108,"h":114.41,"l":107.34,"c":114},{"o":114,"h":119.43,"l":113.74,"c":119},{"o":119,"h":123.34,"l":118.62,"c":123},{"o":123,"h":125.75,"l":122.42,"c":125.6},{"o":125.6,"h":126.06,"l":121.63,"c":122},{"o":122,"h":122.23,"l":117.52,"c":118},{"o":118,"h":118.4,"l":112.41,"c":113},{"o":113,"h":113.67,"l":107.35,"c":108}
+            ],
+            supports: [104],
+            resistances: [126],
+            tolerancePct: 4,
+            explanation: "O preço tocou repetidamente a região de 104 (suporte) e 126 (resistência), revertendo em ambas. Quanto mais toques sem rompimento, mais forte o nível.",
           },
         ],
       },
