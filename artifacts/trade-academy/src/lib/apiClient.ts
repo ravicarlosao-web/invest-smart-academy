@@ -1,6 +1,9 @@
 /**
  * Thin API client for the Turso-backed API server.
- * Base URL is derived from the same origin, rooted at /api-server/api.
+ *
+ * Base URL resolves automatically:
+ *   - Replit dev/prod → uses VITE_API_BASE_URL (set to /api-server/api)
+ *   - Vercel          → falls back to /api (matched by vercel.json rewrite)
  *
  * Usage:
  *   import { api } from "@/lib/apiClient";
@@ -8,7 +11,10 @@
  *   const trades = await api.trades.list(userId);
  */
 
-const BASE = `${window.location.origin}/api-server/api`;
+const API_PREFIX: string =
+  import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+const BASE = `${window.location.origin}${API_PREFIX}`;
 
 async function request<T>(
   method: string,

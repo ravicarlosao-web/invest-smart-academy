@@ -1,0 +1,11 @@
+# Build outputs
+artifacts/*/dist
+artifacts/*/node_modules
+lib/*/dist
+lib/*/node_modules
+node_modules
+
+# Dev tooling
+.local
+scripts
+artifacts/mockup-sandbox
