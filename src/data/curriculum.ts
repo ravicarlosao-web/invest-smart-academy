@@ -5,6 +5,13 @@ export type LessonContent =
   | { type: "tip"; body: string }
   | { type: "example"; title: string; body: string };
 
+export interface MarkChartCandle {
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+}
+
 export type Question =
   | {
       type: "multiple";
@@ -17,6 +24,19 @@ export type Question =
       type: "truefalse";
       prompt: string;
       correct: boolean;
+      explanation: string;
+    }
+  | {
+      type: "markChart";
+      prompt: string;
+      /** Candles a serem desenhados (índice = posição no eixo X). */
+      candles: MarkChartCandle[];
+      /** Níveis-alvo de suporte (preço). */
+      supports: number[];
+      /** Níveis-alvo de resistência (preço). */
+      resistances: number[];
+      /** Tolerância em % (do range de preço) para considerar a marcação correta. Ex: 1.5 */
+      tolerancePct: number;
       explanation: string;
     };
 
