@@ -15,6 +15,7 @@ export const usersTable = sqliteTable("users", {
   updatedAt:    integer("updated_at").notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(usersTable);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const insertUserSchema: z.ZodObject<any> = createInsertSchema(usersTable) as any;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User       = typeof usersTable.$inferSelect;

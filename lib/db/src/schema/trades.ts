@@ -25,6 +25,7 @@ export const tradesTable = sqliteTable("trades", {
   note:       text("note"),
 });
 
-export const insertTradeSchema = createInsertSchema(tradesTable).omit({ id: true });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const insertTradeSchema: z.ZodObject<any> = (createInsertSchema(tradesTable) as any).omit({ id: true });
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type Trade       = typeof tradesTable.$inferSelect;

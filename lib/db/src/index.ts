@@ -20,3 +20,6 @@ export const db = drizzle({
 });
 
 export * from "./schema";
+
+/* Re-export drizzle-orm query helpers so consumers don't need their own copy */
+export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull } from "drizzle-orm";

@@ -33,6 +33,7 @@ export const progressTable = sqliteTable("progress", {
   updatedAt:        integer("updated_at").notNull(),
 });
 
-export const insertProgressSchema = createInsertSchema(progressTable);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const insertProgressSchema: z.ZodObject<any> = createInsertSchema(progressTable) as any;
 export type InsertProgress = z.infer<typeof insertProgressSchema>;
 export type Progress       = typeof progressTable.$inferSelect;

@@ -21,6 +21,7 @@ export const duelosTable = sqliteTable("duelos", {
   code:            text("code").notNull().unique(),
 });
 
-export const insertDueloSchema = createInsertSchema(duelosTable).omit({ id: true });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const insertDueloSchema: z.ZodObject<any> = (createInsertSchema(duelosTable) as any).omit({ id: true });
 export type InsertDuelo = z.infer<typeof insertDueloSchema>;
 export type Duelo       = typeof duelosTable.$inferSelect;

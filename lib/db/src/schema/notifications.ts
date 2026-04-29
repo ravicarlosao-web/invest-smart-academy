@@ -17,6 +17,7 @@ export const notificationsTable = sqliteTable("notifications", {
   createdAt: integer("created_at").notNull(),           // Unix ms
 });
 
-export const insertNotificationSchema = createInsertSchema(notificationsTable).omit({ id: true });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const insertNotificationSchema: z.ZodObject<any> = (createInsertSchema(notificationsTable) as any).omit({ id: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification       = typeof notificationsTable.$inferSelect;

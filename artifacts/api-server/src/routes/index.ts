@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import healthRouter        from "./health";
 import authRouter          from "./auth";
 import progressRouter      from "./progress";
@@ -6,7 +6,7 @@ import tradesRouter        from "./trades";
 import notificationsRouter from "./notifications";
 import duelosRouter        from "./duelos";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.use(healthRouter);
 router.use("/auth",          authRouter);
