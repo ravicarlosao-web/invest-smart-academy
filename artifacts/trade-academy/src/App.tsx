@@ -24,6 +24,7 @@ import Biblioteca   from "./pages/Biblioteca";
 import BookReader   from "./pages/BookReader";
 import Estrategias  from "./pages/Estrategias";
 import NotFound     from "./pages/NotFound.tsx";
+import UserStateSync from "./components/UserStateSync";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <UserStateSync />
         <Routes>
           {/* ── Páginas públicas ─────────────────────────────── */}
           <Route path="/"          element={<Landing />} />

@@ -173,6 +173,9 @@ interface AppState {
   duelos: DueloEntry[];
   booksProgress: Record<string, BookProgress>;
 
+  // full reset (called on logout to clear active user state)
+  resetAll: () => void;
+
   // onboarding / settings
   completeOnboarding: (level: string, interests: string[]) => void;
   updateSettings: (partial: Partial<Settings>) => void;
@@ -402,6 +405,25 @@ export const useAppStore = create<AppState>()(
       seenAchievements: [],
       duelos: [],
       booksProgress: {},
+
+      /* -------- Full reset (called on logout) -------- */
+      resetAll: () =>
+        set({
+          progress:       initialProgress,
+          sim: {
+            ...initialSim,
+            challenges:    buildInitialChallenges(),
+            equityHistory: [{ time: Date.now(), equity: 10_000 }],
+          },
+          onboarded:       false,
+          userLevel:       null,
+          userInterests:   [],
+          settings:        initialSettings,
+          notifications:   [],
+          seenAchievements:[],
+          duelos:          [],
+          booksProgress:   {},
+        }),
 
       /* -------- Onboarding / Settings -------- */
       completeOnboarding: (level, interests) =>
