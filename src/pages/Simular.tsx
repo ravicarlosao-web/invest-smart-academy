@@ -335,8 +335,8 @@ function PositionsTable({
       <table className="w-full text-sm">
         <thead className="bg-surface-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <tr>
-            <Th>Símbolo</Th><Th>Lado</Th><Th right>Tamanho</Th><Th right>Entrada</Th>
-            <Th right>Atual</Th><Th right>SL / TP</Th><Th right>P&L</Th><Th />
+            <Th>Símbolo</Th><Th>Lado</Th><Th right>Tamanho</Th><Th right>Alav.</Th><Th right>Entrada</Th>
+            <Th right>Atual</Th><Th right>Margem</Th><Th right>Liq.</Th><Th right>SL / TP</Th><Th right>P&L</Th><Th />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -345,6 +345,8 @@ function PositionsTable({
             const dir = p.side === "buy" ? 1 : -1;
             const pnl = (last - p.entryPrice) * p.size * dir;
             const meta = SYMBOL_MAP[p.symbol];
+            const lev = p.leverage ?? 1;
+            const margin = (p.entryPrice * p.size) / lev;
             return (
               <tr key={p.id} className="hover:bg-surface-1">
                 <Td className="font-semibold">{p.symbol}</Td>
@@ -354,8 +356,19 @@ function PositionsTable({
                   </Badge>
                 </Td>
                 <Td right mono>{p.size}</Td>
+                <Td right mono>
+                  {lev > 1 ? (
+                    <Badge variant="outline" className="font-mono text-[10px]">{lev}×</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">1×</span>
+                  )}
+                </Td>
                 <Td right mono>{fmtPrice(p.entryPrice, meta.precision)}</Td>
                 <Td right mono>{fmtPrice(last, meta.precision)}</Td>
+                <Td right mono className="text-xs">{fmtUSD(margin)}</Td>
+                <Td right mono className="text-xs text-warning">
+                  {p.liquidationPrice ? fmtPrice(p.liquidationPrice, meta.precision) : "—"}
+                </Td>
                 <Td right mono className="text-xs text-muted-foreground">
                   {p.stopLoss ? fmtPrice(p.stopLoss, meta.precision) : "—"} / {p.takeProfit ? fmtPrice(p.takeProfit, meta.precision) : "—"}
                 </Td>
