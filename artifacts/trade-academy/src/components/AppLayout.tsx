@@ -5,6 +5,7 @@ import OnboardingOverlay from "./OnboardingOverlay";
 import { NotificationCenter } from "./NotificationCenter";
 import { Flame } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { ThemeToggle } from "./ThemeToggle";
 
 const titles: Record<string, string> = {
   "/": "Dashboard",
@@ -42,6 +43,7 @@ export default function AppLayout() {
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">dias</span>
               </div>
               <NotificationCenter />
+              <ThemeToggle />
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-xs font-bold text-primary-foreground">
                 T
               </div>

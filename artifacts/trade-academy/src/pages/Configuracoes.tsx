@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Settings, RotateCcw, Bell, Globe, Shield, Info, ChevronRight, AlertTriangle } from "lucide-react";
+import { Settings, RotateCcw, Bell, Globe, Shield, Info, ChevronRight, AlertTriangle, Palette } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/useAppStore";
@@ -10,6 +12,7 @@ const TOTAL_LESSONS = 40;
 
 export default function Configuracoes() {
   const [confirmReset, setConfirmReset] = useState<"progress" | "simulator" | null>(null);
+  const { theme, setTheme } = useTheme();
 
   const xp = useAppStore((s) => s.progress.xp);
   const completedCount = useAppStore((s) => s.progress.completedLessons.length);
@@ -63,6 +66,43 @@ export default function Configuracoes() {
               </Badge>
             </div>
           </SettingRow>
+        </Section>
+
+        {/* Appearance */}
+        <Section icon={Palette} title="Aparência" color="text-primary">
+          <SettingRow
+            label="Tema da interface"
+            description="Alterne entre modo claro e modo escuro"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {theme === "dark" ? "Escuro" : "Claro"}
+              </span>
+              <ThemeToggle />
+            </div>
+          </SettingRow>
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => setTheme("light")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors ${
+                theme === "light"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-surface-1 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              ☀️ Claro
+            </button>
+            <button
+              onClick={() => setTheme("dark")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors ${
+                theme === "dark"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-surface-1 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              🌙 Escuro
+            </button>
+          </div>
         </Section>
 
         {/* Notifications */}
