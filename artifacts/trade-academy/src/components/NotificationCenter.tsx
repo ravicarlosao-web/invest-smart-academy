@@ -49,7 +49,7 @@ export function NotificationCenter() {
       addNotification({
         type: "achievement",
         title: `🏆 Conquista desbloqueada!`,
-        message: `${ach.emoji} ${ach.title} — +${ach.xp} XP`,
+        message: `${ach.emoji} ${ach.title} — +${ach.xpBonus} XP`,
         link: "/perfil",
       });
     }

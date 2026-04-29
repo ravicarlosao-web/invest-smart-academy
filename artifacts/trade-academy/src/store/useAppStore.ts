@@ -840,6 +840,30 @@ export const useAppStore = create<AppState>()(
           };
         }),
     }),
-    { name: "tradeacademy-store-v2" },
+    {
+      name: "tradeacademy-store-v2",
+      /**
+       * Deep merge nested objects (progress, sim) so that fields added
+       * after the user's state was first persisted always have their
+       * initial-state defaults — never `undefined`.
+       * Zustand's default merge is shallow at the top level, so nested
+       * objects like `progress` would replace the initial state entirely,
+       * leaving newly-added fields such as `reviewQueue` or `dailyMissions`
+       * as `undefined` in old persisted states. This causes selectors like
+       * `s.progress.reviewQueue ?? []` to return a new array reference on
+       * every render, triggering an infinite re-render loop.
+       */
+      merge: (persisted: unknown, current: AppState): AppState => {
+        const p = (persisted ?? {}) as Partial<AppState>;
+        return {
+          ...current,
+          ...p,
+          progress:      { ...current.progress,      ...(p.progress      ?? {}) },
+          sim:           { ...current.sim,            ...(p.sim           ?? {}) },
+          settings:      { ...current.settings,       ...(p.settings      ?? {}) },
+          booksProgress: { ...current.booksProgress,  ...(p.booksProgress ?? {}) },
+        };
+      },
+    },
   ),
 );

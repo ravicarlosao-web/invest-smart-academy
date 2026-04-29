@@ -11,9 +11,11 @@ const difficultyLabel = {
   avancado: "Avançado",
 } as const;
 
+const EMPTY: string[] = [];
+
 export default function Aprender() {
-  const completed = useAppStore((s) => s.progress.completedLessons);
-  const reviewQueue = useAppStore((s) => s.progress.reviewQueue ?? []);
+  const completed   = useAppStore((s) => s.progress.completedLessons);
+  const reviewQueue = useAppStore((s) => s.progress.reviewQueue ?? EMPTY);
   const removeFromReview = useAppStore((s) => s.removeFromReview);
 
   // All lessons in review queue with their metadata
