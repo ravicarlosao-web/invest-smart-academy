@@ -16,8 +16,10 @@ import {
   LogIn,
   LogOut,
   Zap,
+  AlertTriangle,
 } from "lucide-react";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
+import { IconByName } from "@/components/IconByName";
 
 /* ── helpers ─────────────────────────────────────────── */
 const RISK_COLOR: Record<RiskLevel, string> = {
@@ -98,7 +100,9 @@ function StrategyCard({ strategy, defaultOpen }: { strategy: Strategy; defaultOp
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <span className="text-2xl shrink-0">{strategy.emoji}</span>
+            <div className="h-11 w-11 rounded-xl flex items-center justify-center bg-primary/10 shrink-0">
+              <IconByName name={strategy.icon} className="h-5 w-5 text-primary" />
+            </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-0.5">
                 <h3 className="font-semibold text-base leading-tight">{strategy.name}</h3>
