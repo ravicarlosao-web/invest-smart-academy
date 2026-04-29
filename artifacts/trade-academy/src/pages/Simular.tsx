@@ -87,6 +87,16 @@ export default function Simular() {
   const [macdSlow, setMacdSlow] = useState(26);
   const [macdSignal, setMacdSignal] = useState(9);
 
+  /* responsive chart height */
+  const [windowWidth, setWindowWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024,
+  );
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const [candlesBySymbol, setCandlesBySymbol] = useState<Record<string, Candle[]>>(() => {
     const out: Record<string, Candle[]> = {};
     for (const s of SYMBOLS) out[s.symbol] = seedCandles(s, 200, 60);
@@ -215,14 +225,14 @@ export default function Simular() {
   const equityVal = cash + usedMargin + upnl;
 
   return (
-    <div className="container max-w-[1400px] py-4 lg:py-6 space-y-4">
-      {/* Cabeçalho */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+    <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4">
+      {/* Cabeçalho — row 1: símbolo + preço */}
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
           <select
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
-            className="rounded-md border border-border bg-surface-1 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+            className="max-w-[150px] sm:max-w-none rounded-md border border-border bg-surface-1 px-2 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary sm:px-3 sm:py-2 sm:text-sm"
           >
             {CATEGORIES.map((cat) => (
               <optgroup key={cat} label={cat}>
@@ -232,16 +242,16 @@ export default function Simular() {
               </optgroup>
             ))}
           </select>
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono text-2xl font-bold">{fmtPrice(lastPrice, meta.precision)}</span>
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="font-mono text-lg font-bold sm:text-2xl">{fmtPrice(lastPrice, meta.precision)}</span>
             <span className={`stat-pill ${change >= 0 ? "bg-bull/15 text-bull" : "bg-bear/15 text-bear"}`}>
               {change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
               {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
             </span>
-            <span className="hidden sm:inline pulse-dot ml-1 h-1.5 w-1.5 rounded-full bg-primary" />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-right">
+        {/* Stat pills — wrap on mobile */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:gap-4 text-right">
           <Stat label="Saldo" value={fmtUSD(cash)} />
           <Stat label="Margem" value={fmtUSD(usedMargin)} />
           <Stat label="P&L" value={fmtUSD(upnl)} accent={upnl >= 0 ? "bull" : "bear"} />
@@ -253,8 +263,8 @@ export default function Simular() {
       <ActiveChallengeBanner challenges={challenges} equityVal={equityVal} historyCount={history.length} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Coluna principal */}
-        <div className="space-y-4">
+        {/* Coluna principal — chart + tables (appears below order panel on mobile) */}
+        <div className="space-y-4 order-last lg:order-first">
           {/* Gráfico */}
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
@@ -355,7 +365,13 @@ export default function Simular() {
                 </Popover>
               </div>
             </div>
-            <div className="w-full" style={{ height: showRsi && showMacd ? 720 : showRsi || showMacd ? 620 : 500 }}>
+            <div className="w-full" style={{ height:
+              windowWidth < 640
+                ? (showRsi && showMacd ? 420 : showRsi || showMacd ? 340 : 260)
+                : windowWidth < 1024
+                ? (showRsi && showMacd ? 560 : showRsi || showMacd ? 460 : 400)
+                : (showRsi && showMacd ? 720 : showRsi || showMacd ? 620 : 500)
+            }}>
               <PriceChart
                 candles={candles}
                 precision={meta.precision}
@@ -433,7 +449,8 @@ export default function Simular() {
           </Card>
         </div>
 
-        {/* Painel de ordem */}
+        {/* Painel de ordem — aparece primeiro em mobile */}
+        <div className="order-first lg:order-last">
         <OrderPanel
           symbol={symbol}
           lastPrice={lastPrice}
@@ -497,6 +514,7 @@ export default function Simular() {
           }}
           onReset={() => { resetSim(); toast.info("Conta demo reiniciada para $10.000."); }}
         />
+        </div>
       </div>
     </div>
   );

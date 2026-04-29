@@ -230,7 +230,7 @@ function Stars({ count }: { count: number }) {
 
 export default function Recursos() {
   return (
-    <div className="min-h-full p-6">
+    <div className="min-h-full p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-1">

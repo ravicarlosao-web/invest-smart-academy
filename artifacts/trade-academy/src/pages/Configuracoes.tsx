@@ -42,7 +42,7 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="min-h-full p-6 max-w-2xl">
+    <div className="min-h-full p-4 sm:p-6 max-w-2xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-1">

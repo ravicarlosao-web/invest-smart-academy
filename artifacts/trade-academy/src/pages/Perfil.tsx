@@ -174,23 +174,24 @@ export default function Perfil() {
 
       {/* ── Tabs ── */}
       <Card className="overflow-hidden">
-        <div className="flex border-b border-border">
+        <div className="flex overflow-x-auto border-b border-border scrollbar-none">
           {([
-            { id: "conquistas", label: "Conquistas", icon: Award },
-            { id: "missoes",    label: "Missões Diárias", icon: Target },
-            { id: "leaderboard", label: "Leaderboard", icon: Crown },
-          ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
+            { id: "conquistas",  label: "Conquistas",    shortLabel: "Conquistas", icon: Award },
+            { id: "missoes",     label: "Missões Diárias", shortLabel: "Missões", icon: Target },
+            { id: "leaderboard", label: "Leaderboard",   shortLabel: "Ranking",   icon: Crown },
+          ] as { id: Tab; label: string; shortLabel: string; icon: React.ElementType }[]).map(({ id, label, shortLabel, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors sm:px-5 ${
                 tab === id
                   ? "border-b-2 border-primary text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{shortLabel}</span>
             </button>
           ))}
         </div>

@@ -162,7 +162,7 @@ function ContentStep({
   const tone = item.type === "tip" ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary";
 
   return (
-    <Card className="p-6 lg:p-8">
+    <Card className="p-4 sm:p-6 lg:p-8">
       <div className="mb-4 flex items-center gap-2">
         <span className={`flex h-7 w-7 items-center justify-center rounded-md ${tone}`}>
           <Icon className="h-4 w-4" />
@@ -171,8 +171,8 @@ function ContentStep({
           {stepLabel}
         </span>
       </div>
-      {item.title && <h2 className="mb-3 text-xl font-bold leading-snug">{item.title}</h2>}
-      <p className="text-[15px] leading-relaxed text-foreground/90">{item.body}</p>
+      {item.title && <h2 className="mb-3 text-lg sm:text-xl font-bold leading-snug">{item.title}</h2>}
+      <p className="text-sm sm:text-[15px] leading-relaxed text-foreground/90">{item.body}</p>
 
       <div className="mt-6 flex justify-end">
         <Button onClick={onNext} size="lg">
@@ -207,11 +207,11 @@ function QuizStep({
   }, [onSelect]);
 
   return (
-    <Card className="p-6 lg:p-8">
+    <Card className="p-4 sm:p-6 lg:p-8">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
         {stepLabel}
       </p>
-      <h2 className="mb-5 text-lg font-semibold leading-snug">{question.prompt}</h2>
+      <h2 className="mb-5 text-base sm:text-lg font-semibold leading-snug">{question.prompt}</h2>
 
       {question.type === "multiple" && (
         <div className="space-y-2">
