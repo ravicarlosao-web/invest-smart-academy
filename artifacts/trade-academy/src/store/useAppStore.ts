@@ -1,23 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/* ============== Tipos ============== */
+/* ============== Tipos base ============== */
 
 export type Side = "buy" | "sell";
+export type OrderType = "market" | "limit" | "stop";
 
 export interface Position {
   id: string;
   symbol: string;
   side: Side;
-  size: number;        // unidades do ativo
+  size: number;
   entryPrice: number;
   openedAt: number;
   stopLoss?: number;
   takeProfit?: number;
-  /** Alavancagem (1 = sem alavancagem). Margem = size*entryPrice/leverage. */
   leverage?: number;
-  /** Preço de liquidação calculado na abertura. Se atingido, posição é liquidada. */
   liquidationPrice?: number;
+  note?: string;
 }
 
 export interface ClosedTrade extends Position {
@@ -27,19 +27,94 @@ export interface ClosedTrade extends Position {
   reason: "manual" | "stop" | "target" | "liquidation";
 }
 
+export interface PendingOrder {
+  id: string;
+  symbol: string;
+  side: Side;
+  orderType: "limit" | "stop";
+  size: number;
+  triggerPrice: number;
+  leverage: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  note?: string;
+  createdAt: number;
+}
+
+export interface EquityPoint {
+  time: number;   // Unix ms
+  equity: number;
+}
+
+/* ============== Desafios ============== */
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  emoji: string;
+  targetEquity: number;
+  startBalance: number;
+  minTrades: number;
+  maxDrawdownPct: number;
+  active: boolean;
+  completed: boolean;
+  failed: boolean;
+  startedAt: number | null;
+  peakEquity: number;
+}
+
+export const CHALLENGES: Omit<Challenge, "active" | "completed" | "failed" | "startedAt" | "peakEquity">[] = [
+  {
+    id: "beginner",
+    title: "Primeira vitória",
+    description: "Transforme $10.000 em $11.000 fazendo pelo menos 5 trades.",
+    emoji: "🎯",
+    targetEquity: 11_000,
+    startBalance: 10_000,
+    minTrades: 5,
+    maxDrawdownPct: 20,
+  },
+  {
+    id: "intermediate",
+    title: "Trader consistente",
+    description: "Alcance $13.000 a partir de $10.000 com no máximo 15% de drawdown.",
+    emoji: "📈",
+    targetEquity: 13_000,
+    startBalance: 10_000,
+    minTrades: 10,
+    maxDrawdownPct: 15,
+  },
+  {
+    id: "advanced",
+    title: "Mestre do risco",
+    description: "Chegue a $20.000 a partir de $10.000 com máximo de 10% de drawdown.",
+    emoji: "🏆",
+    targetEquity: 20_000,
+    startBalance: 10_000,
+    minTrades: 20,
+    maxDrawdownPct: 10,
+  },
+];
+
+/* ============== Estado ============== */
+
 export interface ProgressState {
   xp: number;
   completedLessons: string[];
-  quizScores: Record<string, number>; // lessonId -> 0..100
+  quizScores: Record<string, number>;
   streakDays: number;
-  lastActivityDay: string | null;     // YYYY-MM-DD
+  lastActivityDay: string | null;
   achievements: string[];
 }
 
 export interface SimState {
-  cashBalance: number;          // saldo livre USD
+  cashBalance: number;
   positions: Position[];
+  pendingOrders: PendingOrder[];
   history: ClosedTrade[];
+  equityHistory: EquityPoint[];
+  challenges: Challenge[];
 }
 
 interface AppState {
@@ -54,6 +129,11 @@ interface AppState {
   openPosition: (p: Omit<Position, "id" | "openedAt">) => string | null;
   closePosition: (id: string, exitPrice: number, reason?: ClosedTrade["reason"]) => void;
   evaluateStops: (symbol: string, lastPrice: number) => void;
+  placePendingOrder: (o: Omit<PendingOrder, "id" | "createdAt">) => string;
+  cancelPendingOrder: (id: string) => void;
+  evaluatePendingOrders: (symbol: string, lastPrice: number) => void;
+  recordEquity: (priceMap: Record<string, number>) => void;
+  startChallenge: (id: string) => void;
   resetSim: () => void;
 }
 
@@ -68,11 +148,89 @@ const initialProgress: ProgressState = {
   achievements: [],
 };
 
+function buildInitialChallenges(): Challenge[] {
+  return CHALLENGES.map((c) => ({
+    ...c,
+    active: false,
+    completed: false,
+    failed: false,
+    startedAt: null,
+    peakEquity: c.startBalance,
+  }));
+}
+
 const initialSim: SimState = {
   cashBalance: 10_000,
   positions: [],
+  pendingOrders: [],
   history: [],
+  equityHistory: [{ time: Date.now(), equity: 10_000 }],
+  challenges: buildInitialChallenges(),
 };
+
+/* ============== Helpers ============== */
+
+export function positionMargin(p: Position): number {
+  return (p.entryPrice * p.size) / (p.leverage ?? 1);
+}
+
+export function positionNotional(p: Position): number {
+  return p.entryPrice * p.size;
+}
+
+export function calcUnrealizedPnL(positions: Position[], priceMap: Record<string, number>) {
+  let total = 0;
+  for (const p of positions) {
+    const last = priceMap[p.symbol];
+    if (last == null) continue;
+    const dir = p.side === "buy" ? 1 : -1;
+    total += (last - p.entryPrice) * p.size * dir;
+  }
+  return total;
+}
+
+export function calcEquity(sim: SimState, priceMap: Record<string, number>): number {
+  const usedMargin = sim.positions.reduce((s, p) => s + positionMargin(p), 0);
+  const upnl = calcUnrealizedPnL(sim.positions, priceMap);
+  return sim.cashBalance + usedMargin + upnl;
+}
+
+/* ============== Performance metrics ============== */
+
+export function calcProfitFactor(history: ClosedTrade[]): number {
+  const gains = history.filter((t) => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
+  const losses = Math.abs(history.filter((t) => t.pnl <= 0).reduce((s, t) => s + t.pnl, 0));
+  if (losses === 0) return gains > 0 ? Infinity : 1;
+  return gains / losses;
+}
+
+export function calcMaxDrawdown(equityHistory: EquityPoint[]): number {
+  let peak = -Infinity;
+  let maxDD = 0;
+  for (const { equity } of equityHistory) {
+    if (equity > peak) peak = equity;
+    const dd = peak > 0 ? (peak - equity) / peak : 0;
+    if (dd > maxDD) maxDD = dd;
+  }
+  return maxDD;
+}
+
+export function calcSharpe(equityHistory: EquityPoint[]): number {
+  if (equityHistory.length < 3) return 0;
+  const returns: number[] = [];
+  for (let i = 1; i < equityHistory.length; i++) {
+    const prev = equityHistory[i - 1].equity;
+    if (prev > 0) returns.push((equityHistory[i].equity - prev) / prev);
+  }
+  if (returns.length < 2) return 0;
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const variance = returns.reduce((a, b) => a + (b - mean) ** 2, 0) / (returns.length - 1);
+  const stdDev = Math.sqrt(variance);
+  if (stdDev === 0) return 0;
+  return (mean / stdDev) * Math.sqrt(252);
+}
+
+/* ============== Store ============== */
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -80,6 +238,7 @@ export const useAppStore = create<AppState>()(
       progress: initialProgress,
       sim: initialSim,
 
+      /* -------- Progress -------- */
       completeLesson: (lessonId, xp, scorePct) =>
         set((s) => {
           const already = s.progress.completedLessons.includes(lessonId);
@@ -103,14 +262,11 @@ export const useAppStore = create<AppState>()(
             if (s.progress.xp + xp >= 200) newAch.add("xp-200");
           }
           if (streak >= 3) newAch.add("streak-3");
-
           return {
             progress: {
               ...s.progress,
               xp: s.progress.xp + (already ? Math.round(xp * 0.25) : xp),
-              completedLessons: already
-                ? s.progress.completedLessons
-                : [...s.progress.completedLessons, lessonId],
+              completedLessons: already ? s.progress.completedLessons : [...s.progress.completedLessons, lessonId],
               quizScores: { ...s.progress.quizScores, [lessonId]: scorePct },
               streakDays: streak,
               lastActivityDay: t,
@@ -121,14 +277,13 @@ export const useAppStore = create<AppState>()(
 
       resetProgress: () => set({ progress: initialProgress }),
 
+      /* -------- Positions -------- */
       openPosition: (p) => {
         const leverage = Math.max(1, p.leverage ?? 1);
         const notional = p.size * p.entryPrice;
         const margin = notional / leverage;
         const { cashBalance } = get().sim;
         if (margin > cashBalance) return null;
-        // Preço de liquidação: quando a perda iguala a margem (ignorando taxas).
-        // buy:  liq = entry * (1 - 1/lev)    sell: liq = entry * (1 + 1/lev)
         const liquidationPrice =
           leverage > 1
             ? p.side === "buy"
@@ -136,16 +291,18 @@ export const useAppStore = create<AppState>()(
               : p.entryPrice * (1 + 1 / leverage)
             : undefined;
         const id = `pos_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        set((s) => ({
-          sim: {
-            ...s.sim,
-            cashBalance: s.sim.cashBalance - margin,
-            positions: [
-              ...s.sim.positions,
-              { ...p, id, openedAt: Date.now(), leverage, liquidationPrice },
-            ],
-          },
-        }));
+        set((s) => {
+          const newPositions = [...s.sim.positions, { ...p, id, openedAt: Date.now(), leverage, liquidationPrice }];
+          const equity = s.sim.cashBalance - margin + newPositions.reduce((sum, pos) => sum + positionMargin(pos), 0);
+          return {
+            sim: {
+              ...s.sim,
+              cashBalance: s.sim.cashBalance - margin,
+              positions: newPositions,
+              equityHistory: [...s.sim.equityHistory, { time: Date.now(), equity: s.sim.cashBalance - margin + margin }].slice(-500),
+            },
+          };
+        });
         return id;
       },
 
@@ -157,21 +314,32 @@ export const useAppStore = create<AppState>()(
           const direction = pos.side === "buy" ? 1 : -1;
           const rawPnl = (exitPrice - pos.entryPrice) * pos.size * direction;
           const margin = (pos.entryPrice * pos.size) / leverage;
-          // Em liquidação a perda é limitada à margem (não fica devendo).
           const pnl = reason === "liquidation" ? -margin : rawPnl;
           const refund = margin + pnl;
-          const closed: ClosedTrade = {
-            ...pos,
-            closedAt: Date.now(),
-            exitPrice,
-            pnl,
-            reason,
-          };
+          const closed: ClosedTrade = { ...pos, closedAt: Date.now(), exitPrice, pnl, reason };
+          const newCash = s.sim.cashBalance + refund;
+          const newPositions = s.sim.positions.filter((p) => p.id !== id);
+
+          // Check challenge progress
+          const newHistory = [closed, ...s.sim.history].slice(0, 500);
+          const updatedChallenges = s.sim.challenges.map((ch) => {
+            if (!ch.active || ch.completed || ch.failed) return ch;
+            const totalTradesDone = newHistory.length;
+            const peakEquity = Math.max(ch.peakEquity, newCash);
+            const drawdownPct = peakEquity > 0 ? ((peakEquity - newCash) / peakEquity) * 100 : 0;
+            const failed = drawdownPct > ch.maxDrawdownPct;
+            const completed = !failed && newCash >= ch.targetEquity && totalTradesDone >= ch.minTrades;
+            return { ...ch, peakEquity, completed, failed };
+          });
+
           return {
             sim: {
-              cashBalance: s.sim.cashBalance + refund,
-              positions: s.sim.positions.filter((p) => p.id !== id),
-              history: [closed, ...s.sim.history].slice(0, 200),
+              ...s.sim,
+              cashBalance: newCash,
+              positions: newPositions,
+              history: newHistory,
+              challenges: updatedChallenges,
+              equityHistory: [...s.sim.equityHistory, { time: Date.now(), equity: newCash }].slice(-500),
             },
           };
         }),
@@ -179,7 +347,6 @@ export const useAppStore = create<AppState>()(
       evaluateStops: (symbol, lastPrice) => {
         const positions = get().sim.positions.filter((p) => p.symbol === symbol);
         for (const p of positions) {
-          // Liquidação tem prioridade
           if (p.liquidationPrice != null) {
             if (p.side === "buy" && lastPrice <= p.liquidationPrice) {
               get().closePosition(p.id, p.liquidationPrice, "liquidation");
@@ -200,38 +367,116 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      resetSim: () => set({ sim: initialSim }),
+      /* -------- Pending Orders -------- */
+      placePendingOrder: (o) => {
+        const id = `pend_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        set((s) => ({
+          sim: {
+            ...s.sim,
+            pendingOrders: [...s.sim.pendingOrders, { ...o, id, createdAt: Date.now() }],
+          },
+        }));
+        return id;
+      },
+
+      cancelPendingOrder: (id) =>
+        set((s) => ({
+          sim: {
+            ...s.sim,
+            pendingOrders: s.sim.pendingOrders.filter((o) => o.id !== id),
+          },
+        })),
+
+      evaluatePendingOrders: (symbol, lastPrice) => {
+        const pending = get().sim.pendingOrders.filter((o) => o.symbol === symbol);
+        for (const o of pending) {
+          let triggered = false;
+          if (o.orderType === "limit") {
+            // Limit buy: execute when price <= triggerPrice
+            // Limit sell: execute when price >= triggerPrice
+            triggered = o.side === "buy" ? lastPrice <= o.triggerPrice : lastPrice >= o.triggerPrice;
+          } else if (o.orderType === "stop") {
+            // Stop buy: execute when price >= triggerPrice
+            // Stop sell: execute when price <= triggerPrice
+            triggered = o.side === "buy" ? lastPrice >= o.triggerPrice : lastPrice <= o.triggerPrice;
+          }
+          if (triggered) {
+            // Remove pending order
+            set((s) => ({
+              sim: { ...s.sim, pendingOrders: s.sim.pendingOrders.filter((x) => x.id !== o.id) },
+            }));
+            // Open position at trigger price
+            const posId = get().openPosition({
+              symbol: o.symbol,
+              side: o.side,
+              size: o.size,
+              entryPrice: o.triggerPrice,
+              leverage: o.leverage,
+              stopLoss: o.stopLoss,
+              takeProfit: o.takeProfit,
+              note: o.note,
+            });
+            if (!posId) {
+              // Margem insuficiente — remove silently
+            }
+          }
+        }
+      },
+
+      /* -------- Equity Curve -------- */
+      recordEquity: (priceMap) =>
+        set((s) => {
+          const equity = calcEquity(s.sim, priceMap);
+          const last = s.sim.equityHistory[s.sim.equityHistory.length - 1];
+          // Record only if equity changed meaningfully (>0.01%) or every 30s
+          const now = Date.now();
+          const shouldRecord =
+            !last ||
+            Math.abs(equity - last.equity) / (last.equity || 1) > 0.0001 ||
+            now - last.time > 30_000;
+          if (!shouldRecord) return s;
+          return {
+            sim: {
+              ...s.sim,
+              equityHistory: [...s.sim.equityHistory, { time: now, equity }].slice(-500),
+            },
+          };
+        }),
+
+      /* -------- Challenges -------- */
+      startChallenge: (id) =>
+        set((s) => {
+          const def = CHALLENGES.find((c) => c.id === id);
+          if (!def) return s;
+          return {
+            sim: {
+              ...s.sim,
+              cashBalance: def.startBalance,
+              positions: [],
+              pendingOrders: [],
+              history: [],
+              equityHistory: [{ time: Date.now(), equity: def.startBalance }],
+              challenges: s.sim.challenges.map((ch) => ({
+                ...ch,
+                active: ch.id === id,
+                completed: ch.id === id ? false : ch.completed,
+                failed: ch.id === id ? false : ch.failed,
+                startedAt: ch.id === id ? Date.now() : ch.startedAt,
+                peakEquity: ch.id === id ? def.startBalance : ch.peakEquity,
+              })),
+            },
+          };
+        }),
+
+      resetSim: () =>
+        set({
+          sim: {
+            ...initialSim,
+            challenges: buildInitialChallenges(),
+            equityHistory: [{ time: Date.now(), equity: 10_000 }],
+          },
+        }),
     }),
-    {
-      name: "tradeacademy-store-v1",
-    },
+    { name: "tradeacademy-store-v2" },
   ),
 );
-
-/* ============== Helpers ============== */
-
-export function positionMargin(p: Position): number {
-  const lev = p.leverage ?? 1;
-  return (p.entryPrice * p.size) / lev;
-}
-
-export function positionNotional(p: Position): number {
-  return p.entryPrice * p.size;
-}
-
-export function calcUnrealizedPnL(positions: Position[], priceMap: Record<string, number>) {
-  let total = 0;
-  for (const p of positions) {
-    const last = priceMap[p.symbol];
-    if (last == null) continue;
-    const dir = p.side === "buy" ? 1 : -1;
-    total += (last - p.entryPrice) * p.size * dir;
-  }
-  return total;
-}
-
-export function equity(state: AppState, priceMap: Record<string, number>) {
-  const usedMargin = state.sim.positions.reduce((sum, p) => sum + positionMargin(p), 0);
-  const upnl = calcUnrealizedPnL(state.sim.positions, priceMap);
-  return state.sim.cashBalance + usedMargin + upnl;
-}
