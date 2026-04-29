@@ -14,13 +14,17 @@ export interface Position {
   openedAt: number;
   stopLoss?: number;
   takeProfit?: number;
+  /** Alavancagem (1 = sem alavancagem). Margem = size*entryPrice/leverage. */
+  leverage?: number;
+  /** Preço de liquidação calculado na abertura. Se atingido, posição é liquidada. */
+  liquidationPrice?: number;
 }
 
 export interface ClosedTrade extends Position {
   closedAt: number;
   exitPrice: number;
   pnl: number;
-  reason: "manual" | "stop" | "target";
+  reason: "manual" | "stop" | "target" | "liquidation";
 }
 
 export interface ProgressState {
@@ -118,17 +122,27 @@ export const useAppStore = create<AppState>()(
       resetProgress: () => set({ progress: initialProgress }),
 
       openPosition: (p) => {
-        const cost = p.size * p.entryPrice;
+        const leverage = Math.max(1, p.leverage ?? 1);
+        const notional = p.size * p.entryPrice;
+        const margin = notional / leverage;
         const { cashBalance } = get().sim;
-        if (cost > cashBalance) return null;
+        if (margin > cashBalance) return null;
+        // Preço de liquidação: quando a perda iguala a margem (ignorando taxas).
+        // buy:  liq = entry * (1 - 1/lev)    sell: liq = entry * (1 + 1/lev)
+        const liquidationPrice =
+          leverage > 1
+            ? p.side === "buy"
+              ? p.entryPrice * (1 - 1 / leverage)
+              : p.entryPrice * (1 + 1 / leverage)
+            : undefined;
         const id = `pos_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         set((s) => ({
           sim: {
             ...s.sim,
-            cashBalance: s.sim.cashBalance - cost,
+            cashBalance: s.sim.cashBalance - margin,
             positions: [
               ...s.sim.positions,
-              { ...p, id, openedAt: Date.now() },
+              { ...p, id, openedAt: Date.now(), leverage, liquidationPrice },
             ],
           },
         }));
@@ -139,10 +153,13 @@ export const useAppStore = create<AppState>()(
         set((s) => {
           const pos = s.sim.positions.find((p) => p.id === id);
           if (!pos) return s;
+          const leverage = pos.leverage ?? 1;
           const direction = pos.side === "buy" ? 1 : -1;
-          const pnl = (exitPrice - pos.entryPrice) * pos.size * direction;
-          // devolvemos o custo original + pnl
-          const refund = pos.entryPrice * pos.size + pnl;
+          const rawPnl = (exitPrice - pos.entryPrice) * pos.size * direction;
+          const margin = (pos.entryPrice * pos.size) / leverage;
+          // Em liquidação a perda é limitada à margem (não fica devendo).
+          const pnl = reason === "liquidation" ? -margin : rawPnl;
+          const refund = margin + pnl;
           const closed: ClosedTrade = {
             ...pos,
             closedAt: Date.now(),
@@ -162,6 +179,17 @@ export const useAppStore = create<AppState>()(
       evaluateStops: (symbol, lastPrice) => {
         const positions = get().sim.positions.filter((p) => p.symbol === symbol);
         for (const p of positions) {
+          // Liquidação tem prioridade
+          if (p.liquidationPrice != null) {
+            if (p.side === "buy" && lastPrice <= p.liquidationPrice) {
+              get().closePosition(p.id, p.liquidationPrice, "liquidation");
+              continue;
+            }
+            if (p.side === "sell" && lastPrice >= p.liquidationPrice) {
+              get().closePosition(p.id, p.liquidationPrice, "liquidation");
+              continue;
+            }
+          }
           if (p.side === "buy") {
             if (p.stopLoss && lastPrice <= p.stopLoss) get().closePosition(p.id, lastPrice, "stop");
             else if (p.takeProfit && lastPrice >= p.takeProfit) get().closePosition(p.id, lastPrice, "target");
@@ -182,6 +210,15 @@ export const useAppStore = create<AppState>()(
 
 /* ============== Helpers ============== */
 
+export function positionMargin(p: Position): number {
+  const lev = p.leverage ?? 1;
+  return (p.entryPrice * p.size) / lev;
+}
+
+export function positionNotional(p: Position): number {
+  return p.entryPrice * p.size;
+}
+
 export function calcUnrealizedPnL(positions: Position[], priceMap: Record<string, number>) {
   let total = 0;
   for (const p of positions) {
@@ -194,7 +231,7 @@ export function calcUnrealizedPnL(positions: Position[], priceMap: Record<string
 }
 
 export function equity(state: AppState, priceMap: Record<string, number>) {
-  const used = state.sim.positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
+  const usedMargin = state.sim.positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const upnl = calcUnrealizedPnL(state.sim.positions, priceMap);
-  return state.sim.cashBalance + used + upnl;
+  return state.sim.cashBalance + usedMargin + upnl;
 }
