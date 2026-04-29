@@ -13,22 +13,83 @@ export interface Candle {
 }
 
 export interface SymbolMeta {
-  symbol: string;
-  name: string;
-  category: "Forex" | "Cripto" | "Ações";
-  basePrice: number;
+  symbol:     string;
+  name:       string;
+  category:   "Forex" | "Cripto" | "Ações" | "Commodities" | "Índices";
+  basePrice:  number;
   volatility: number; // 0..1 — desvio padrão por step
-  drift: number;      // tendência leve por step
-  precision: number;  // casas decimais
+  drift:      number; // tendência leve por step
+  precision:  number; // casas decimais
 }
 
 export const SYMBOLS: SymbolMeta[] = [
-  { symbol: "BTC/USD", name: "Bitcoin",  category: "Cripto", basePrice: 67_500, volatility: 0.0035, drift: 0.00005, precision: 2 },
-  { symbol: "ETH/USD", name: "Ethereum", category: "Cripto", basePrice: 3_450,  volatility: 0.0042, drift: 0.00003, precision: 2 },
-  { symbol: "EUR/USD", name: "Euro / Dólar", category: "Forex", basePrice: 1.0825, volatility: 0.0008, drift: 0.000005, precision: 5 },
-  { symbol: "GBP/USD", name: "Libra / Dólar", category: "Forex", basePrice: 1.2640, volatility: 0.0010, drift: -0.000003, precision: 5 },
-  { symbol: "AAPL",    name: "Apple Inc.", category: "Ações", basePrice: 215.40, volatility: 0.0018, drift: 0.00002, precision: 2 },
-  { symbol: "TSLA",    name: "Tesla Inc.", category: "Ações", basePrice: 248.90, volatility: 0.0035, drift: 0.0,     precision: 2 },
+
+  /* ════════ CRIPTO ════════════════════════════════════════════════ */
+  { symbol: "BTC/USD",  name: "Bitcoin",             category: "Cripto",      basePrice: 67_500,  volatility: 0.0035, drift:  0.00005,   precision: 2 },
+  { symbol: "ETH/USD",  name: "Ethereum",            category: "Cripto",      basePrice: 3_450,   volatility: 0.0042, drift:  0.00003,   precision: 2 },
+  { symbol: "BNB/USD",  name: "BNB",                 category: "Cripto",      basePrice: 420,     volatility: 0.0038, drift:  0.00002,   precision: 2 },
+  { symbol: "SOL/USD",  name: "Solana",              category: "Cripto",      basePrice: 185,     volatility: 0.0050, drift:  0.00004,   precision: 2 },
+  { symbol: "XRP/USD",  name: "XRP (Ripple)",        category: "Cripto",      basePrice: 0.55,    volatility: 0.0045, drift:  0.00001,   precision: 4 },
+  { symbol: "ADA/USD",  name: "Cardano",             category: "Cripto",      basePrice: 0.55,    volatility: 0.0048, drift:  0.000005,  precision: 4 },
+  { symbol: "DOGE/USD", name: "Dogecoin",            category: "Cripto",      basePrice: 0.18,    volatility: 0.0060, drift:  0.0,       precision: 5 },
+  { symbol: "DOT/USD",  name: "Polkadot",            category: "Cripto",      basePrice: 10.50,   volatility: 0.0046, drift:  0.00001,   precision: 3 },
+  { symbol: "AVAX/USD", name: "Avalanche",           category: "Cripto",      basePrice: 42.00,   volatility: 0.0052, drift:  0.00003,   precision: 2 },
+  { symbol: "LINK/USD", name: "Chainlink",           category: "Cripto",      basePrice: 18.00,   volatility: 0.0049, drift:  0.00002,   precision: 3 },
+  { symbol: "LTC/USD",  name: "Litecoin",            category: "Cripto",      basePrice: 92.00,   volatility: 0.0036, drift:  0.0,       precision: 2 },
+  { symbol: "UNI/USD",  name: "Uniswap",             category: "Cripto",      basePrice: 12.50,   volatility: 0.0055, drift:  0.00001,   precision: 3 },
+  { symbol: "ATOM/USD", name: "Cosmos",              category: "Cripto",      basePrice: 10.50,   volatility: 0.0046, drift:  0.00001,   precision: 3 },
+  { symbol: "MATIC/USD",name: "Polygon (POL)",       category: "Cripto",      basePrice: 0.92,    volatility: 0.0050, drift:  0.00001,   precision: 4 },
+
+  /* ════════ FOREX ═════════════════════════════════════════════════ */
+  { symbol: "EUR/USD",  name: "Euro / Dólar",        category: "Forex",       basePrice: 1.0825,  volatility: 0.0008, drift:  0.000005,  precision: 5 },
+  { symbol: "GBP/USD",  name: "Libra / Dólar",       category: "Forex",       basePrice: 1.2640,  volatility: 0.0010, drift: -0.000003,  precision: 5 },
+  { symbol: "USD/JPY",  name: "Dólar / Iene",        category: "Forex",       basePrice: 151.50,  volatility: 0.0007, drift:  0.000003,  precision: 3 },
+  { symbol: "USD/CHF",  name: "Dólar / Franco Suíço",category: "Forex",       basePrice: 0.9045,  volatility: 0.0007, drift: -0.000002,  precision: 5 },
+  { symbol: "AUD/USD",  name: "Dólar Aus. / Dólar",  category: "Forex",       basePrice: 0.6530,  volatility: 0.0009, drift:  0.000002,  precision: 5 },
+  { symbol: "NZD/USD",  name: "Dólar NZ / Dólar",    category: "Forex",       basePrice: 0.6120,  volatility: 0.0009, drift:  0.000001,  precision: 5 },
+  { symbol: "USD/CAD",  name: "Dólar / Dólar Can.",  category: "Forex",       basePrice: 1.3540,  volatility: 0.0008, drift: -0.000002,  precision: 5 },
+  { symbol: "EUR/GBP",  name: "Euro / Libra",        category: "Forex",       basePrice: 0.8570,  volatility: 0.0007, drift:  0.000001,  precision: 5 },
+  { symbol: "EUR/JPY",  name: "Euro / Iene",         category: "Forex",       basePrice: 163.90,  volatility: 0.0008, drift:  0.000004,  precision: 3 },
+  { symbol: "GBP/JPY",  name: "Libra / Iene",        category: "Forex",       basePrice: 191.40,  volatility: 0.0011, drift:  0.000003,  precision: 3 },
+  { symbol: "USD/BRL",  name: "Dólar / Real",        category: "Forex",       basePrice: 5.05,    volatility: 0.0012, drift:  0.000005,  precision: 4 },
+  { symbol: "EUR/BRL",  name: "Euro / Real",         category: "Forex",       basePrice: 5.47,    volatility: 0.0013, drift:  0.000006,  precision: 4 },
+
+  /* ════════ ACÇÕES ════════════════════════════════════════════════ */
+  { symbol: "AAPL",     name: "Apple Inc.",          category: "Ações",       basePrice: 215.40,  volatility: 0.0018, drift:  0.00002,   precision: 2 },
+  { symbol: "TSLA",     name: "Tesla Inc.",          category: "Ações",       basePrice: 248.90,  volatility: 0.0035, drift:  0.0,       precision: 2 },
+  { symbol: "MSFT",     name: "Microsoft",           category: "Ações",       basePrice: 425.50,  volatility: 0.0015, drift:  0.00003,   precision: 2 },
+  { symbol: "GOOGL",    name: "Alphabet (Google)",   category: "Ações",       basePrice: 175.30,  volatility: 0.0016, drift:  0.00002,   precision: 2 },
+  { symbol: "AMZN",     name: "Amazon",              category: "Ações",       basePrice: 195.80,  volatility: 0.0017, drift:  0.00003,   precision: 2 },
+  { symbol: "NVDA",     name: "NVIDIA",              category: "Ações",       basePrice: 875.00,  volatility: 0.0032, drift:  0.00008,   precision: 2 },
+  { symbol: "META",     name: "Meta Platforms",      category: "Ações",       basePrice: 520.00,  volatility: 0.0022, drift:  0.00004,   precision: 2 },
+  { symbol: "NFLX",     name: "Netflix",             category: "Ações",       basePrice: 680.00,  volatility: 0.0025, drift:  0.00003,   precision: 2 },
+  { symbol: "AMD",      name: "AMD",                 category: "Ações",       basePrice: 175.00,  volatility: 0.0030, drift:  0.00004,   precision: 2 },
+  { symbol: "JPM",      name: "JPMorgan Chase",      category: "Ações",       basePrice: 215.00,  volatility: 0.0016, drift:  0.00002,   precision: 2 },
+  { symbol: "V",        name: "Visa",                category: "Ações",       basePrice: 285.00,  volatility: 0.0014, drift:  0.00002,   precision: 2 },
+  { symbol: "MA",       name: "Mastercard",          category: "Ações",       basePrice: 475.00,  volatility: 0.0015, drift:  0.00002,   precision: 2 },
+  { symbol: "DIS",      name: "Disney",              category: "Ações",       basePrice: 110.00,  volatility: 0.0020, drift: -0.000005,  precision: 2 },
+  { symbol: "COIN",     name: "Coinbase",            category: "Ações",       basePrice: 220.00,  volatility: 0.0038, drift:  0.00003,   precision: 2 },
+  { symbol: "SHOP",     name: "Shopify",             category: "Ações",       basePrice: 90.00,   volatility: 0.0026, drift:  0.00002,   precision: 2 },
+
+  /* ════════ COMMODITIES ════════════════════════════════════════════ */
+  { symbol: "XAU/USD",  name: "Ouro (Gold)",         category: "Commodities", basePrice: 2_340,   volatility: 0.0012, drift:  0.00002,   precision: 2 },
+  { symbol: "XAG/USD",  name: "Prata (Silver)",      category: "Commodities", basePrice: 29.50,   volatility: 0.0020, drift:  0.00001,   precision: 3 },
+  { symbol: "OIL/USD",  name: "Petróleo WTI",        category: "Commodities", basePrice: 82.50,   volatility: 0.0022, drift: -0.000005,  precision: 2 },
+  { symbol: "BRENT",    name: "Petróleo Brent",      category: "Commodities", basePrice: 86.00,   volatility: 0.0021, drift: -0.000005,  precision: 2 },
+  { symbol: "GAS/USD",  name: "Gás Natural",         category: "Commodities", basePrice: 2.30,    volatility: 0.0040, drift:  0.000005,  precision: 3 },
+  { symbol: "COPPER",   name: "Cobre",               category: "Commodities", basePrice: 4.25,    volatility: 0.0018, drift:  0.000005,  precision: 3 },
+  { symbol: "WHEAT",    name: "Trigo",               category: "Commodities", basePrice: 5.85,    volatility: 0.0018, drift: -0.000002,  precision: 3 },
+  { symbol: "CORN",     name: "Milho",               category: "Commodities", basePrice: 4.50,    volatility: 0.0016, drift: -0.000001,  precision: 3 },
+
+  /* ════════ ÍNDICES ════════════════════════════════════════════════ */
+  { symbol: "SPX500",   name: "S&P 500",             category: "Índices",     basePrice: 5_280,   volatility: 0.0010, drift:  0.000015,  precision: 2 },
+  { symbol: "NAS100",   name: "NASDAQ 100",          category: "Índices",     basePrice: 18_400,  volatility: 0.0013, drift:  0.000018,  precision: 2 },
+  { symbol: "DJ30",     name: "Dow Jones 30",        category: "Índices",     basePrice: 38_900,  volatility: 0.0009, drift:  0.000012,  precision: 2 },
+  { symbol: "DAX40",    name: "DAX 40 (Alemanha)",   category: "Índices",     basePrice: 18_200,  volatility: 0.0011, drift:  0.000013,  precision: 2 },
+  { symbol: "FTSE100",  name: "FTSE 100 (Londres)",  category: "Índices",     basePrice: 8_200,   volatility: 0.0009, drift:  0.000010,  precision: 2 },
+  { symbol: "N225",     name: "Nikkei 225",          category: "Índices",     basePrice: 38_800,  volatility: 0.0012, drift:  0.000010,  precision: 2 },
+  { symbol: "CAC40",    name: "CAC 40 (França)",     category: "Índices",     basePrice: 8_050,   volatility: 0.0010, drift:  0.000011,  precision: 2 },
+  { symbol: "IBOV",     name: "IBOVESPA",            category: "Índices",     basePrice: 128_500, volatility: 0.0014, drift:  0.000008,  precision: 0 },
 ];
 
 export const SYMBOL_MAP: Record<string, SymbolMeta> = Object.fromEntries(
@@ -94,6 +155,9 @@ export const TIMEFRAMES = [
   { label: "1h", seconds: 3600 },
   { label: "1D", seconds: 86_400 },
 ] as const;
+
+export const CATEGORIES = ["Cripto", "Forex", "Ações", "Commodities", "Índices"] as const;
+export type Category = typeof CATEGORIES[number];
 
 export function fmtPrice(value: number, precision = 2) {
   return value.toLocaleString("en-US", { minimumFractionDigits: precision, maximumFractionDigits: precision });

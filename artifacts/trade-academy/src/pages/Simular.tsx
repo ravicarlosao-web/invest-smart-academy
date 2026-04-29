@@ -18,7 +18,7 @@ import {
   CHALLENGES,
 } from "@/store/useAppStore";
 import {
-  SYMBOLS, SYMBOL_MAP, TIMEFRAMES, seedCandles, nextCandle, fmtPrice, fmtUSD,
+  SYMBOLS, SYMBOL_MAP, TIMEFRAMES, CATEGORIES, seedCandles, nextCandle, fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
 import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2 } from "lucide-react";
@@ -130,7 +130,7 @@ export default function Simular() {
             onChange={(e) => setSymbol(e.target.value)}
             className="rounded-md border border-border bg-surface-1 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
           >
-            {(["Cripto", "Forex", "Ações"] as const).map((cat) => (
+            {CATEGORIES.map((cat) => (
               <optgroup key={cat} label={cat}>
                 {SYMBOLS.filter((s) => s.category === cat).map((s) => (
                   <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>
