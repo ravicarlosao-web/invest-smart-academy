@@ -14,13 +14,17 @@ export interface Position {
   openedAt: number;
   stopLoss?: number;
   takeProfit?: number;
+  /** Alavancagem (1 = sem alavancagem). Margem = size*entryPrice/leverage. */
+  leverage?: number;
+  /** Preço de liquidação calculado na abertura. Se atingido, posição é liquidada. */
+  liquidationPrice?: number;
 }
 
 export interface ClosedTrade extends Position {
   closedAt: number;
   exitPrice: number;
   pnl: number;
-  reason: "manual" | "stop" | "target";
+  reason: "manual" | "stop" | "target" | "liquidation";
 }
 
 export interface ProgressState {
