@@ -31,6 +31,45 @@ import {
 } from "recharts";
 
 /* ============================================================
+   CUSTO REALISTA — spread + comissão por categoria
+============================================================ */
+
+const SPREAD_PCT: Record<string, number> = {
+  Cripto:      0.0005,  // 0.05%
+  Forex:       0.00015, // ~1.5 pips em EUR/USD
+  Ações:       0.0002,  // 0.02%
+  Commodities: 0.0004,  // 0.04%
+  Índices:     0.0002,  // 0.02%
+};
+const COMMISSION_RATE = 0.001; // 0.1% por operação
+
+function calcEntryWithCost(
+  marketPrice: number,
+  side: "buy" | "sell",
+  category: string,
+  spreadOn: boolean,
+  commOn: boolean,
+): number {
+  const sp  = spreadOn ? (SPREAD_PCT[category] ?? 0.0003) : 0;
+  const com = commOn   ? COMMISSION_RATE                  : 0;
+  return side === "buy"
+    ? marketPrice * (1 + sp + com)
+    : marketPrice * (1 - sp - com);
+}
+
+function estimateTradeCost(
+  marketPrice: number,
+  size: number,
+  category: string,
+  spreadOn: boolean,
+  commOn: boolean,
+): number {
+  const sp  = spreadOn ? (SPREAD_PCT[category] ?? 0.0003) : 0;
+  const com = commOn   ? COMMISSION_RATE                  : 0;
+  return marketPrice * size * (sp + com);
+}
+
+/* ============================================================
    PÁGINA PRINCIPAL
 ============================================================ */
 
@@ -116,6 +155,60 @@ export default function Simular() {
   const resetSim = useAppStore((s) => s.resetSim);
 
   const upnl = calcUnrealizedPnL(positions, priceMap);
+
+  /* ── Cooldown (Anti-Impulso) ─────────────────────────── */
+  const [cooldownUntil, setCooldownUntil]   = useState<number | null>(null);
+  const [cooldownReason, setCooldownReason] = useState("");
+  const [tickNow, setTickNow]               = useState(Date.now());
+  const prevHistLen = useRef(history.length);
+
+  // Ticking clock — updates every second for the countdown
+  useEffect(() => {
+    const iv = setInterval(() => setTickNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Detect new trade closures and trigger cooldown if needed
+  useEffect(() => {
+    if (history.length <= prevHistLen.current) {
+      prevHistLen.current = history.length;
+      return;
+    }
+    prevHistLen.current = history.length;
+    const latest = history[0];
+    if (!latest) return;
+
+    // Liquidation → 15 min
+    if (latest.reason === "liquidation") {
+      setCooldownUntil(Date.now() + 15 * 60_000);
+      setCooldownReason("liquidação — respira 15 minutos antes de continuar");
+      toast.error("⚠ Liquidação! Cooldown de 15 min activado.");
+      return;
+    }
+    // Single loss > 10% of equity → 10 min
+    const eq = cash + positions.reduce((s, p) => s + positionMargin(p), 0);
+    if (latest.pnl < 0 && eq > 0 && Math.abs(latest.pnl) / eq > 0.1) {
+      setCooldownUntil(Date.now() + 10 * 60_000);
+      setCooldownReason("perda grave (>10% do patrimônio) — respira 10 minutos");
+      toast.error("⚠ Perda grave! Cooldown de 10 min activado.");
+      return;
+    }
+    // 2 consecutive losses → 5 min
+    const last2 = history.slice(0, 2);
+    if (last2.length === 2 && last2.every((t) => t.pnl <= 0)) {
+      setCooldownUntil(Date.now() + 5 * 60_000);
+      setCooldownReason("2 perdas seguidas — respira 5 minutos");
+      toast.warning("⏸ Cooldown de 5 min activado — 2 perdas seguidas.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history.length]);
+
+  const cooldownActive   = cooldownUntil != null && tickNow < cooldownUntil;
+  const cooldownSecsLeft = cooldownActive ? Math.ceil((cooldownUntil! - tickNow) / 1000) : 0;
+
+  /* ── Custo Realista (Spread + Comissão) ─────────────── */
+  const [spreadEnabled,     setSpreadEnabled]     = useState(true);
+  const [commissionEnabled, setCommissionEnabled] = useState(true);
   const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
@@ -232,6 +325,31 @@ export default function Simular() {
                         </div>
                       </div>
                     </div>
+                    {/* ── Realismo ── */}
+                    <div className="border-t border-border pt-3 space-y-3">
+                      <Label className="text-xs font-semibold uppercase tracking-wider">Realismo</Label>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-medium">Spread</p>
+                          <p className="text-[10px] text-muted-foreground">Diferença entre compra e venda</p>
+                        </div>
+                        <Switch checked={spreadEnabled} onCheckedChange={setSpreadEnabled} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-medium">Comissão (0,1%)</p>
+                          <p className="text-[10px] text-muted-foreground">Taxa por operação aberta</p>
+                        </div>
+                        <Switch checked={commissionEnabled} onCheckedChange={setCommissionEnabled} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-medium">Cooldown anti-impulso</p>
+                          <p className="text-[10px] text-muted-foreground">Activo automaticamente</p>
+                        </div>
+                        <span className="text-[10px] font-semibold text-primary">ON</span>
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
@@ -320,12 +438,29 @@ export default function Simular() {
           lastPrice={lastPrice}
           precision={meta.precision}
           cash={cash}
+          category={meta.category}
+          spreadEnabled={spreadEnabled}
+          commissionEnabled={commissionEnabled}
+          cooldownActive={cooldownActive}
+          cooldownSecsLeft={cooldownSecsLeft}
+          cooldownReason={cooldownReason}
+          onClearCooldown={() => setCooldownUntil(null)}
           onSubmitMarket={(order) => {
+            if (cooldownActive) {
+              toast.error("⏸ Trading bloqueado — aguarda o fim do cooldown.");
+              return;
+            }
+            const entryPrice = calcEntryWithCost(
+              lastPrice, order.side, meta.category, spreadEnabled, commissionEnabled,
+            );
+            const cost = estimateTradeCost(
+              lastPrice, order.size, meta.category, spreadEnabled, commissionEnabled,
+            );
             const id = openPosition({
               symbol,
               side: order.side,
               size: order.size,
-              entryPrice: lastPrice,
+              entryPrice,
               leverage: order.leverage,
               stopLoss: order.stopLoss,
               takeProfit: order.takeProfit,
@@ -335,11 +470,15 @@ export default function Simular() {
               toast.error("Margem insuficiente para abrir essa posição.");
             } else {
               toast.success(`${order.side === "buy" ? "Compra" : "Venda"} executada`, {
-                description: `${order.size} ${symbol} @ ${fmtPrice(lastPrice, meta.precision)}`,
+                description: `${order.size} ${symbol} @ ${fmtPrice(entryPrice, meta.precision)}${cost > 0 ? ` · custo: ${fmtUSD(cost)}` : ""}`,
               });
             }
           }}
           onSubmitPending={(order) => {
+            if (cooldownActive) {
+              toast.error("⏸ Trading bloqueado — aguarda o fim do cooldown.");
+              return;
+            }
             placePendingOrder({
               symbol,
               side: order.side,
@@ -903,12 +1042,22 @@ interface OrderInput {
 const LEVERAGE_OPTIONS = [1, 2, 5, 10, 25, 50, 100] as const;
 
 function OrderPanel({
-  symbol, lastPrice, precision, cash, onSubmitMarket, onSubmitPending, onReset,
+  symbol, lastPrice, precision, cash, category,
+  spreadEnabled, commissionEnabled,
+  cooldownActive, cooldownSecsLeft, cooldownReason, onClearCooldown,
+  onSubmitMarket, onSubmitPending, onReset,
 }: {
   symbol: string;
   lastPrice: number;
   precision: number;
   cash: number;
+  category: string;
+  spreadEnabled: boolean;
+  commissionEnabled: boolean;
+  cooldownActive: boolean;
+  cooldownSecsLeft: number;
+  cooldownReason: string;
+  onClearCooldown: () => void;
   onSubmitMarket: (o: OrderInput) => void;
   onSubmitPending: (o: OrderInput) => void;
   onReset: () => void;
@@ -997,10 +1146,38 @@ function OrderPanel({
     setNote("");
   };
 
+  /* Custo estimado para exibição no painel */
+  const tradeCost = estimateTradeCost(lastPrice, sizeNum, category, spreadEnabled, commissionEnabled);
+  const spreadPct = spreadEnabled ? (SPREAD_PCT[category] ?? 0.0003) : 0;
+  const commPct   = commissionEnabled ? COMMISSION_RATE : 0;
+  const effectiveEntryDisplay = calcEntryWithCost(lastPrice, side, category, spreadEnabled, commissionEnabled);
+
   return (
     <Card className="h-fit p-4 space-y-3">
+      {/* ── Banner de Cooldown ── */}
+      {cooldownActive && (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-center space-y-1.5">
+          <div className="flex items-center justify-center gap-2 text-warning">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm font-bold">Trading bloqueado</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground capitalize">{cooldownReason}</p>
+          <div className="font-mono text-2xl font-bold text-warning">
+            {Math.floor(cooldownSecsLeft / 60).toString().padStart(2, "0")}
+            :{(cooldownSecsLeft % 60).toString().padStart(2, "0")}
+          </div>
+          <p className="text-[10px] text-muted-foreground">Respira. Revê o teu plano de trading.</p>
+          <button
+            onClick={onClearCooldown}
+            className="text-[10px] text-muted-foreground underline hover:text-foreground mt-1"
+          >
+            Ignorar cooldown (não recomendado)
+          </button>
+        </div>
+      )}
+
       {/* Comprar / Vender */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid grid-cols-2 gap-2 ${cooldownActive ? "opacity-40 pointer-events-none" : ""}`}>
         <Button
           variant={side === "buy" ? "default" : "outline"}
           className={side === "buy" ? "bg-bull text-bull-foreground hover:bg-bull/90" : ""}
@@ -1146,6 +1323,22 @@ function OrderPanel({
             mono
             valueClass={slRiskPct! > 5 ? "text-bear" : slRiskPct! > 2 ? "text-warning" : "text-bull"}
           />
+        )}
+        {/* ── Custo Realista ── */}
+        {(spreadEnabled || commissionEnabled) && sizeNum > 0 && (
+          <>
+            <div className="my-1.5 border-t border-border/50" />
+            {spreadEnabled && (
+              <MetricRow label={`Spread (${(spreadPct * 100).toFixed(3)}%)`} value={fmtUSD(notional * spreadPct)} mono valueClass="text-muted-foreground" />
+            )}
+            {commissionEnabled && (
+              <MetricRow label={`Comissão (${(commPct * 100).toFixed(2)}%)`} value={fmtUSD(notional * commPct)} mono valueClass="text-muted-foreground" />
+            )}
+            <MetricRow label="Custo total" value={fmtUSD(tradeCost)} mono valueClass="text-warning" />
+            {orderType === "market" && (
+              <MetricRow label="Preço efectivo entrada" value={fmtPrice(effectiveEntryDisplay, precision)} mono valueClass="text-muted-foreground" />
+            )}
+          </>
         )}
       </div>
 
