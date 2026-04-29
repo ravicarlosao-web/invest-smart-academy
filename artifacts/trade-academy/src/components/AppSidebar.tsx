@@ -29,7 +29,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
 const mainItems = [
-  { title: "Dashboard",   url: "/",             icon: LayoutDashboard },
+  { title: "Dashboard",   url: "/dashboard",    icon: LayoutDashboard },
   { title: "Aprender",    url: "/aprender",     icon: GraduationCap },
   { title: "Simular",     url: "/simular",      icon: LineChart },
   { title: "Estratégias", url: "/estrategias",  icon: Compass },
