@@ -95,8 +95,9 @@ export default function Simular() {
   const resetSim = useAppStore((s) => s.resetSim);
 
   const upnl = calcUnrealizedPnL(positions, priceMap);
-  const used = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
-  const equityVal = cash + used + upnl;
+  const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
+  const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
+  const equityVal = cash + usedMargin + upnl;
 
   return (
     <div className="container max-w-[1400px] py-4 lg:py-6">
