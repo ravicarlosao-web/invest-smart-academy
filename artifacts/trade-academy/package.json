@@ -78,6 +78,7 @@
   "dependencies": {
     "html-to-image": "^1.11.13",
     "lightweight-charts": "^5.2.0",
+    "mammoth": "^1.12.0",
     "react-router-dom": "^7.14.2",
     "tailwindcss-animate": "^1.0.7",
     "vitest": "^4.1.5",

@@ -139,6 +139,13 @@ export interface SimState {
   challenges: Challenge[];
 }
 
+/* ============== Livros ============== */
+export interface BookProgress {
+  completed:    boolean;
+  completedAt?: string;
+  scrollPercent: number;
+}
+
 /* ============== Duelo ============== */
 export interface DueloEntry {
   id: string;
@@ -164,6 +171,7 @@ interface AppState {
   notifications: AppNotification[];
   seenAchievements: string[];
   duelos: DueloEntry[];
+  booksProgress: Record<string, BookProgress>;
 
   // onboarding / settings
   completeOnboarding: (level: string, interests: string[]) => void;
@@ -198,6 +206,10 @@ interface AppState {
   createDuelo: (d: Omit<DueloEntry, "id" | "createdAt" | "accepted" | "code" | "startEquity">) => string;
   acceptDuelo: (code: string, currentEquity: number) => boolean;
   removeDuelo: (id: string) => void;
+
+  // books actions
+  updateBookProgress: (bookId: string, scrollPercent: number) => void;
+  markBookComplete:   (bookId: string) => void;
 }
 
 const initialSettings: Settings = {
@@ -389,6 +401,7 @@ export const useAppStore = create<AppState>()(
       notifications: [],
       seenAchievements: [],
       duelos: [],
+      booksProgress: {},
 
       /* -------- Onboarding / Settings -------- */
       completeOnboarding: (level, interests) =>
@@ -801,6 +814,31 @@ export const useAppStore = create<AppState>()(
 
       removeDuelo: (id) =>
         set((s) => ({ duelos: s.duelos.filter((d) => d.id !== id) })),
+
+      /* -------- Books -------- */
+      updateBookProgress: (bookId, scrollPercent) =>
+        set((s) => {
+          const prev = s.booksProgress[bookId] ?? { completed: false, scrollPercent: 0 };
+          if (prev.completed) return s;
+          return {
+            booksProgress: {
+              ...s.booksProgress,
+              [bookId]: { ...prev, scrollPercent: Math.max(prev.scrollPercent, scrollPercent) },
+            },
+          };
+        }),
+
+      markBookComplete: (bookId) =>
+        set((s) => {
+          const prev = s.booksProgress[bookId] ?? { completed: false, scrollPercent: 0 };
+          if (prev.completed) return s;
+          return {
+            booksProgress: {
+              ...s.booksProgress,
+              [bookId]: { completed: true, scrollPercent: 100, completedAt: new Date().toISOString() },
+            },
+          };
+        }),
     }),
     { name: "tradeacademy-store-v2" },
   ),

@@ -55,6 +55,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "mammoth": path.resolve(import.meta.dirname, "node_modules/mammoth/mammoth.browser.js"),
     },
     dedupe: ["react", "react-dom"],
   },

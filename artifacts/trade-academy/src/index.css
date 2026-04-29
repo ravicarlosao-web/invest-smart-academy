@@ -217,3 +217,112 @@
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ── Leitor de Livros ──────────────────────────────── */
+.book-content {
+  color: hsl(var(--foreground));
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.book-content h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.book-content .book-lead {
+  font-size: 1.05rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 1rem;
+}
+
+.book-content h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.4rem;
+}
+
+.book-content h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--primary));
+}
+
+.book-content p {
+  margin-bottom: 1rem;
+  color: hsl(var(--foreground) / 0.9);
+}
+
+.book-content ul,
+.book-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.book-content li {
+  margin-bottom: 0.4rem;
+  color: hsl(var(--foreground) / 0.9);
+}
+
+.book-content ul li { list-style-type: disc; }
+.book-content ol li { list-style-type: decimal; }
+
+.book-content strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.book-content em {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.book-content code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  color: hsl(var(--primary));
+}
+
+.book-content blockquote {
+  border-left: 4px solid hsl(var(--primary) / 0.5);
+  background: hsl(var(--surface-1));
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1.5rem 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.book-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+.book-content th {
+  background: hsl(var(--surface-2));
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid hsl(var(--border));
+}
+.book-content td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.book-content tr:last-child td { border-bottom: none; }
