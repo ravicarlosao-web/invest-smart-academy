@@ -11,14 +11,24 @@ import {
   SYMBOLS, SYMBOL_MAP, TIMEFRAMES, seedCandles, nextCandle, fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 
 export default function Simular() {
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(0); // 1m por padrão
   const meta = SYMBOL_MAP[symbol];
   const tf = TIMEFRAMES[tfIdx];
+
+  // Indicadores
+  const [showRsi, setShowRsi] = useState(false);
+  const [rsiPeriod, setRsiPeriod] = useState(14);
+  const [showMacd, setShowMacd] = useState(false);
+  const [macdFast, setMacdFast] = useState(12);
+  const [macdSlow, setMacdSlow] = useState(26);
+  const [macdSignal, setMacdSignal] = useState(9);
 
   // candles por símbolo (mantemos estado por símbolo para preservar ao trocar TF)
   const [candlesBySymbol, setCandlesBySymbol] = useState<Record<string, Candle[]>>(() => {
@@ -128,7 +138,7 @@ export default function Simular() {
         {/* Gráfico + tabs */}
         <div className="space-y-4">
           <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border bg-surface-1 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
               <div className="flex gap-1">
                 {TIMEFRAMES.map((t, i) => (
                   <button
@@ -142,13 +152,93 @@ export default function Simular() {
                   </button>
                 ))}
               </div>
-              <Badge variant="outline" className="font-mono text-[10px]">MM 20</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono text-[10px]">MM 20</Badge>
+                <button
+                  onClick={() => setShowRsi((v) => !v)}
+                  className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${
+                    showRsi ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"
+                  }`}
+                >
+                  RSI
+                </button>
+                <button
+                  onClick={() => setShowMacd((v) => !v)}
+                  className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${
+                    showMacd ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"
+                  }`}
+                >
+                  MACD
+                </button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground">
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 space-y-4">
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <Label className="text-xs font-semibold uppercase tracking-wider">RSI</Label>
+                        <Switch checked={showRsi} onCheckedChange={setShowRsi} />
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor="rsi-p" className="text-[11px] text-muted-foreground">Período</Label>
+                        <Input
+                          id="rsi-p"
+                          type="number"
+                          min={2}
+                          max={100}
+                          value={rsiPeriod}
+                          onChange={(e) => setRsiPeriod(Math.max(2, Math.min(100, parseInt(e.target.value) || 14)))}
+                          className="h-8 w-20 font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="border-t border-border pt-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <Label className="text-xs font-semibold uppercase tracking-wider">MACD</Label>
+                        <Switch checked={showMacd} onCheckedChange={setShowMacd} />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="macd-f" className="text-[11px] text-muted-foreground">Rápida (EMA)</Label>
+                          <Input id="macd-f" type="number" min={2} max={100} value={macdFast}
+                            onChange={(e) => setMacdFast(Math.max(2, Math.min(100, parseInt(e.target.value) || 12)))}
+                            className="h-8 w-20 font-mono" />
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="macd-s" className="text-[11px] text-muted-foreground">Lenta (EMA)</Label>
+                          <Input id="macd-s" type="number" min={3} max={200} value={macdSlow}
+                            onChange={(e) => setMacdSlow(Math.max(3, Math.min(200, parseInt(e.target.value) || 26)))}
+                            className="h-8 w-20 font-mono" />
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="macd-sig" className="text-[11px] text-muted-foreground">Sinal (EMA)</Label>
+                          <Input id="macd-sig" type="number" min={2} max={50} value={macdSignal}
+                            onChange={(e) => setMacdSignal(Math.max(2, Math.min(50, parseInt(e.target.value) || 9)))}
+                            className="h-8 w-20 font-mono" />
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-            <div className="h-[420px] w-full lg:h-[500px]">
+            <div
+              className="w-full"
+              style={{ height: showRsi && showMacd ? 720 : showRsi || showMacd ? 620 : 500 }}
+            >
               <PriceChart
                 candles={candles}
                 precision={meta.precision}
                 movingAverage={20}
+                showRsi={showRsi}
+                rsiPeriod={rsiPeriod}
+                showMacd={showMacd}
+                macdFast={macdFast}
+                macdSlow={macdSlow}
+                macdSignal={macdSignal}
                 className="h-full w-full"
               />
             </div>
