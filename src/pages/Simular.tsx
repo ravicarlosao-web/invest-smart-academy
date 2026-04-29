@@ -421,7 +421,7 @@ function HistoryTable({ history }: { history: ReturnType<typeof useAppStore.getS
                 <Td right mono>{fmtPrice(t.entryPrice, meta.precision)}</Td>
                 <Td right mono>{fmtPrice(t.exitPrice, meta.precision)}</Td>
                 <Td className="text-xs text-muted-foreground capitalize">
-                  {t.reason === "stop" ? "Stop loss" : t.reason === "target" ? "Take profit" : "Manual"}
+                  {t.reason === "stop" ? "Stop loss" : t.reason === "target" ? "Take profit" : t.reason === "liquidation" ? "Liquidação" : "Manual"}
                 </Td>
                 <Td right mono className={t.pnl >= 0 ? "text-bull font-semibold" : "text-bear font-semibold"}>
                   {fmtUSD(t.pnl)}
