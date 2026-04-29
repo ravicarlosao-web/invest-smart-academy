@@ -285,7 +285,7 @@ function QuizStep({
 
       <div className="mt-6 flex justify-end">
         {!revealed ? (
-          <Button size="lg" disabled={selected === null} onClick={onSubmit}>
+          <Button size="lg" disabled={!canSubmit} onClick={onSubmit}>
             Confirmar
           </Button>
         ) : (
