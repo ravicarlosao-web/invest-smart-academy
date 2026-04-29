@@ -99,6 +99,15 @@ export const CHALLENGES: Omit<Challenge, "active" | "completed" | "failed" | "st
 
 /* ============== Estado ============== */
 
+export interface Settings {
+  notifyGoals: boolean;
+  dailyTip: boolean;
+  weeklyReport: boolean;
+  confirmOrders: boolean;
+  realtimePnl: boolean;
+  autoSaveNotes: boolean;
+}
+
 export interface ProgressState {
   xp: number;
   completedLessons: string[];
@@ -120,6 +129,14 @@ export interface SimState {
 interface AppState {
   progress: ProgressState;
   sim: SimState;
+  onboarded: boolean;
+  userLevel: "iniciante" | "intermediario" | "avancado" | null;
+  userInterests: string[];
+  settings: Settings;
+
+  // onboarding / settings
+  completeOnboarding: (level: string, interests: string[]) => void;
+  updateSettings: (partial: Partial<Settings>) => void;
 
   // progress actions
   completeLesson: (lessonId: string, xp: number, scorePct: number) => void;
@@ -136,6 +153,15 @@ interface AppState {
   startChallenge: (id: string) => void;
   resetSim: () => void;
 }
+
+const initialSettings: Settings = {
+  notifyGoals: true,
+  dailyTip: true,
+  weeklyReport: false,
+  confirmOrders: false,
+  realtimePnl: true,
+  autoSaveNotes: true,
+};
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -237,6 +263,17 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       progress: initialProgress,
       sim: initialSim,
+      onboarded: false,
+      userLevel: null,
+      userInterests: [],
+      settings: initialSettings,
+
+      /* -------- Onboarding / Settings -------- */
+      completeOnboarding: (level, interests) =>
+        set({ onboarded: true, userLevel: level as AppState["userLevel"], userInterests: interests }),
+
+      updateSettings: (partial) =>
+        set((s) => ({ settings: { ...s.settings, ...partial } })),
 
       /* -------- Progress -------- */
       completeLesson: (lessonId, xp, scorePct) =>

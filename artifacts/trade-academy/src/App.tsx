@@ -9,6 +9,9 @@ import Aprender from "./pages/Aprender";
 import Licao from "./pages/Licao";
 import Simular from "./pages/Simular";
 import Perfil from "./pages/Perfil";
+import Glossario from "./pages/Glossario";
+import Recursos from "./pages/Recursos";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +29,9 @@ const App = () => (
             <Route path="/aprender/:lessonId" element={<Licao />} />
             <Route path="/simular" element={<Simular />} />
             <Route path="/perfil" element={<Perfil />} />
+            <Route path="/glossario" element={<Glossario />} />
+            <Route path="/recursos" element={<Recursos />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

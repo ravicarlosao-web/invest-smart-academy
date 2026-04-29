@@ -1,11 +1,21 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, GraduationCap, LineChart, User2, TrendingUp } from "lucide-react";
+import {
+  LayoutDashboard,
+  GraduationCap,
+  LineChart,
+  User2,
+  TrendingUp,
+  BookOpen,
+  Library,
+  Settings,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -15,11 +25,17 @@ import {
 import { useAppStore } from "@/store/useAppStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
-const items = [
+const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Aprender",  url: "/aprender", icon: GraduationCap },
   { title: "Simular",   url: "/simular",  icon: LineChart },
   { title: "Perfil",    url: "/perfil",   icon: User2 },
+];
+
+const extraItems = [
+  { title: "Glossário",      url: "/glossario",     icon: BookOpen },
+  { title: "Recursos",       url: "/recursos",      icon: Library },
+  { title: "Configurações",  url: "/configuracoes", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -51,10 +67,43 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2">
+        {/* Main nav */}
         <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-2 py-1">
+              Principal
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-primary"
+                  >
+                    <NavLink to={item.url} className="flex items-center gap-3">
+                      <item.icon className="h-[18px] w-[18px]" />
+                      {!collapsed && <span className="text-sm font-medium">{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Extra nav */}
+        <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-2 py-1">
+              Referência
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {extraItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

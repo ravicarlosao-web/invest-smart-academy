@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import OnboardingOverlay from "./OnboardingOverlay";
 import { Flame } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -9,13 +10,16 @@ const titles: Record<string, string> = {
   "/aprender": "Aprender",
   "/simular": "Simulador de Trading",
   "/perfil": "Perfil",
+  "/glossario": "Glossário",
+  "/recursos": "Recursos",
+  "/configuracoes": "Configurações",
 };
 
 export default function AppLayout() {
   const { pathname } = useLocation();
   const streak = useAppStore((s) => s.progress.streakDays);
+  const onboarded = useAppStore((s) => s.onboarded);
 
-  // pega o título da rota base
   const baseKey = "/" + (pathname.split("/")[1] ?? "");
   const title = titles[baseKey] ?? titles[pathname] ?? "TradeAcademy";
 
@@ -45,6 +49,7 @@ export default function AppLayout() {
           </main>
         </div>
       </div>
+      {!onboarded && <OnboardingOverlay />}
     </SidebarProvider>
   );
 }
