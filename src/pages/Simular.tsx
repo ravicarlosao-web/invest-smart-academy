@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { PriceChart } from "@/components/PriceChart";
-import { useAppStore, calcUnrealizedPnL } from "@/store/useAppStore";
+import { useAppStore, calcUnrealizedPnL, positionMargin } from "@/store/useAppStore";
 import {
   SYMBOLS, SYMBOL_MAP, TIMEFRAMES, seedCandles, nextCandle, fmtPrice, fmtUSD,
   type Candle,
