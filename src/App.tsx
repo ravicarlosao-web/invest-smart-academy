@@ -3,7 +3,12 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
+import AppLayout from "./components/AppLayout";
+import Dashboard from "./pages/Dashboard";
+import Aprender from "./pages/Aprender";
+import Licao from "./pages/Licao";
+import Simular from "./pages/Simular";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -15,7 +20,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/aprender" element={<Aprender />} />
+            <Route path="/aprender/:lessonId" element={<Licao />} />
+            <Route path="/simular" element={<Simular />} />
+            <Route path="/perfil" element={<Perfil />} />
+          </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
