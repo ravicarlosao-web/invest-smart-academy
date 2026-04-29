@@ -129,7 +129,8 @@ export default function Simular() {
 
         <div className="flex flex-wrap items-center gap-4 text-right">
           <Stat label="Saldo" value={fmtUSD(cash)} />
-          <Stat label="Em ordens" value={fmtUSD(used)} />
+          <Stat label="Margem usada" value={fmtUSD(usedMargin)} />
+          <Stat label="Exposição" value={fmtUSD(exposure)} />
           <Stat label="P&L aberto" value={fmtUSD(upnl)} accent={upnl >= 0 ? "bull" : "bear"} />
           <Stat label="Patrimônio" value={fmtUSD(equityVal)} highlight />
         </div>
