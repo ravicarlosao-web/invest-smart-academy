@@ -189,14 +189,22 @@ function QuizStep({
 }: {
   question: Question;
   stepLabel: string;
-  selected: number | boolean | null;
+  selected: Answer | null;
   revealed: boolean;
-  onSelect: (v: number | boolean) => void;
+  onSelect: (v: Answer) => void;
   onSubmit: () => void;
   onNext: () => void;
   isLast: boolean;
 }) {
   const correct = selected !== null && isCorrect(question, selected);
+  const canSubmit =
+    selected !== null &&
+    (question.type !== "markChart" || (Array.isArray(selected) && selected.length > 0));
+
+  // estável p/ evitar setState em loop dentro do ChartMarkExercise
+  const handleMarkChange = useCallback((lines: MarkLine[]) => {
+    onSelect(lines);
+  }, [onSelect]);
 
   return (
     <Card className="p-6 lg:p-8">
@@ -205,7 +213,7 @@ function QuizStep({
       </p>
       <h2 className="mb-5 text-lg font-semibold leading-snug">{question.prompt}</h2>
 
-      {question.type === "multiple" ? (
+      {question.type === "multiple" && (
         <div className="space-y-2">
           {question.options.map((opt, i) => {
             const isSel = selected === i;
@@ -229,7 +237,9 @@ function QuizStep({
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {question.type === "truefalse" && (
         <div className="grid grid-cols-2 gap-3">
           {[true, false].map((v) => {
             const isSel = selected === v;
@@ -251,6 +261,17 @@ function QuizStep({
             );
           })}
         </div>
+      )}
+
+      {question.type === "markChart" && (
+        <ChartMarkExercise
+          candles={question.candles}
+          supports={question.supports}
+          resistances={question.resistances}
+          tolerancePct={question.tolerancePct}
+          revealed={revealed}
+          onChange={handleMarkChange}
+        />
       )}
 
       {revealed && (
