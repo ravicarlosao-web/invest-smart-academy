@@ -8,6 +8,7 @@ import {
   BookOpen,
   Library,
   Settings,
+  Swords,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Aprender",  url: "/aprender", icon: GraduationCap },
   { title: "Simular",   url: "/simular",  icon: LineChart },
+  { title: "Duelos",    url: "/duelo",    icon: Swords },
   { title: "Perfil",    url: "/perfil",   icon: User2 },
 ];
 

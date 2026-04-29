@@ -21,8 +21,9 @@ import {
   SYMBOLS, SYMBOL_MAP, TIMEFRAMES, seedCandles, nextCandle, fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { TradeShareModal } from "@/components/TradeShareModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -795,47 +796,65 @@ function PositionsTable({
 ============================================================ */
 
 function HistoryTable({ history }: { history: ReturnType<typeof useAppStore.getState>["sim"]["history"] }) {
+  const [shareTarget, setShareTarget] = useState<typeof history[0] | null>(null);
+
   if (history.length === 0) {
     return <div className="px-5 py-10 text-center text-sm text-muted-foreground">Sem trades fechados ainda.</div>;
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-surface-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <tr>
-            <Th>Data</Th><Th>Símbolo</Th><Th>Lado</Th>
-            <Th right>Tam.</Th><Th right>Entrada</Th><Th right>Saída</Th>
-            <Th>Motivo</Th><Th>Nota</Th><Th right>P&L</Th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {history.map((t) => {
-            const meta = SYMBOL_MAP[t.symbol];
-            return (
-              <tr key={t.id} className="hover:bg-surface-1">
-                <Td className="text-xs text-muted-foreground">
-                  {new Date(t.closedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                </Td>
-                <Td className="font-semibold">{t.symbol}</Td>
-                <Td>
-                  <Badge className={t.side === "buy" ? "bg-bull/15 text-bull" : "bg-bear/15 text-bear"}>
-                    {t.side === "buy" ? "BUY" : "SELL"}
-                  </Badge>
-                </Td>
-                <Td right mono>{t.size}</Td>
-                <Td right mono>{fmtPrice(t.entryPrice, meta.precision)}</Td>
-                <Td right mono>{fmtPrice(t.exitPrice, meta.precision)}</Td>
-                <Td className="text-xs text-muted-foreground capitalize">
-                  {t.reason === "stop" ? "Stop loss" : t.reason === "target" ? "Take profit" : t.reason === "liquidation" ? "Liquidação" : "Manual"}
-                </Td>
-                <Td className="max-w-[120px] truncate text-xs text-muted-foreground">{t.note || "—"}</Td>
-                <Td right mono className={t.pnl >= 0 ? "text-bull font-semibold" : "text-bear font-semibold"}>{fmtUSD(t.pnl)}</Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <Th>Data</Th><Th>Símbolo</Th><Th>Lado</Th>
+              <Th right>Tam.</Th><Th right>Entrada</Th><Th right>Saída</Th>
+              <Th>Motivo</Th><Th>Nota</Th><Th right>P&L</Th><Th></Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {history.map((t) => {
+              const meta = SYMBOL_MAP[t.symbol];
+              return (
+                <tr key={t.id} className="group hover:bg-surface-1">
+                  <Td className="text-xs text-muted-foreground">
+                    {new Date(t.closedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </Td>
+                  <Td className="font-semibold">{t.symbol}</Td>
+                  <Td>
+                    <Badge className={t.side === "buy" ? "bg-bull/15 text-bull" : "bg-bear/15 text-bear"}>
+                      {t.side === "buy" ? "BUY" : "SELL"}
+                    </Badge>
+                  </Td>
+                  <Td right mono>{t.size}</Td>
+                  <Td right mono>{fmtPrice(t.entryPrice, meta.precision)}</Td>
+                  <Td right mono>{fmtPrice(t.exitPrice, meta.precision)}</Td>
+                  <Td className="text-xs text-muted-foreground capitalize">
+                    {t.reason === "stop" ? "Stop loss" : t.reason === "target" ? "Take profit" : t.reason === "liquidation" ? "Liquidação" : "Manual"}
+                  </Td>
+                  <Td className="max-w-[120px] truncate text-xs text-muted-foreground">{t.note || "—"}</Td>
+                  <Td right mono className={t.pnl >= 0 ? "text-bull font-semibold" : "text-bear font-semibold"}>{fmtUSD(t.pnl)}</Td>
+                  <Td>
+                    <button
+                      onClick={() => setShareTarget(t)}
+                      className="rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-2"
+                      title="Partilhar trade"
+                    >
+                      <Share2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <TradeShareModal
+        trade={shareTarget}
+        open={shareTarget !== null}
+        onClose={() => setShareTarget(null)}
+      />
+    </>
   );
 }
 

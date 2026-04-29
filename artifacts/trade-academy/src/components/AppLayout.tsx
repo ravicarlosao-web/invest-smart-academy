@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import OnboardingOverlay from "./OnboardingOverlay";
+import { NotificationCenter } from "./NotificationCenter";
 import { Flame } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -13,6 +14,7 @@ const titles: Record<string, string> = {
   "/glossario": "Glossário",
   "/recursos": "Recursos",
   "/configuracoes": "Configurações",
+  "/duelo": "Duelos",
 };
 
 export default function AppLayout() {
@@ -33,12 +35,13 @@ export default function AppLayout() {
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
               <h1 className="text-base font-semibold tracking-tight">{title}</h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="hidden items-center gap-1.5 rounded-md bg-surface-2 px-2.5 py-1 sm:flex">
                 <Flame className="h-3.5 w-3.5 text-warning" />
                 <span className="font-mono text-xs font-semibold">{streak}</span>
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">dias</span>
               </div>
+              <NotificationCenter />
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-xs font-bold text-primary-foreground">
                 T
               </div>

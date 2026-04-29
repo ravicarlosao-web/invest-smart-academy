@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ACHIEVEMENT_MAP, getDailyMissions, MISSION_POOL, MissionType } from "@/data/gamification";
 import { LEVELS } from "@/data/curriculum";
+import type { AppNotification } from "@/data/notifications";
 
 /* ============== Tipos base ============== */
 
@@ -138,6 +139,21 @@ export interface SimState {
   challenges: Challenge[];
 }
 
+/* ============== Duelo ============== */
+export interface DueloEntry {
+  id: string;
+  title: string;
+  targetEquity: number;
+  startBalance: number;
+  maxDrawdownPct: number;
+  maxTrades: number;
+  expiresAt: number;
+  createdAt: number;
+  startEquity: number;
+  accepted: boolean;
+  code: string;
+}
+
 interface AppState {
   progress: ProgressState;
   sim: SimState;
@@ -145,6 +161,9 @@ interface AppState {
   userLevel: "iniciante" | "intermediario" | "avancado" | null;
   userInterests: string[];
   settings: Settings;
+  notifications: AppNotification[];
+  seenAchievements: string[];
+  duelos: DueloEntry[];
 
   // onboarding / settings
   completeOnboarding: (level: string, interests: string[]) => void;
@@ -168,6 +187,17 @@ interface AppState {
   recordEquity: (priceMap: Record<string, number>) => void;
   startChallenge: (id: string) => void;
   resetSim: () => void;
+
+  // notification actions
+  addNotification: (n: Omit<AppNotification, "id" | "read" | "createdAt">) => void;
+  markAllRead: () => void;
+  dismissNotification: (id: string) => void;
+  markAchievementsSeen: (ids: string[]) => void;
+
+  // duelo actions
+  createDuelo: (d: Omit<DueloEntry, "id" | "createdAt" | "accepted" | "code" | "startEquity">) => string;
+  acceptDuelo: (code: string, currentEquity: number) => boolean;
+  removeDuelo: (id: string) => void;
 }
 
 const initialSettings: Settings = {
@@ -356,6 +386,9 @@ export const useAppStore = create<AppState>()(
       userLevel: null,
       userInterests: [],
       settings: initialSettings,
+      notifications: [],
+      seenAchievements: [],
+      duelos: [],
 
       /* -------- Onboarding / Settings -------- */
       completeOnboarding: (level, interests) =>
@@ -702,6 +735,72 @@ export const useAppStore = create<AppState>()(
             equityHistory: [{ time: Date.now(), equity: 10_000 }],
           },
         }),
+
+      /* -------- Notifications -------- */
+      addNotification: (n) =>
+        set((s) => {
+          const id = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          const notif: AppNotification = { ...n, id, read: false, createdAt: Date.now() };
+          return { notifications: [notif, ...s.notifications].slice(0, 50) };
+        }),
+
+      markAllRead: () =>
+        set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+
+      dismissNotification: (id) =>
+        set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
+
+      markAchievementsSeen: (ids) =>
+        set((s) => ({ seenAchievements: [...new Set([...s.seenAchievements, ...ids])] })),
+
+      /* -------- Duelos -------- */
+      createDuelo: (d) => {
+        const id = `duelo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const code = btoa(JSON.stringify({ ...d, id })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+        const entry: DueloEntry = {
+          ...d,
+          id,
+          code,
+          createdAt: Date.now(),
+          accepted: false,
+          startEquity: 0,
+        };
+        set((s) => ({ duelos: [entry, ...s.duelos] }));
+        return code;
+      },
+
+      acceptDuelo: (code, currentEquity) => {
+        try {
+          const normalized = code.replace(/-/g, "+").replace(/_/g, "/");
+          const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+          const data = JSON.parse(atob(padded));
+          const existing = get().duelos.find((d) => d.id === data.id || d.code === code);
+          if (existing) {
+            if (!existing.accepted) {
+              set((s) => ({
+                duelos: s.duelos.map((d) =>
+                  d.id === existing.id ? { ...d, accepted: true, startEquity: currentEquity } : d
+                ),
+              }));
+            }
+            return true;
+          }
+          const entry: DueloEntry = {
+            ...data,
+            code,
+            createdAt: Date.now(),
+            accepted: true,
+            startEquity: currentEquity,
+          };
+          set((s) => ({ duelos: [entry, ...s.duelos] }));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      removeDuelo: (id) =>
+        set((s) => ({ duelos: s.duelos.filter((d) => d.id !== id) })),
     }),
     { name: "tradeacademy-store-v2" },
   ),

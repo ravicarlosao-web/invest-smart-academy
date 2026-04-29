@@ -12,6 +12,7 @@ import Perfil from "./pages/Perfil";
 import Glossario from "./pages/Glossario";
 import Recursos from "./pages/Recursos";
 import Configuracoes from "./pages/Configuracoes";
+import Duelo from "./pages/Duelo";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/glossario" element={<Glossario />} />
             <Route path="/recursos" element={<Recursos />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/duelo" element={<Duelo />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
