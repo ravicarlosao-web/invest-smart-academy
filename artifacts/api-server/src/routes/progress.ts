@@ -22,6 +22,11 @@ router.get("/:userId", async (req, res) => {
       achievements:     JSON.parse(row.achievements),
       reviewQueue:      JSON.parse(row.reviewQueue),
       dailyMissions:    JSON.parse(row.dailyMissions),
+      userInterests:    JSON.parse(row.userInterests),
+      settings:         JSON.parse(row.settings),
+      booksProgress:    JSON.parse(row.booksProgress),
+      seenAchievements: JSON.parse(row.seenAchievements),
+      onboarded:        row.onboarded === 1,
     });
   } catch (err) {
     req.log.error(err);
@@ -29,7 +34,7 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
-/** PUT /api/progress/:userId — upsert full progress */
+/** PUT /api/progress/:userId — upsert full progress + settings + onboarding */
 router.put("/:userId", async (req, res) => {
   try {
     const body = req.body;
@@ -47,6 +52,13 @@ router.put("/:userId", async (req, res) => {
       achievements:     JSON.stringify(body.achievements     ?? []),
       reviewQueue:      JSON.stringify(body.reviewQueue      ?? []),
       dailyMissions:    JSON.stringify(body.dailyMissions    ?? []),
+      onboarded:        body.onboarded ? 1 : 0,
+      userLevel:        body.userLevel         ?? null,
+      userInterests:    JSON.stringify(body.userInterests    ?? []),
+      settings:         JSON.stringify(body.settings         ?? {}),
+      booksProgress:    JSON.stringify(body.booksProgress    ?? {}),
+      seenAchievements: JSON.stringify(body.seenAchievements ?? []),
+      simCashBalance:   body.simCashBalance    ?? 10000,
       updatedAt:        now,
     };
 

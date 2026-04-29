@@ -4,14 +4,15 @@ import { z } from "zod";
 
 /**
  * users
- * One row per anonymous session (identified by a UUID stored in localStorage).
- * No real authentication — anonymous_id is generated on first app load.
+ * One row per registered account.
  */
 export const usersTable = sqliteTable("users", {
-  id:          text("id").primaryKey(),           // UUID
-  anonymousId: text("anonymous_id").notNull().unique(),
-  createdAt:   integer("created_at").notNull(),   // Unix ms
-  updatedAt:   integer("updated_at").notNull(),
+  id:           text("id").primaryKey(),
+  name:         text("name"),
+  email:        text("email"),
+  passwordHash: text("password_hash"),
+  createdAt:    integer("created_at").notNull(),
+  updatedAt:    integer("updated_at").notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable);

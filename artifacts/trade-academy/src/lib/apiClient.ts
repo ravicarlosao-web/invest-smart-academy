@@ -4,11 +4,6 @@
  * Base URL resolves automatically:
  *   - Replit dev/prod → uses VITE_API_BASE_URL (set to /api-server/api)
  *   - Vercel          → falls back to /api (matched by vercel.json rewrite)
- *
- * Usage:
- *   import { api } from "@/lib/apiClient";
- *   await api.progress.save(userId, progressState);
- *   const trades = await api.trades.list(userId);
  */
 
 const API_PREFIX: string =
@@ -34,47 +29,59 @@ async function request<T>(
 }
 
 export const api = {
+  /* ---------- Auth ---------- */
+  auth: {
+    register: (data: { id: string; name: string; email: string; passwordHash: string }) =>
+      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+        "POST", "/auth/register", data,
+      ),
+    login: (data: { email: string; passwordHash: string }) =>
+      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+        "POST", "/auth/login", data,
+      ),
+  },
+
   /* ---------- Progress ---------- */
   progress: {
-    get: (userId: string) =>
-      request("GET", `/progress/${userId}`),
+    get:  (userId: string) =>
+      request<Record<string, unknown>>("GET", `/progress/${userId}`),
     save: (userId: string, data: Record<string, unknown>) =>
-      request("PUT", `/progress/${userId}`, data),
+      request<{ ok: boolean }>("PUT", `/progress/${userId}`, data),
   },
 
   /* ---------- Trades ---------- */
   trades: {
-    list: (userId: string, limit = 500) =>
-      request("GET", `/trades/${userId}?limit=${limit}`),
-    sync: (userId: string, trades: unknown[]) =>
-      request("POST", `/trades/${userId}`, trades),
+    list:  (userId: string, limit = 500) =>
+      request<unknown[]>("GET", `/trades/${userId}?limit=${limit}`),
+    sync:  (userId: string, trades: unknown[]) =>
+      request<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
     clear: (userId: string) =>
-      request("DELETE", `/trades/${userId}`),
+      request<{ ok: boolean }>("DELETE", `/trades/${userId}`),
   },
 
   /* ---------- Notifications ---------- */
   notifications: {
-    list: (userId: string) =>
-      request("GET", `/notifications/${userId}`),
-    create: (userId: string, n: Record<string, unknown>) =>
-      request("POST", `/notifications/${userId}`, n),
+    list:    (userId: string) =>
+      request<unknown[]>("GET", `/notifications/${userId}`),
+    create:  (userId: string, n: Record<string, unknown>) =>
+      request<{ ok: boolean; id: string }>("POST", `/notifications/${userId}`, n),
     readAll: (userId: string) =>
-      request("PATCH", `/notifications/${userId}/read-all`, {}),
+      request<{ ok: boolean }>("PATCH", `/notifications/${userId}/read-all`, {}),
     dismiss: (userId: string, id: string) =>
-      request("DELETE", `/notifications/${userId}/${id}`),
+      request<{ ok: boolean }>("DELETE", `/notifications/${userId}/${id}`),
   },
 
   /* ---------- Duelos ---------- */
   duelos: {
-    list: (userId: string) =>
-      request("GET", `/duelos/${userId}`),
+    list:   (userId: string) =>
+      request<unknown[]>("GET", `/duelos/${userId}`),
     byCode: (code: string) =>
-      request("GET", `/duelos/code/${code}`),
+      request<unknown>("GET", `/duelos/code/${code}`),
     create: (userId: string, d: Record<string, unknown>) =>
-      request("POST", `/duelos/${userId}`, d),
+      request<{ ok: boolean; id: string; code: string }>("POST", `/duelos/${userId}`, d),
     update: (userId: string, id: string, patch: Record<string, unknown>) =>
-      request("PATCH", `/duelos/${userId}/${id}`, patch),
+      request<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
-      request("DELETE", `/duelos/${userId}/${id}`),
+      request<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
   },
 } as const;
