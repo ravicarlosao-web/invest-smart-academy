@@ -1,21 +1,22 @@
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql/http";
 import * as schema from "./schema";
 
-const tursoUrl   = process.env["TURSO_DATABASE_URL"];
+const rawUrl    = process.env["TURSO_DATABASE_URL"];
 const tursoToken = process.env["TURSO_AUTH_TOKEN"];
 
-if (!tursoUrl) {
+if (!rawUrl) {
   throw new Error(
     "TURSO_DATABASE_URL must be set. " +
     "Create a database at turso.tech and set the secret in the Replit Secrets tab.",
   );
 }
 
-const client = createClient({
-  url:       tursoUrl,
-  authToken: tursoToken ?? undefined,
+/* Turso URLs use the libsql:// scheme; the HTTP-only client needs https:// */
+const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
+
+export const db = drizzle({
+  connection: { url: tursoUrl, authToken: tursoToken ?? undefined },
+  schema,
 });
 
-export const db = drizzle(client, { schema });
 export * from "./schema";
