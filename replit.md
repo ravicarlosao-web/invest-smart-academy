@@ -16,6 +16,11 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+- **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language. No backend — all data is static/local.
+- **api-server** (`artifacts/api-server/`) — Express 5 backend. Currently only has a health check endpoint. Can be extended for user data persistence, leaderboards, etc.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
