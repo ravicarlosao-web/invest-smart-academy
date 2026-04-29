@@ -241,11 +241,11 @@ export default function Simular() {
             <span className="hidden sm:inline pulse-dot ml-1 h-1.5 w-1.5 rounded-full bg-primary" />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-right">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-right">
           <Stat label="Saldo" value={fmtUSD(cash)} />
-          <Stat label="Margem usada" value={fmtUSD(usedMargin)} />
-          <Stat label="P&L aberto" value={fmtUSD(upnl)} accent={upnl >= 0 ? "bull" : "bear"} />
-          <Stat label="Patrimônio" value={fmtUSD(equityVal)} highlight />
+          <Stat label="Margem" value={fmtUSD(usedMargin)} />
+          <Stat label="P&L" value={fmtUSD(upnl)} accent={upnl >= 0 ? "bull" : "bear"} />
+          <Stat label="Patrim." value={fmtUSD(equityVal)} highlight />
         </div>
       </div>
 
@@ -257,13 +257,13 @@ export default function Simular() {
         <div className="space-y-4">
           {/* Gráfico */}
           <Card className="overflow-hidden">
-            <div className="flex items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
+              <div className="flex flex-wrap gap-1">
                 {TIMEFRAMES.map((t, i) => (
                   <button
                     key={t.label}
                     onClick={() => setTfIdx(i)}
-                    className={`rounded px-2.5 py-1 font-mono text-[11px] font-semibold transition-colors ${
+                    className={`rounded px-2 py-1 font-mono text-[11px] font-semibold transition-colors sm:px-2.5 ${
                       i === tfIdx ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-2"
                     }`}
                   >

@@ -148,9 +148,9 @@ export default function Landing() {
             </div>
           </div>
           {/* fake dashboard content */}
-          <div className="p-6 grid grid-cols-3 gap-4">
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* chart placeholder */}
-            <div className="col-span-2 bg-[#13161e] rounded-xl p-4 h-36 flex flex-col justify-between">
+            <div className="sm:col-span-2 bg-[#13161e] rounded-xl p-4 h-36 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 font-medium">BTC/USD — Simulador</span>
                 <span className="text-xs text-green-400 font-semibold">+2.4%</span>
@@ -170,20 +170,20 @@ export default function Landing() {
               </div>
             </div>
             {/* stats cards */}
-            <div className="flex flex-col gap-3">
-              <div className="bg-[#13161e] rounded-xl p-3 flex flex-col gap-1">
+            <div className="flex sm:flex-col gap-3">
+              <div className="flex-1 bg-[#13161e] rounded-xl p-3 flex flex-col gap-1">
                 <span className="text-[10px] text-gray-500">Saldo virtual</span>
                 <span className="text-lg font-bold text-white">$12 450</span>
                 <span className="text-xs text-green-400">+$450 hoje</span>
               </div>
-              <div className="bg-[#13161e] rounded-xl p-3 flex flex-col gap-1">
+              <div className="flex-1 bg-[#13161e] rounded-xl p-3 flex flex-col gap-1">
                 <span className="text-[10px] text-gray-500">Win rate</span>
                 <span className="text-lg font-bold text-cyan-400">64%</span>
                 <span className="text-xs text-gray-500">32 trades</span>
               </div>
             </div>
             {/* lessons row */}
-            <div className="col-span-3 grid grid-cols-3 gap-3">
+            <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {["Gestão de Risco", "Price Action", "Psicologia do Trader"].map((title, i) => (
                 <div key={i} className="bg-[#13161e] rounded-xl p-3 flex items-center gap-3">
                   <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">

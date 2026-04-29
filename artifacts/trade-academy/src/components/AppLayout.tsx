@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { BottomNav } from "./BottomNav";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { NotificationCenter } from "./NotificationCenter";
 import { Flame, LogOut } from "lucide-react";
@@ -42,23 +43,32 @@ export default function AppLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <h1 className="text-base font-semibold tracking-tight">{title}</h1>
+        {/* Sidebar — hidden on mobile, desktop shows collapsed icon rail */}
+        <div className="hidden md:block">
+          <AppSidebar />
+        </div>
+
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Header */}
+          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 px-3 backdrop-blur-md sm:px-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              {/* Sidebar trigger — only desktop */}
+              <span className="hidden md:block">
+                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              </span>
+              <h1 className="text-sm font-semibold tracking-tight sm:text-base truncate">{title}</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-1.5 rounded-md bg-surface-2 px-2.5 py-1 sm:flex">
-                <Flame className="h-3.5 w-3.5 text-warning" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* Streak badge */}
+              <div className="flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 sm:px-2.5">
+                <Flame className="h-3 w-3 text-warning sm:h-3.5 sm:w-3.5" />
                 <span className="font-mono text-xs font-semibold">{streak}</span>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">dias</span>
+                <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">dias</span>
               </div>
               <NotificationCenter />
               <ThemeToggle />
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-xs font-bold text-primary-foreground cursor-default select-none"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-primary text-[11px] font-bold text-primary-foreground cursor-default select-none sm:h-8 sm:w-8 sm:text-xs"
                 title={user?.name ?? ""}
               >
                 {initial}
@@ -66,19 +76,25 @@ export default function AppLayout() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground sm:h-8 sm:w-8"
                 title="Terminar sessão"
                 onClick={handleLogout}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </header>
-          <main className="flex-1 animate-fade-in-up">
+
+          {/* Page content — extra bottom padding on mobile for the BottomNav */}
+          <main className="flex-1 animate-fade-in-up pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
             <Outlet />
           </main>
         </div>
       </div>
+
+      {/* Bottom navigation — mobile only */}
+      <BottomNav />
+
       {!onboarded && <OnboardingOverlay />}
     </SidebarProvider>
   );
