@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LEVELS } from "@/data/curriculum";
 import { useAppStore } from "@/store/useAppStore";
-import { Check, Lock, Sparkles, ChevronRight } from "lucide-react";
+import { Check, Lock, Sparkles, ChevronRight, BookMarked, RotateCcw } from "lucide-react";
 
 const difficultyLabel = {
   iniciante: "Iniciante",
@@ -13,6 +13,19 @@ const difficultyLabel = {
 
 export default function Aprender() {
   const completed = useAppStore((s) => s.progress.completedLessons);
+  const reviewQueue = useAppStore((s) => s.progress.reviewQueue ?? []);
+  const removeFromReview = useAppStore((s) => s.removeFromReview);
+
+  // All lessons in review queue with their metadata
+  const reviewLessons = reviewQueue
+    .map((id) => {
+      for (const lvl of LEVELS) {
+        const ls = lvl.lessons.find((l) => l.id === id);
+        if (ls) return { lesson: ls, level: lvl };
+      }
+      return null;
+    })
+    .filter(Boolean) as { lesson: (typeof LEVELS)[0]["lessons"][0]; level: (typeof LEVELS)[0] }[];
 
   // desbloqueio sequencial: nível desbloqueado se nível anterior 100% feito (nível 1 sempre liberado)
   const levelUnlocked = (idx: number): boolean => {
@@ -29,6 +42,48 @@ export default function Aprender() {
           Avance pelos níveis na ordem. Cada aula libera a próxima e dá XP.
         </p>
       </div>
+
+      {/* ── Review Queue ── */}
+      {reviewLessons.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <BookMarked className="h-4 w-4 text-warning" />
+            <h3 className="text-sm font-semibold text-warning">Para Revisar ({reviewLessons.length})</h3>
+          </div>
+          <Card className="overflow-hidden border-warning/30">
+            <div className="divide-y divide-border">
+              {reviewLessons.map(({ lesson, level }) => (
+                <div key={lesson.id} className="flex items-center justify-between gap-3 px-5 py-3.5 bg-warning/5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{lesson.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">N{level.id} · {level.title}</p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Link
+                      to={`/aprender/${lesson.id}`}
+                      className="rounded-md bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/25 transition-colors"
+                    >
+                      Rever
+                    </Link>
+                    <button
+                      onClick={() => removeFromReview(lesson.id)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      title="Remover da lista de revisão"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="space-y-4">
         {LEVELS.map((level, idx) => {

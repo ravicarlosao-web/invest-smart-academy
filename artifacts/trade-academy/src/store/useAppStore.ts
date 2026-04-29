@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { ACHIEVEMENT_MAP, getDailyMissions, MISSION_POOL, MissionType } from "@/data/gamification";
+import { LEVELS } from "@/data/curriculum";
 
 /* ============== Tipos base ============== */
 
@@ -108,6 +110,12 @@ export interface Settings {
   autoSaveNotes: boolean;
 }
 
+export interface DailyMissionState {
+  id: string;
+  progress: number;
+  completed: boolean;
+}
+
 export interface ProgressState {
   xp: number;
   completedLessons: string[];
@@ -115,6 +123,10 @@ export interface ProgressState {
   streakDays: number;
   lastActivityDay: string | null;
   achievements: string[];
+  reviewQueue: string[];
+  perfectQuizCount: number;
+  dailyMissions: DailyMissionState[];
+  missionDate: string | null;
 }
 
 export interface SimState {
@@ -141,6 +153,10 @@ interface AppState {
   // progress actions
   completeLesson: (lessonId: string, xp: number, scorePct: number) => void;
   resetProgress: () => void;
+  addToReview: (lessonId: string) => void;
+  removeFromReview: (lessonId: string) => void;
+  tickMission: (type: MissionType, increment?: number) => void;
+  refreshDailyMissions: () => void;
 
   // sim actions
   openPosition: (p: Omit<Position, "id" | "openedAt">) => string | null;
@@ -172,7 +188,64 @@ const initialProgress: ProgressState = {
   streakDays: 0,
   lastActivityDay: null,
   achievements: [],
+  reviewQueue: [],
+  perfectQuizCount: 0,
+  dailyMissions: [],
+  missionDate: null,
 };
+
+/* Helper: build DailyMissionState[] for a date */
+function buildMissionsForDate(dateStr: string): DailyMissionState[] {
+  return getDailyMissions(dateStr).map((m) => ({ id: m.id, progress: 0, completed: false }));
+}
+
+/* Helper: compute which achievements should be unlocked */
+function computeAchievements(
+  prev: string[],
+  p: ProgressState,
+  history: ClosedTrade[],
+): string[] {
+  const earned = new Set(prev);
+  const wins = history.filter((t) => t.pnl > 0);
+  const totalPnl = history.reduce((s, t) => s + t.pnl, 0);
+  const winRate = history.length >= 10 ? wins.length / history.length : 0;
+  const level1 = LEVELS[0];
+  const level1Done = level1.lessons.every((l) => p.completedLessons.includes(l.id));
+
+  const checks: [string, boolean][] = [
+    ["first-lesson",   p.completedLessons.length >= 1],
+    ["five-lessons",   p.completedLessons.length >= 5],
+    ["ten-lessons",    p.completedLessons.length >= 10],
+    ["twenty-lessons", p.completedLessons.length >= 20],
+    ["all-lessons",    p.completedLessons.length >= 40],
+    ["perfect-quiz",   p.perfectQuizCount >= 1],
+    ["three-perfects", p.perfectQuizCount >= 3],
+    ["level-1-done",   level1Done],
+    ["streak-3",       p.streakDays >= 3],
+    ["streak-7",       p.streakDays >= 7],
+    ["streak-14",      p.streakDays >= 14],
+    ["streak-30",      p.streakDays >= 30],
+    ["first-trade",    history.length >= 1],
+    ["first-profit",   wins.length >= 1],
+    ["profit-100",     totalPnl >= 100],
+    ["profit-500",     totalPnl >= 500],
+    ["trades-10",      history.length >= 10],
+    ["trades-50",      history.length >= 50],
+    ["trades-100",     history.length >= 100],
+    ["win-rate-60",    winRate >= 0.6],
+    ["xp-100",         p.xp >= 100],
+    ["xp-500",         p.xp >= 500],
+    ["xp-1000",        p.xp >= 1000],
+    ["xp-2500",        p.xp >= 2500],
+    ["challenge-done", false], // handled separately on challenge complete
+  ];
+
+  for (const [id, cond] of checks) {
+    if (cond && ACHIEVEMENT_MAP[id]) earned.add(id);
+  }
+
+  return Array.from(earned);
+}
 
 function buildInitialChallenges(): Challenge[] {
   return CHALLENGES.map((c) => ({
@@ -256,6 +329,22 @@ export function calcSharpe(equityHistory: EquityPoint[]): number {
   return (mean / stdDev) * Math.sqrt(252);
 }
 
+/* Helper: tick missions of a given type */
+function tickMissions(
+  missions: DailyMissionState[],
+  type: MissionType,
+  increment: number,
+): DailyMissionState[] {
+  if (increment === 0) return missions;
+  return missions.map((m) => {
+    if (m.completed) return m;
+    const def = MISSION_POOL.find((p) => p.id === m.id);
+    if (!def || def.type !== type) return m;
+    const newProgress = m.progress + increment;
+    return { ...m, progress: newProgress, completed: newProgress >= def.target };
+  });
+}
+
 /* ============== Store ============== */
 
 export const useAppStore = create<AppState>()(
@@ -276,7 +365,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ settings: { ...s.settings, ...partial } })),
 
       /* -------- Progress -------- */
-      completeLesson: (lessonId, xp, scorePct) =>
+      completeLesson: (lessonId, xpEarned, scorePct) =>
         set((s) => {
           const already = s.progress.completedLessons.includes(lessonId);
           const t = today();
@@ -284,35 +373,107 @@ export const useAppStore = create<AppState>()(
           let streak = s.progress.streakDays;
           if (last !== t) {
             if (last) {
-              const d1 = new Date(last);
-              const d2 = new Date(t);
-              const diff = Math.round((d2.getTime() - d1.getTime()) / 86_400_000);
+              const diff = Math.round((new Date(t).getTime() - new Date(last).getTime()) / 86_400_000);
               streak = diff === 1 ? streak + 1 : 1;
             } else {
               streak = 1;
             }
           }
-          const newAch = new Set(s.progress.achievements);
-          if (!already) {
-            if (s.progress.completedLessons.length + 1 >= 1) newAch.add("first-lesson");
-            if (s.progress.completedLessons.length + 1 >= 5) newAch.add("five-lessons");
-            if (s.progress.xp + xp >= 200) newAch.add("xp-200");
+
+          const isPerfect = scorePct === 100;
+          const newPerfectCount = s.progress.perfectQuizCount + (isPerfect && !already ? 1 : 0);
+          const newXp = s.progress.xp + (already ? Math.round(xpEarned * 0.25) : xpEarned);
+          const newCompleted = already
+            ? s.progress.completedLessons
+            : [...s.progress.completedLessons, lessonId];
+
+          // Review queue: add if score < 80%; remove if re-completed with 80%+
+          let reviewQueue = [...(s.progress.reviewQueue ?? [])];
+          if (!already && scorePct < 80) {
+            if (!reviewQueue.includes(lessonId)) reviewQueue.push(lessonId);
+          } else if (scorePct >= 80) {
+            reviewQueue = reviewQueue.filter((id) => id !== lessonId);
           }
-          if (streak >= 3) newAch.add("streak-3");
+
+          // Build provisional state for achievement computation
+          const provisional: ProgressState = {
+            ...s.progress,
+            xp: newXp,
+            completedLessons: newCompleted,
+            streakDays: streak,
+            perfectQuizCount: newPerfectCount,
+            reviewQueue,
+          };
+          const newAchievements = computeAchievements(s.progress.achievements, provisional, s.sim.history);
+
+          // Tick daily missions
+          const t2 = today();
+          let missions = (s.progress.missionDate === t2 ? s.progress.dailyMissions : buildMissionsForDate(t2));
+          const mDate = t2;
+          missions = tickMissions(missions, "lessons", already ? 0 : 1);
+          if (isPerfect && !already) missions = tickMissions(missions, "perfect_quiz", 1);
+
           return {
             progress: {
               ...s.progress,
-              xp: s.progress.xp + (already ? Math.round(xp * 0.25) : xp),
-              completedLessons: already ? s.progress.completedLessons : [...s.progress.completedLessons, lessonId],
+              xp: newXp,
+              completedLessons: newCompleted,
               quizScores: { ...s.progress.quizScores, [lessonId]: scorePct },
               streakDays: streak,
               lastActivityDay: t,
-              achievements: Array.from(newAch),
+              achievements: newAchievements,
+              perfectQuizCount: newPerfectCount,
+              reviewQueue,
+              dailyMissions: missions,
+              missionDate: mDate,
             },
           };
         }),
 
       resetProgress: () => set({ progress: initialProgress }),
+
+      addToReview: (lessonId) =>
+        set((s) => {
+          const q = s.progress.reviewQueue ?? [];
+          if (q.includes(lessonId)) return s;
+          return { progress: { ...s.progress, reviewQueue: [...q, lessonId] } };
+        }),
+
+      removeFromReview: (lessonId) =>
+        set((s) => ({
+          progress: {
+            ...s.progress,
+            reviewQueue: (s.progress.reviewQueue ?? []).filter((id) => id !== lessonId),
+          },
+        })),
+
+      tickMission: (type, increment = 1) =>
+        set((s) => {
+          const t = today();
+          const missions = s.progress.missionDate === t
+            ? s.progress.dailyMissions
+            : buildMissionsForDate(t);
+          return {
+            progress: {
+              ...s.progress,
+              dailyMissions: tickMissions(missions, type, increment),
+              missionDate: t,
+            },
+          };
+        }),
+
+      refreshDailyMissions: () =>
+        set((s) => {
+          const t = today();
+          if (s.progress.missionDate === t) return s;
+          return {
+            progress: {
+              ...s.progress,
+              dailyMissions: buildMissionsForDate(t),
+              missionDate: t,
+            },
+          };
+        }),
 
       /* -------- Positions -------- */
       openPosition: (p) => {
@@ -356,18 +517,40 @@ export const useAppStore = create<AppState>()(
           const closed: ClosedTrade = { ...pos, closedAt: Date.now(), exitPrice, pnl, reason };
           const newCash = s.sim.cashBalance + refund;
           const newPositions = s.sim.positions.filter((p) => p.id !== id);
-
-          // Check challenge progress
           const newHistory = [closed, ...s.sim.history].slice(0, 500);
+
+          // Check challenge progress + challenge-done achievement
+          let challengeDone = false;
           const updatedChallenges = s.sim.challenges.map((ch) => {
             if (!ch.active || ch.completed || ch.failed) return ch;
-            const totalTradesDone = newHistory.length;
             const peakEquity = Math.max(ch.peakEquity, newCash);
             const drawdownPct = peakEquity > 0 ? ((peakEquity - newCash) / peakEquity) * 100 : 0;
             const failed = drawdownPct > ch.maxDrawdownPct;
-            const completed = !failed && newCash >= ch.targetEquity && totalTradesDone >= ch.minTrades;
+            const completed = !failed && newCash >= ch.targetEquity && newHistory.length >= ch.minTrades;
+            if (completed) challengeDone = true;
             return { ...ch, peakEquity, completed, failed };
           });
+
+          // Update achievements with sim data
+          const provisionalProgress: ProgressState = {
+            ...s.progress,
+            achievements: challengeDone
+              ? [...new Set([...s.progress.achievements, "challenge-done"])]
+              : s.progress.achievements,
+          };
+          const newAchievements = computeAchievements(
+            provisionalProgress.achievements,
+            provisionalProgress,
+            newHistory,
+          );
+
+          // Tick daily trade missions
+          const t = today();
+          let missions = s.progress.missionDate === t
+            ? [...s.progress.dailyMissions]
+            : buildMissionsForDate(t);
+          missions = tickMissions(missions, "trades", 1);
+          if (pnl > 0) missions = tickMissions(missions, "profitable_trades", 1);
 
           return {
             sim: {
@@ -377,6 +560,12 @@ export const useAppStore = create<AppState>()(
               history: newHistory,
               challenges: updatedChallenges,
               equityHistory: [...s.sim.equityHistory, { time: Date.now(), equity: newCash }].slice(-500),
+            },
+            progress: {
+              ...s.progress,
+              achievements: newAchievements,
+              dailyMissions: missions,
+              missionDate: t,
             },
           };
         }),
