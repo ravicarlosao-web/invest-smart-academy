@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import type { Question } from "@/data/curriculum";
 import { useAppStore } from "@/store/useAppStore";
 import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { ChartMarkExercise, evaluateMarks, type MarkLine } from "@/components/ChartMarkExercise";
+
+type Answer = number | boolean | MarkLine[];
 
 type Phase = "content" | "quiz" | "result";
 
