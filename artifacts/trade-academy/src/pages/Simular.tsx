@@ -931,13 +931,19 @@ function OrderPanel({
   const [sl, setSl] = useState<string>("");
   const [tp, setTp] = useState<string>("");
 
+  // Reset form only when the symbol changes, not on every price tick.
+  // defaultSize changes every second because lastPrice is live — keeping it
+  // in the dependency array would clear SL/TP on every candle update.
+  const defaultSizeRef = useRef(defaultSize);
   useEffect(() => {
+    defaultSizeRef.current = defaultSize;
     setSize(String(defaultSize));
     setSl("");
     setTp("");
     setTriggerPrice("");
     setNote("");
-  }, [symbol, defaultSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol]); // intentionally omit defaultSize — we only want to reset on symbol change
 
   const sizeNum = parseFloat(size) || 0;
   const slNum = sl ? parseFloat(sl) : NaN;
