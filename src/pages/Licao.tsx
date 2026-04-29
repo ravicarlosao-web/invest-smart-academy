@@ -30,7 +30,7 @@ export default function Licao() {
   const [phase, setPhase] = useState<Phase>("content");
   const [contentIdx, setContentIdx] = useState(0);
   const [qIdx, setQIdx] = useState(0);
-  const [selected, setSelected] = useState<number | boolean | null>(null);
+  const [selected, setSelected] = useState<Answer | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
 
@@ -128,9 +128,26 @@ export default function Licao() {
   );
 }
 
-function isCorrect(q: Question, ans: number | boolean): boolean {
+function isCorrect(q: Question, ans: Answer): boolean {
   if (q.type === "multiple") return ans === q.correctIndex;
-  return ans === q.correct;
+  if (q.type === "truefalse") return ans === q.correct;
+  if (q.type === "markChart") {
+    if (!Array.isArray(ans)) return false;
+    const tol = (q.tolerancePct / 100) * computePriceRange(q.candles);
+    return evaluateMarks(ans as MarkLine[], q.supports, q.resistances, tol).correct;
+  }
+  return false;
+}
+
+function computePriceRange(candles: { l: number; h: number }[]) {
+  let lo = Infinity, hi = -Infinity;
+  for (const c of candles) {
+    if (c.l < lo) lo = c.l;
+    if (c.h > hi) hi = c.h;
+  }
+  // mesmo padding usado no componente (8% top/bottom)
+  const pad = (hi - lo) * 0.08;
+  return (hi + pad) - (lo - pad);
 }
 
 function ContentStep({
