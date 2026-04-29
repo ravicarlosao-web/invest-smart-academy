@@ -287,13 +287,14 @@ export default function Simular() {
               side: order.side,
               size: order.size,
               entryPrice: lastPrice,
+              leverage: order.leverage,
               stopLoss: order.stopLoss,
               takeProfit: order.takeProfit,
             });
             if (!id) {
-              toast.error("Saldo insuficiente para abrir essa posição.");
+              toast.error("Margem insuficiente para abrir essa posição.");
             } else {
-              toast.success(`${order.side === "buy" ? "Compra" : "Venda"} executada`, {
+              toast.success(`${order.side === "buy" ? "Compra" : "Venda"} ${order.leverage > 1 ? `${order.leverage}× ` : ""}executada`, {
                 description: `${order.size} ${symbol} @ ${fmtPrice(lastPrice, meta.precision)}`,
               });
             }
