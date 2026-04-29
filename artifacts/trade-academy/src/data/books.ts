@@ -10,7 +10,7 @@ export interface BookMeta {
   order:       number;
   title:       string;
   author:      string;
-  cover:       string;      // emoji
+  cover:       string;      // lucide icon name
   category:    string;
   description: string;
   pages:       number;      // estimativa para exibição
@@ -24,7 +24,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     order:    1,
     title:    "Fundamentos do Mercado Financeiro",
     author:   "TradeAcademy",
-    cover:    "📈",
+    cover:    "TrendingUp",
     category: "Iniciante",
     description:
       "Do zero ao básico: entenda como os mercados funcionam, quais são os principais activos e como começar a operar com segurança.",
@@ -132,7 +132,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     order:    2,
     title:    "Análise Técnica: O Guia Completo",
     author:   "TradeAcademy",
-    cover:    "📊",
+    cover:    "BarChart2",
     category: "Intermediário",
     description:
       "Aprenda a ler gráficos como um profissional: suporte e resistência, candlesticks, médias móveis, RSI, MACD e os padrões gráficos mais lucrativos.",
@@ -265,7 +265,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     order:    3,
     title:    "Gestão de Portfólio e Capital",
     author:   "TradeAcademy",
-    cover:    "💼",
+    cover:    "Briefcase",
     category: "Avançado",
     description:
       "Em breve — este livro será adicionado à biblioteca. Complete os livros anteriores para desbloqueá-lo.",

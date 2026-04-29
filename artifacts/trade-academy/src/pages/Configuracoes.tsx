@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, RotateCcw, Bell, Globe, Shield, Info, ChevronRight, AlertTriangle, Palette } from "lucide-react";
+import { Settings, RotateCcw, Bell, Globe, Shield, Info, ChevronRight, AlertTriangle, Palette, Sun, Moon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
@@ -60,7 +60,7 @@ export default function Configuracoes() {
             description="Idioma da interface da plataforma"
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">🇧🇷 Português</span>
+              <span className="text-sm font-medium flex items-center gap-2"><span className="text-xs font-bold text-green-500 bg-green-500/10 rounded px-1">PT</span>Português</span>
               <Badge variant="outline" className="text-[10px] h-5">
                 Único disponível
               </Badge>
@@ -90,7 +90,7 @@ export default function Configuracoes() {
                   : "border-border bg-surface-1 text-muted-foreground hover:text-foreground"
               }`}
             >
-              ☀️ Claro
+              <Sun className="h-4 w-4" /> Claro
             </button>
             <button
               onClick={() => setTheme("dark")}
@@ -100,7 +100,7 @@ export default function Configuracoes() {
                   : "border-border bg-surface-1 text-muted-foreground hover:text-foreground"
               }`}
             >
-              🌙 Escuro
+              <Moon className="h-4 w-4" /> Escuro
             </button>
           </div>
         </Section>

@@ -48,8 +48,8 @@ export function NotificationCenter() {
       if (!ach) continue;
       addNotification({
         type: "achievement",
-        title: `🏆 Conquista desbloqueada!`,
-        message: `${ach.emoji} ${ach.title} — +${ach.xpBonus} XP`,
+        title: `Conquista desbloqueada!`,
+        message: `${ach.title} — +${ach.xpBonus} XP`,
         link: "/perfil",
       });
     }

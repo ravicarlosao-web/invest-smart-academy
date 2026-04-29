@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { BookOpen, Lock, CheckCircle2, Clock, ChevronRight, Library } from "lucide-react";
+import { IconByName } from "@/components/IconByName";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/store/useAppStore";
@@ -66,14 +67,14 @@ export default function Biblioteca() {
             >
               <div className="flex items-start gap-4 p-4">
                 {/* Cover */}
-                <div className={`flex h-16 w-14 shrink-0 items-center justify-center rounded-lg text-3xl ${
+                <div className={`flex h-16 w-14 shrink-0 items-center justify-center rounded-lg ${
                   completed
                     ? "bg-bull/10 ring-1 ring-bull/30"
                     : unlocked
                     ? "bg-primary/10 ring-1 ring-primary/20"
                     : "bg-muted"
                 }`}>
-                  {book.cover}
+                  <IconByName name={book.cover} className="h-7 w-7 text-primary" />
                 </div>
 
                 {/* Info */}

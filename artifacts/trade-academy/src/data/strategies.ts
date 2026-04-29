@@ -4,7 +4,7 @@ export interface Strategy {
   id: string;
   name: string;
   subtitle: string;
-  emoji: string;
+  icon: string;
   timeframes: string[];
   markets: string[];
   riskLevel: RiskLevel;
@@ -28,7 +28,7 @@ export const STRATEGIES: Strategy[] = [
     id: "trend-following",
     name: "Seguimento de Tendência",
     subtitle: "Negocie a favor da direcção dominante do mercado",
-    emoji: "📈",
+    icon: "TrendingUp",
     timeframes: ["1H", "4H", "1D"],
     markets: ["Forex", "Cripto", "Ações", "Índices"],
     riskLevel: "Médio",
@@ -84,7 +84,7 @@ export const STRATEGIES: Strategy[] = [
     id: "mean-reversion",
     name: "Reversão à Média",
     subtitle: "Compra quando está barato demais, vende quando está caro demais",
-    emoji: "↩️",
+    icon: "Shuffle",
     timeframes: ["15M", "1H", "4H"],
     markets: ["Forex", "Ações", "Commodities"],
     riskLevel: "Médio",
@@ -140,7 +140,7 @@ export const STRATEGIES: Strategy[] = [
     id: "breakout",
     name: "Breakout de Consolidação",
     subtitle: "Captura explosões de volatilidade após períodos de compressão",
-    emoji: "💥",
+    icon: "Zap",
     timeframes: ["1H", "4H", "1D"],
     markets: ["Cripto", "Ações", "Forex", "Commodities"],
     riskLevel: "Alto",
@@ -196,7 +196,7 @@ export const STRATEGIES: Strategy[] = [
     id: "support-resistance",
     name: "Suporte e Resistência",
     subtitle: "A estratégia mais clássica e mais universalmente eficaz",
-    emoji: "🧱",
+    icon: "Layers",
     timeframes: ["1H", "4H", "1D"],
     markets: ["Todos"],
     riskLevel: "Baixo",
@@ -252,7 +252,7 @@ export const STRATEGIES: Strategy[] = [
     id: "swing-trading",
     name: "Swing Trading com Price Action",
     subtitle: "Captura oscilações de vários dias sem precisar de indicadores",
-    emoji: "🌊",
+    icon: "Waves",
     timeframes: ["4H", "1D"],
     markets: ["Ações", "Forex", "Cripto", "Índices"],
     riskLevel: "Médio",
@@ -308,7 +308,7 @@ export const STRATEGIES: Strategy[] = [
     id: "scalping",
     name: "Scalping de Curto Prazo",
     subtitle: "Muitas operações pequenas e rápidas ao longo do dia",
-    emoji: "⚡",
+    icon: "Zap",
     timeframes: ["1M", "5M"],
     markets: ["Forex", "Índices"],
     riskLevel: "Alto",
@@ -364,7 +364,7 @@ export const STRATEGIES: Strategy[] = [
     id: "momentum",
     name: "Momentum (RSI + MACD)",
     subtitle: "Segue a força do mercado quando tudo alinha na mesma direcção",
-    emoji: "🚀",
+    icon: "Rocket",
     timeframes: ["15M", "1H", "4H"],
     markets: ["Cripto", "Ações", "Forex"],
     riskLevel: "Médio",
@@ -420,7 +420,7 @@ export const STRATEGIES: Strategy[] = [
     id: "channel-trading",
     name: "Trading em Canal de Preço",
     subtitle: "Lucra nas oscilações dentro de um canal bem definido",
-    emoji: "🔀",
+    icon: "Shuffle",
     timeframes: ["1H", "4H"],
     markets: ["Forex", "Commodities", "Índices"],
     riskLevel: "Baixo",
@@ -476,7 +476,7 @@ export const STRATEGIES: Strategy[] = [
     id: "opening-range-breakout",
     name: "Breakout da Abertura (ORB)",
     subtitle: "Explora a volatilidade da primeira meia hora de mercado",
-    emoji: "🔔",
+    icon: "Bell",
     timeframes: ["5M", "15M"],
     markets: ["Ações", "Índices"],
     riskLevel: "Médio",
@@ -532,7 +532,7 @@ export const STRATEGIES: Strategy[] = [
     id: "divergence-trading",
     name: "Trading de Divergência",
     subtitle: "Antecipa reversões quando o preço e os indicadores divergem",
-    emoji: "🔭",
+    icon: "Telescope",
     timeframes: ["1H", "4H", "1D"],
     markets: ["Todos"],
     riskLevel: "Médio",

@@ -104,7 +104,7 @@ export default function Duelo() {
     setLastCode(code);
     addNotif({
       type: "duelo",
-      title: "⚔️ Duelo criado!",
+      title: "Duelo criado!",
       message: `"${title}" — partilha o código com os teus amigos`,
       link: "/duelo",
     });
@@ -125,7 +125,7 @@ export default function Duelo() {
     }
     addNotif({
       type: "duelo",
-      title: "⚔️ Entraste num Duelo!",
+      title: "Entraste num Duelo!",
       message: "Segue o teu progresso no separador Activos.",
       link: "/duelo",
     });
@@ -395,7 +395,7 @@ export default function Duelo() {
                       <div className="mt-3 flex items-center gap-2 rounded-lg bg-bull/10 px-4 py-2.5">
                         <Trophy className="h-4 w-4 text-bull" />
                         <p className="text-sm font-semibold text-bull">
-                          Objectivo atingido! Parabéns 🎉
+                          Objectivo atingido! Parabéns
                         </p>
                       </div>
                     )}

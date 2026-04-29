@@ -26,7 +26,7 @@ export function randomMarketAlert(): Omit<AppNotification, "id" | "read" | "crea
   const pct = a.pct();
   return {
     type: "market",
-    title: `📊 Alerta de mercado — ${a.symbol}`,
+    title: `Alerta de mercado — ${a.symbol}`,
     message: `${a.symbol} ${a.verb} ${pct}% — ${a.hint}`,
     link: "/simular",
   };

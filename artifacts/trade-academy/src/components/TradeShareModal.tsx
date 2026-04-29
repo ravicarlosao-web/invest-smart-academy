@@ -58,15 +58,15 @@ export function TradeShareModal({ trade, open, onClose }: Props) {
   }
 
   function copyText() {
-    const dir = trade.side === "buy" ? "📈 BUY" : "📉 SELL";
-    const emoji = isWin ? "✅" : "❌";
+    const dir = trade.side === "buy" ? "BUY" : "SELL";
+    const result = isWin ? "[WIN]" : "[LOSS]";
     const text = [
-      `${emoji} Trade no TradeAcademy`,
+      `${result} Trade no TradeAcademy`,
       `${dir} ${trade.symbol}`,
       `Entrada: ${fmtPrice(trade.entryPrice, prec)} → Saída: ${fmtPrice(trade.exitPrice, prec)}`,
       `P&L: ${fmtUSD(trade.pnl)} (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%)`,
       `Saída: ${reasonLabel}`,
-      `📊 tradeacademy.app`,
+      `tradeacademy.app`,
     ].join("\n");
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -74,7 +74,7 @@ export function TradeShareModal({ trade, open, onClose }: Props) {
   }
 
   async function nativeShare() {
-    const text = `${isWin ? "✅" : "❌"} ${trade.side === "buy" ? "📈 BUY" : "📉 SELL"} ${trade.symbol} — P&L: ${fmtUSD(trade.pnl)} (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%) · TradeAcademy`;
+    const text = `${isWin ? "[WIN]" : "[LOSS]"} ${trade.side === "buy" ? "BUY" : "SELL"} ${trade.symbol} — P&L: ${fmtUSD(trade.pnl)} (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%) · TradeAcademy`;
     if (navigator.share) {
       await navigator.share({ title: "Meu trade no TradeAcademy", text });
     } else {

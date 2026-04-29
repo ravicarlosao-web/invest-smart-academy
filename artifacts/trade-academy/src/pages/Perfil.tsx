@@ -27,7 +27,9 @@ import {
   CheckCircle2,
   Clock,
   Crown,
+  PartyPopper,
 } from "lucide-react";
+import { IconByName } from "@/components/IconByName";
 
 const CATEGORY_LABELS = {
   aprendizado: { label: "Aprendizado", color: "bg-primary/15 text-primary" },
@@ -70,15 +72,15 @@ export default function Perfil() {
             <div className="flex items-center gap-4">
               <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-primary text-2xl font-bold text-primary-foreground shadow-glow">
                 T
-                <span className="absolute -bottom-1 -right-1 rounded-full bg-background px-1 text-sm leading-none">
-                  {rank.emoji}
+                <span className="absolute -bottom-1 -right-1 rounded-full bg-background p-0.5">
+                  <IconByName name={rank.icon} className="h-3.5 w-3.5" />
                 </span>
               </div>
               <div>
                 <h2 className="text-xl font-bold">Trader</h2>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${rank.bgColor} ${rank.color}`}>
-                    {rank.emoji} {rank.label}
+                    <IconByName name={rank.icon} className="h-3 w-3" /> {rank.label}
                   </span>
                   <Badge className="bg-warning/15 text-warning hover:bg-warning/20">
                     <Flame className="mr-1 h-3 w-3" />{progress.streakDays} dias
@@ -107,8 +109,8 @@ export default function Perfil() {
             <Progress value={rankPct} className="h-2.5" />
             <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
               {XP_RANKS.map((r) => (
-                <span key={r.id} className={progress.xp >= r.minXp ? `font-bold ${r.color}` : ""}>
-                  {r.emoji}
+                <span key={r.id} className={progress.xp >= r.minXp ? `font-bold ${r.color}` : "text-muted-foreground/30"}>
+                  <IconByName name={r.icon} className="h-3 w-3 inline" />
                 </span>
               ))}
             </div>
@@ -246,7 +248,7 @@ function AchievementsTab({ achievements }: { achievements: string[] }) {
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xl">{a.emoji}</span>
+                      <IconByName name={a.icon} className="h-5 w-5" />
                       {unlocked && <CheckCircle2 className="h-3.5 w-3.5 text-bull" />}
                     </div>
                     <p className="text-xs font-semibold leading-tight">{a.title}</p>
@@ -301,7 +303,7 @@ function MissoesTab({ progress }: { progress: ReturnType<typeof useAppStore.getS
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xl">{def.emoji}</span>
+                  <IconByName name={def.icon} className="h-5 w-5" />
                   <div>
                     <p className={`text-sm font-medium ${state.completed ? "line-through text-muted-foreground" : ""}`}>
                       {def.label}
@@ -330,7 +332,7 @@ function MissoesTab({ progress }: { progress: ReturnType<typeof useAppStore.getS
 
       {completedCount === missionDefs.length && (
         <div className="mt-4 rounded-xl border border-bull/30 bg-bull/5 p-4 text-center">
-          <p className="text-2xl mb-1">🎉</p>
+          <PartyPopper className="h-7 w-7 mx-auto mb-1 text-bull" />
           <p className="text-sm font-semibold text-bull">Todas as missões concluídas!</p>
           <p className="text-xs text-muted-foreground">Volta amanhã para novas missões</p>
         </div>
@@ -369,7 +371,7 @@ function LeaderboardTab({ xp }: { xp: number }) {
         {board.slice(0, 10).map((entry) => {
           const rank = XP_RANKS.find((r) => r.id === entry.rankId) ?? XP_RANKS[0];
           const isTop3 = entry.rank <= 3;
-          const medalEmoji = entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : null;
+
           return (
             <div
               key={entry.id}
@@ -382,8 +384,8 @@ function LeaderboardTab({ xp }: { xp: number }) {
               }`}
             >
               <div className="w-8 text-center">
-                {medalEmoji ? (
-                  <span className="text-lg">{medalEmoji}</span>
+                {isTop3 ? (
+                  <Medal className={`h-5 w-5 mx-auto ${entry.rank === 1 ? "text-yellow-400" : entry.rank === 2 ? "text-slate-400" : "text-amber-600"}`} />
                 ) : (
                   <span className="font-mono text-sm font-bold text-muted-foreground">
                     #{entry.rank}
@@ -394,7 +396,7 @@ function LeaderboardTab({ xp }: { xp: number }) {
                 <p className={`text-sm font-semibold ${entry.isCurrentUser ? "text-primary" : ""}`}>
                   {entry.name} {entry.isCurrentUser && <span className="text-xs font-normal">(você)</span>}
                 </p>
-                <p className={`text-[11px] ${rank.color}`}>{rank.emoji} {rank.label}</p>
+                <p className={`text-[11px] ${rank.color} flex items-center gap-1`}><IconByName name={rank.icon} className="h-3 w-3 inline" />{rank.label}</p>
               </div>
               <div className="text-right">
                 <p className="font-mono text-sm font-bold">{entry.xp.toLocaleString()}</p>
@@ -419,7 +421,7 @@ function LeaderboardTab({ xp }: { xp: number }) {
             </span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-primary">Você</p>
-              <p className={`text-[11px] ${getRank(xp).color}`}>{getRank(xp).emoji} {getRank(xp).label}</p>
+              <p className={`text-[11px] ${getRank(xp).color} flex items-center gap-1`}><IconByName name={getRank(xp).icon} className="h-3 w-3 inline" />{getRank(xp).label}</p>
             </div>
             <div className="text-right">
               <p className="font-mono text-sm font-bold">{xp.toLocaleString()}</p>

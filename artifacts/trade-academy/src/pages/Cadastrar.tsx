@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   TrendingUp, Eye, EyeOff, Loader2, ChevronRight,
   Check, Rocket, ArrowLeft, User, Mail, Lock,
-  BarChart2, Zap, Shield,
+  BarChart2, Zap, Shield, Lightbulb,
 } from "lucide-react";
+import { IconByName } from "@/components/IconByName";
 import { Button } from "@/components/ui/button";
 import { Input }  from "@/components/ui/input";
 import { Label }  from "@/components/ui/label";
@@ -17,7 +18,7 @@ const LEVELS = [
   {
     id:          "iniciante",
     label:       "Iniciante",
-    emoji:       "🌱",
+    icon:        "Sprout",
     description: "Nunca operei ou estou a aprender o básico",
     badge:       "Começa aqui",
     color:       "from-emerald-500/20 to-emerald-600/5",
@@ -26,7 +27,7 @@ const LEVELS = [
   {
     id:          "intermediario",
     label:       "Intermediário",
-    emoji:       "📈",
+    icon:        "TrendingUp",
     description: "Já conheço análise técnica e tenho alguma experiência",
     badge:       "Bom ponto",
     color:       "from-cyan-500/20 to-cyan-600/5",
@@ -35,7 +36,7 @@ const LEVELS = [
   {
     id:          "avancado",
     label:       "Avançado",
-    emoji:       "🏆",
+    icon:        "Trophy",
     description: "Opero há mais de 1 ano e quero aperfeiçoar a estratégia",
     badge:       "Excelente",
     color:       "from-violet-500/20 to-violet-600/5",
@@ -44,14 +45,14 @@ const LEVELS = [
 ];
 
 const INTERESTS = [
-  { id: "cripto",      label: "Criptomoedas",          emoji: "₿",  color: "text-orange-400" },
-  { id: "forex",       label: "Forex",                 emoji: "💱", color: "text-blue-400"   },
-  { id: "acoes",       label: "Ações & B3",            emoji: "📊", color: "text-green-400"  },
-  { id: "risco",       label: "Gestão de Risco",       emoji: "🛡️", color: "text-red-400"    },
-  { id: "psicologia",  label: "Psicologia",            emoji: "🧠", color: "text-pink-400"   },
-  { id: "algoritmos",  label: "Trading Algorítmico",   emoji: "🤖", color: "text-purple-400" },
-  { id: "price-action",label: "Price Action",          emoji: "🕯️", color: "text-yellow-400" },
-  { id: "fundamentos", label: "Análise Fundamental",   emoji: "📑", color: "text-teal-400"   },
+  { id: "cripto",      label: "Criptomoedas",          icon: "Bitcoin",        color: "text-orange-400" },
+  { id: "forex",       label: "Forex",                 icon: "ArrowLeftRight", color: "text-blue-400"   },
+  { id: "acoes",       label: "Ações & B3",            icon: "BarChart2",      color: "text-green-400"  },
+  { id: "risco",       label: "Gestão de Risco",       icon: "Shield",         color: "text-red-400"    },
+  { id: "psicologia",  label: "Psicologia",            icon: "Brain",          color: "text-pink-400"   },
+  { id: "algoritmos",  label: "Trading Algorítmico",   icon: "Bot",            color: "text-purple-400" },
+  { id: "price-action",label: "Price Action",          icon: "Activity",       color: "text-yellow-400" },
+  { id: "fundamentos", label: "Análise Fundamental",   icon: "FileText",       color: "text-teal-400"   },
 ];
 
 const BENEFITS = [
@@ -144,7 +145,7 @@ export default function Cadastrar() {
   /* ── Step final: guardar onboarding ── */
   function handleFinish() {
     completeOnboarding(level ?? "iniciante", interests);
-    toast.success(`Bem-vindo, ${name.split(" ")[0]}! 🚀`);
+    toast.success(`Bem-vindo, ${name.split(" ")[0]}!`);
     navigate("/aprender");
   }
 
@@ -335,7 +336,9 @@ export default function Cadastrar() {
                       : "border-white/10 bg-[#0f1117] hover:border-white/20"
                   }`}
                 >
-                  <span className="text-2xl shrink-0">{l.emoji}</span>
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-surface-3 shrink-0">
+                    <IconByName name={l.icon} className="h-5 w-5 text-primary" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-sm">{l.label}</p>
@@ -398,7 +401,7 @@ export default function Cadastrar() {
                         : "border-white/10 bg-[#0f1117] hover:border-white/20"
                     }`}
                   >
-                    <span className="text-lg">{item.emoji}</span>
+                    <IconByName name={item.icon} className={`h-4 w-4 shrink-0 ${active ? "text-cyan-400" : "text-gray-500"}`} />
                     <span className={`text-xs font-medium ${active ? "text-cyan-300" : "text-gray-300"}`}>
                       {item.label}
                     </span>
@@ -412,7 +415,7 @@ export default function Cadastrar() {
 
             {interests.length === 0 && (
               <p className="text-xs text-amber-400/80 mb-4 text-center">
-                💡 Selecciona pelo menos um tema para uma melhor experiência
+                <Lightbulb className="inline h-3.5 w-3.5 mr-1" />Selecciona pelo menos um tema para uma melhor experiência
               </p>
             )}
 
@@ -444,7 +447,9 @@ export default function Cadastrar() {
             <div className="flex flex-col gap-3 text-left mb-6">
               {/* Nível */}
               <div className="flex items-center gap-3 bg-[#0f1117] rounded-xl px-4 py-3 border border-white/10">
-                <span className="text-xl">{selectedLevelData?.emoji}</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-surface-3 shrink-0">
+                  {selectedLevelData && <IconByName name={selectedLevelData.icon} className="h-4 w-4 text-cyan-400" />}
+                </div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium">Nível</p>
                   <p className="text-sm font-semibold">{selectedLevelData?.label}</p>
@@ -464,7 +469,7 @@ export default function Cadastrar() {
                           key={id}
                           className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 rounded-lg px-2 py-0.5"
                         >
-                          {item.emoji} {item.label}
+                          <IconByName name={item.icon} className="h-3 w-3" />{item.label}
                         </span>
                       ) : null;
                     })}

@@ -5,18 +5,18 @@
 export interface XpRank {
   id: string;
   label: string;
-  emoji: string;
+  icon: string;
   minXp: number;
   color: string;
   bgColor: string;
 }
 
 export const XP_RANKS: XpRank[] = [
-  { id: "iniciante",   label: "Iniciante",   emoji: "🌱", minXp: 0,    color: "text-muted-foreground",  bgColor: "bg-surface-2" },
-  { id: "aprendiz",    label: "Aprendiz",    emoji: "📚", minXp: 100,  color: "text-info",               bgColor: "bg-info/15" },
-  { id: "trader",      label: "Trader",      emoji: "📈", minXp: 500,  color: "text-primary",            bgColor: "bg-primary/15" },
-  { id: "especialista",label: "Especialista",emoji: "🎯", minXp: 1000, color: "text-warning",            bgColor: "bg-warning/15" },
-  { id: "expert",      label: "Expert",      emoji: "🏆", minXp: 2500, color: "text-bull",               bgColor: "bg-bull/15" },
+  { id: "iniciante",   label: "Iniciante",   icon: "Sprout",     minXp: 0,    color: "text-muted-foreground",  bgColor: "bg-surface-2" },
+  { id: "aprendiz",    label: "Aprendiz",    icon: "BookOpen",   minXp: 100,  color: "text-info",               bgColor: "bg-info/15" },
+  { id: "trader",      label: "Trader",      icon: "TrendingUp", minXp: 500,  color: "text-primary",            bgColor: "bg-primary/15" },
+  { id: "especialista",label: "Especialista",icon: "Target",     minXp: 1000, color: "text-warning",            bgColor: "bg-warning/15" },
+  { id: "expert",      label: "Expert",      icon: "Trophy",     minXp: 2500, color: "text-bull",               bgColor: "bg-bull/15" },
 ];
 
 export function getRank(xp: number): XpRank {
@@ -49,41 +49,41 @@ export interface AchievementDef {
   id: string;
   title: string;
   desc: string;
-  emoji: string;
+  icon: string;
   category: "aprendizado" | "trading" | "streak" | "especial";
   xpBonus: number;
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
   // Aprendizado
-  { id: "first-lesson",    title: "Primeira Aula",        emoji: "📖", desc: "Conclua sua primeira lição.",            category: "aprendizado", xpBonus: 10 },
-  { id: "five-lessons",    title: "Estudante",            emoji: "🎒", desc: "Conclua 5 aulas.",                      category: "aprendizado", xpBonus: 20 },
-  { id: "ten-lessons",     title: "Dedicado",             emoji: "💪", desc: "Conclua 10 aulas.",                     category: "aprendizado", xpBonus: 30 },
-  { id: "twenty-lessons",  title: "Especialista em Formação", emoji: "🧑‍🎓", desc: "Conclua 20 aulas.",              category: "aprendizado", xpBonus: 50 },
-  { id: "all-lessons",     title: "Trilha Completa",      emoji: "🎓", desc: "Conclua todas as 40 aulas.",            category: "aprendizado", xpBonus: 200 },
-  { id: "perfect-quiz",    title: "Quiz Perfeito",        emoji: "💯", desc: "Acerte 100% de um quiz.",              category: "aprendizado", xpBonus: 25 },
-  { id: "three-perfects",  title: "Sem Erros",            emoji: "✨", desc: "Acerte 100% em 3 quizzes diferentes.", category: "aprendizado", xpBonus: 50 },
-  { id: "level-1-done",    title: "Fundamentos Sólidos",  emoji: "🧱", desc: "Complete o Nível 1 inteiro.",          category: "aprendizado", xpBonus: 30 },
+  { id: "first-lesson",    title: "Primeira Aula",        icon: "BookOpenText",  desc: "Conclua sua primeira lição.",            category: "aprendizado", xpBonus: 10 },
+  { id: "five-lessons",    title: "Estudante",            icon: "GraduationCap", desc: "Conclua 5 aulas.",                      category: "aprendizado", xpBonus: 20 },
+  { id: "ten-lessons",     title: "Dedicado",             icon: "Dumbbell",      desc: "Conclua 10 aulas.",                     category: "aprendizado", xpBonus: 30 },
+  { id: "twenty-lessons",  title: "Especialista em Formação", icon: "GraduationCap", desc: "Conclua 20 aulas.",              category: "aprendizado", xpBonus: 50 },
+  { id: "all-lessons",     title: "Trilha Completa",      icon: "GraduationCap", desc: "Conclua todas as 40 aulas.",            category: "aprendizado", xpBonus: 200 },
+  { id: "perfect-quiz",    title: "Quiz Perfeito",        icon: "BadgeCheck",    desc: "Acerte 100% de um quiz.",              category: "aprendizado", xpBonus: 25 },
+  { id: "three-perfects",  title: "Sem Erros",            icon: "Sparkles",      desc: "Acerte 100% em 3 quizzes diferentes.", category: "aprendizado", xpBonus: 50 },
+  { id: "level-1-done",    title: "Fundamentos Sólidos",  icon: "Layers",        desc: "Complete o Nível 1 inteiro.",          category: "aprendizado", xpBonus: 30 },
   // Streak
-  { id: "streak-3",        title: "3 Dias Seguidos",      emoji: "🔥", desc: "Estude 3 dias consecutivos.",          category: "streak",      xpBonus: 15 },
-  { id: "streak-7",        title: "Semana de Fogo",       emoji: "🔥🔥", desc: "Estude 7 dias consecutivos.",        category: "streak",      xpBonus: 35 },
-  { id: "streak-14",       title: "Quinzena Imparável",   emoji: "⚡", desc: "Estude 14 dias consecutivos.",        category: "streak",      xpBonus: 75 },
-  { id: "streak-30",       title: "Mestre da Disciplina", emoji: "🏅", desc: "Estude 30 dias consecutivos.",        category: "streak",      xpBonus: 150 },
+  { id: "streak-3",        title: "3 Dias Seguidos",      icon: "Flame",         desc: "Estude 3 dias consecutivos.",          category: "streak",      xpBonus: 15 },
+  { id: "streak-7",        title: "Semana de Fogo",       icon: "Flame",         desc: "Estude 7 dias consecutivos.",          category: "streak",      xpBonus: 35 },
+  { id: "streak-14",       title: "Quinzena Imparável",   icon: "Zap",           desc: "Estude 14 dias consecutivos.",         category: "streak",      xpBonus: 75 },
+  { id: "streak-30",       title: "Mestre da Disciplina", icon: "Medal",         desc: "Estude 30 dias consecutivos.",         category: "streak",      xpBonus: 150 },
   // Trading
-  { id: "first-trade",     title: "Primeiro Trade",       emoji: "🚀", desc: "Execute seu primeiro trade no simulador.", category: "trading", xpBonus: 10 },
-  { id: "first-profit",    title: "Primeiro Lucro",       emoji: "💰", desc: "Feche um trade com lucro.",           category: "trading",     xpBonus: 20 },
-  { id: "profit-100",      title: "Lucro de $100",        emoji: "💵", desc: "Acumule $100 de P&L realizado.",      category: "trading",     xpBonus: 30 },
-  { id: "profit-500",      title: "Lucro de $500",        emoji: "💸", desc: "Acumule $500 de P&L realizado.",      category: "trading",     xpBonus: 50 },
-  { id: "trades-10",       title: "10 Trades",            emoji: "📊", desc: "Execute 10 trades no simulador.",     category: "trading",     xpBonus: 20 },
-  { id: "trades-50",       title: "50 Trades",            emoji: "📈", desc: "Execute 50 trades no simulador.",     category: "trading",     xpBonus: 50 },
-  { id: "trades-100",      title: "Centenário",           emoji: "💯", desc: "Execute 100 trades no simulador.",    category: "trading",     xpBonus: 100 },
-  { id: "win-rate-60",     title: "Acerto Consistente",   emoji: "🎯", desc: "Alcance 60%+ de taxa de acerto (mín. 10 trades).", category: "trading", xpBonus: 40 },
-  { id: "challenge-done",  title: "Desafiador",           emoji: "🏆", desc: "Conclua qualquer desafio do simulador.", category: "trading",  xpBonus: 75 },
+  { id: "first-trade",     title: "Primeiro Trade",       icon: "Rocket",        desc: "Execute seu primeiro trade no simulador.", category: "trading", xpBonus: 10 },
+  { id: "first-profit",    title: "Primeiro Lucro",       icon: "DollarSign",    desc: "Feche um trade com lucro.",           category: "trading",     xpBonus: 20 },
+  { id: "profit-100",      title: "Lucro de $100",        icon: "DollarSign",    desc: "Acumule $100 de P&L realizado.",      category: "trading",     xpBonus: 30 },
+  { id: "profit-500",      title: "Lucro de $500",        icon: "Banknote",      desc: "Acumule $500 de P&L realizado.",      category: "trading",     xpBonus: 50 },
+  { id: "trades-10",       title: "10 Trades",            icon: "BarChart2",     desc: "Execute 10 trades no simulador.",     category: "trading",     xpBonus: 20 },
+  { id: "trades-50",       title: "50 Trades",            icon: "TrendingUp",    desc: "Execute 50 trades no simulador.",     category: "trading",     xpBonus: 50 },
+  { id: "trades-100",      title: "Centenário",           icon: "BadgeCheck",    desc: "Execute 100 trades no simulador.",    category: "trading",     xpBonus: 100 },
+  { id: "win-rate-60",     title: "Acerto Consistente",   icon: "Target",        desc: "Alcance 60%+ de taxa de acerto (mín. 10 trades).", category: "trading", xpBonus: 40 },
+  { id: "challenge-done",  title: "Desafiador",           icon: "Trophy",        desc: "Conclua qualquer desafio do simulador.", category: "trading",  xpBonus: 75 },
   // Especial
-  { id: "xp-100",          title: "100 XP",               emoji: "⚡", desc: "Acumule 100 pontos de experiência.",  category: "especial",    xpBonus: 0 },
-  { id: "xp-500",          title: "500 XP",               emoji: "💎", desc: "Acumule 500 pontos de experiência.",  category: "especial",    xpBonus: 0 },
-  { id: "xp-1000",         title: "1000 XP",              emoji: "🌟", desc: "Acumule 1000 pontos de experiência.", category: "especial",    xpBonus: 0 },
-  { id: "xp-2500",         title: "Expert",               emoji: "👑", desc: "Acumule 2500 pontos de experiência.", category: "especial",    xpBonus: 0 },
+  { id: "xp-100",          title: "100 XP",               icon: "Zap",           desc: "Acumule 100 pontos de experiência.",  category: "especial",    xpBonus: 0 },
+  { id: "xp-500",          title: "500 XP",               icon: "Gem",           desc: "Acumule 500 pontos de experiência.",  category: "especial",    xpBonus: 0 },
+  { id: "xp-1000",         title: "1000 XP",              icon: "Star",          desc: "Acumule 1000 pontos de experiência.", category: "especial",    xpBonus: 0 },
+  { id: "xp-2500",         title: "Expert",               icon: "Crown",         desc: "Acumule 2500 pontos de experiência.", category: "especial",    xpBonus: 0 },
 ];
 
 export const ACHIEVEMENT_MAP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -100,18 +100,18 @@ export interface MissionDef {
   target: number;
   type: MissionType;
   xpReward: number;
-  emoji: string;
+  icon: string;
 }
 
 export const MISSION_POOL: MissionDef[] = [
-  { id: "complete-1-lesson",  label: "Conclua 1 aula hoje",         target: 1, type: "lessons",           xpReward: 15, emoji: "📖" },
-  { id: "complete-2-lessons", label: "Conclua 2 aulas hoje",        target: 2, type: "lessons",           xpReward: 25, emoji: "📚" },
-  { id: "make-3-trades",      label: "Faça 3 trades no simulador",  target: 3, type: "trades",            xpReward: 20, emoji: "📊" },
-  { id: "make-5-trades",      label: "Faça 5 trades no simulador",  target: 5, type: "trades",            xpReward: 30, emoji: "📈" },
-  { id: "perfect-quiz-1",     label: "Acerte 100% em 1 quiz",       target: 1, type: "perfect_quiz",      xpReward: 30, emoji: "💯" },
-  { id: "profitable-trade-1", label: "Feche 1 trade com lucro",     target: 1, type: "profitable_trades", xpReward: 20, emoji: "💰" },
-  { id: "profitable-trade-3", label: "Feche 3 trades com lucro",    target: 3, type: "profitable_trades", xpReward: 35, emoji: "💸" },
-  { id: "make-10-trades",     label: "Faça 10 trades no simulador", target: 10, type: "trades",           xpReward: 50, emoji: "🚀" },
+  { id: "complete-1-lesson",  label: "Conclua 1 aula hoje",         target: 1, type: "lessons",           xpReward: 15, icon: "BookOpenText" },
+  { id: "complete-2-lessons", label: "Conclua 2 aulas hoje",        target: 2, type: "lessons",           xpReward: 25, icon: "BookOpen" },
+  { id: "make-3-trades",      label: "Faça 3 trades no simulador",  target: 3, type: "trades",            xpReward: 20, icon: "BarChart2" },
+  { id: "make-5-trades",      label: "Faça 5 trades no simulador",  target: 5, type: "trades",            xpReward: 30, icon: "TrendingUp" },
+  { id: "perfect-quiz-1",     label: "Acerte 100% em 1 quiz",       target: 1, type: "perfect_quiz",      xpReward: 30, icon: "BadgeCheck" },
+  { id: "profitable-trade-1", label: "Feche 1 trade com lucro",     target: 1, type: "profitable_trades", xpReward: 20, icon: "DollarSign" },
+  { id: "profitable-trade-3", label: "Feche 3 trades com lucro",    target: 3, type: "profitable_trades", xpReward: 35, icon: "Banknote" },
+  { id: "make-10-trades",     label: "Faça 10 trades no simulador", target: 10, type: "trades",           xpReward: 50, icon: "Rocket" },
 ];
 
 /** Selects 3 missions for a given date string (YYYY-MM-DD) using a seeded shuffle */

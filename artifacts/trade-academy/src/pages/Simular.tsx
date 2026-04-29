@@ -22,6 +22,7 @@ import {
   type Candle,
 } from "@/lib/market";
 import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2 } from "lucide-react";
+import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -182,7 +183,7 @@ export default function Simular() {
     if (latest.reason === "liquidation") {
       setCooldownUntil(Date.now() + 15 * 60_000);
       setCooldownReason("liquidação — respira 15 minutos antes de continuar");
-      toast.error("⚠ Liquidação! Cooldown de 15 min activado.");
+      toast.error("Liquidação! Cooldown de 15 min activado.");
       return;
     }
     // Single loss > 10% of equity → 10 min
@@ -190,7 +191,7 @@ export default function Simular() {
     if (latest.pnl < 0 && eq > 0 && Math.abs(latest.pnl) / eq > 0.1) {
       setCooldownUntil(Date.now() + 10 * 60_000);
       setCooldownReason("perda grave (>10% do patrimônio) — respira 10 minutos");
-      toast.error("⚠ Perda grave! Cooldown de 10 min activado.");
+      toast.error("Perda grave! Cooldown de 10 min activado.");
       return;
     }
     // 2 consecutive losses → 5 min
@@ -198,7 +199,7 @@ export default function Simular() {
     if (last2.length === 2 && last2.every((t) => t.pnl <= 0)) {
       setCooldownUntil(Date.now() + 5 * 60_000);
       setCooldownReason("2 perdas seguidas — respira 5 minutos");
-      toast.warning("⏸ Cooldown de 5 min activado — 2 perdas seguidas.");
+      toast.warning("Cooldown de 5 min activado — 2 perdas seguidas.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
@@ -447,7 +448,7 @@ export default function Simular() {
           onClearCooldown={() => setCooldownUntil(null)}
           onSubmitMarket={(order) => {
             if (cooldownActive) {
-              toast.error("⏸ Trading bloqueado — aguarda o fim do cooldown.");
+              toast.error("Trading bloqueado — aguarda o fim do cooldown.");
               return;
             }
             const entryPrice = calcEntryWithCost(
@@ -476,7 +477,7 @@ export default function Simular() {
           }}
           onSubmitPending={(order) => {
             if (cooldownActive) {
-              toast.error("⏸ Trading bloqueado — aguarda o fim do cooldown.");
+              toast.error("Trading bloqueado — aguarda o fim do cooldown.");
               return;
             }
             placePendingOrder({
@@ -518,7 +519,9 @@ function ActiveChallengeBanner({
     <Card className="border-primary/30 bg-primary/5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{def?.emoji ?? "🎯"}</span>
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 shrink-0">
+            <IconByName name={def?.icon ?? "Target"} className="h-5 w-5 text-primary" />
+          </div>
           <div>
             <p className="font-semibold text-sm">{active.title}</p>
             <p className="text-xs text-muted-foreground">{active.description}</p>
@@ -735,7 +738,9 @@ function ChallengesPanel({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{def?.emoji}</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-surface-3 shrink-0">
+                  {def && <IconByName name={def.icon} className="h-4 w-4 text-muted-foreground" />}
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm">{ch.title}</p>
@@ -1259,7 +1264,7 @@ function OrderPanel({
         </div>
         {leverage >= 25 && (
           <p className="mt-1.5 text-[10px] text-bear">
-            ⚠ Liquidação a {liqDistPct?.toFixed(2)}% de distância.
+            <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />Liquidação a {liqDistPct?.toFixed(2)}% de distância.
           </p>
         )}
       </div>
@@ -1342,7 +1347,7 @@ function OrderPanel({
         )}
       </div>
 
-      {slBeyondLiq && <p className="text-[11px] text-warning">⚠ Stop além do preço de liquidação.</p>}
+      {slBeyondLiq && <p className="text-[11px] text-warning flex items-center gap-1"><AlertTriangle className="h-3 w-3 shrink-0" />Stop além do preço de liquidação.</p>}
       {slInvalid && <p className="text-[11px] text-bear">Stop loss deve ficar {side === "buy" ? "abaixo" : "acima"} do preço.</p>}
       {tpInvalid && <p className="text-[11px] text-bear">Take profit deve ficar {side === "buy" ? "acima" : "abaixo"} do preço.</p>}
 

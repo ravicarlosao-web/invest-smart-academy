@@ -335,7 +335,7 @@ export default function Estrategias() {
       {/* Footer note */}
       <div className="mt-8 rounded-lg border border-warning/20 bg-warning/5 p-4">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          <span className="font-semibold text-warning">⚠ Aviso importante:</span> Todas as estratégias apresentadas são baseadas em análise técnica clássica e destinam-se exclusivamente a fins educativos. Os resultados passados não garantem resultados futuros. Pratica sempre no simulador antes de usar capital real. O trading envolve risco de perda total do capital investido.
+          <span className="font-semibold text-warning flex items-center gap-1 mb-1"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />Aviso importante:</span> Todas as estratégias apresentadas são baseadas em análise técnica clássica e destinam-se exclusivamente a fins educativos. Os resultados passados não garantem resultados futuros. Pratica sempre no simulador antes de usar capital real. O trading envolve risco de perda total do capital investido.
         </p>
       </div>
     </div>

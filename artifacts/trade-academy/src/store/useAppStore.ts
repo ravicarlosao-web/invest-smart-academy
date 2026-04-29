@@ -55,7 +55,7 @@ export interface Challenge {
   id: string;
   title: string;
   description: string;
-  emoji: string;
+  icon: string;
   targetEquity: number;
   startBalance: number;
   minTrades: number;
@@ -72,7 +72,7 @@ export const CHALLENGES: Omit<Challenge, "active" | "completed" | "failed" | "st
     id: "beginner",
     title: "Primeira vitória",
     description: "Transforme $10.000 em $11.000 fazendo pelo menos 5 trades.",
-    emoji: "🎯",
+    icon: "Target",
     targetEquity: 11_000,
     startBalance: 10_000,
     minTrades: 5,
@@ -82,7 +82,7 @@ export const CHALLENGES: Omit<Challenge, "active" | "completed" | "failed" | "st
     id: "intermediate",
     title: "Trader consistente",
     description: "Alcance $13.000 a partir de $10.000 com no máximo 15% de drawdown.",
-    emoji: "📈",
+    icon: "TrendingUp",
     targetEquity: 13_000,
     startBalance: 10_000,
     minTrades: 10,
@@ -92,7 +92,7 @@ export const CHALLENGES: Omit<Challenge, "active" | "completed" | "failed" | "st
     id: "advanced",
     title: "Mestre do risco",
     description: "Chegue a $20.000 a partir de $10.000 com máximo de 10% de drawdown.",
-    emoji: "🏆",
+    icon: "Trophy",
     targetEquity: 20_000,
     startBalance: 10_000,
     minTrades: 20,

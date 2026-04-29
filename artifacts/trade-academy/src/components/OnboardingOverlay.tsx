@@ -1,38 +1,45 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, ChevronRight, Check, Rocket } from "lucide-react";
+import { TrendingUp, ChevronRight, Check, Rocket, Sprout, Trophy, Bitcoin, ArrowLeftRight, BarChart2, Shield, Brain, Bot, Activity, FileText, BookOpen, Target } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { IconByName } from "@/components/IconByName";
 
 const LEVELS = [
   {
     id: "iniciante",
     label: "Iniciante",
-    emoji: "🌱",
+    icon: "Sprout",
     description: "Nunca operei ou estou aprendendo o básico",
   },
   {
     id: "intermediario",
     label: "Intermediário",
-    emoji: "📈",
+    icon: "TrendingUp",
     description: "Já conheço análise técnica e tenho alguma experiência",
   },
   {
     id: "avancado",
     label: "Avançado",
-    emoji: "🏆",
+    icon: "Trophy",
     description: "Opero há mais de 1 ano e quero aperfeiçoar a estratégia",
   },
 ];
 
 const INTERESTS = [
-  { id: "cripto", label: "Criptomoedas", emoji: "₿" },
-  { id: "forex", label: "Forex", emoji: "💱" },
-  { id: "acoes", label: "Ações & B3", emoji: "📊" },
-  { id: "risco", label: "Gestão de Risco", emoji: "🛡️" },
-  { id: "psicologia", label: "Psicologia", emoji: "🧠" },
-  { id: "algoritmos", label: "Trading Algorítmico", emoji: "🤖" },
-  { id: "price-action", label: "Price Action", emoji: "🕯️" },
-  { id: "fundamentos", label: "Análise Fundamentalista", emoji: "📑" },
+  { id: "cripto",       label: "Criptomoedas",          icon: "Bitcoin" },
+  { id: "forex",        label: "Forex",                  icon: "ArrowLeftRight" },
+  { id: "acoes",        label: "Ações & B3",             icon: "BarChart2" },
+  { id: "risco",        label: "Gestão de Risco",        icon: "Shield" },
+  { id: "psicologia",   label: "Psicologia",             icon: "Brain" },
+  { id: "algoritmos",   label: "Trading Algorítmico",    icon: "Bot" },
+  { id: "price-action", label: "Price Action",           icon: "Activity" },
+  { id: "fundamentos",  label: "Análise Fundamentalista",icon: "FileText" },
+];
+
+const FEATURES = [
+  { icon: "BookOpen", text: "40 aulas estruturadas do básico ao avançado" },
+  { icon: "BarChart2", text: "Simulador com ordens reais e análise de performance" },
+  { icon: "Target", text: "Desafios e conquistas para manter o progresso" },
 ];
 
 export default function OnboardingOverlay() {
@@ -84,13 +91,9 @@ export default function OnboardingOverlay() {
               </p>
 
               <div className="grid gap-3 text-left mb-6">
-                {[
-                  { emoji: "📚", text: "40 aulas estruturadas do básico ao avançado" },
-                  { emoji: "📊", text: "Simulador com ordens reais e análise de performance" },
-                  { emoji: "🎯", text: "Desafios e conquistas para manter o progresso" },
-                ].map((item) => (
+                {FEATURES.map((item) => (
                   <div key={item.text} className="flex items-center gap-3 rounded-xl bg-surface-2 px-4 py-2.5">
-                    <span className="text-lg">{item.emoji}</span>
+                    <IconByName name={item.icon} className="h-4 w-4 text-primary shrink-0" />
                     <p className="text-sm">{item.text}</p>
                   </div>
                 ))}
@@ -125,7 +128,9 @@ export default function OnboardingOverlay() {
                         : "border-border bg-surface-2 hover:border-muted-foreground"
                     }`}
                   >
-                    <span className="text-2xl">{l.emoji}</span>
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${selectedLevel === l.id ? "bg-primary/20" : "bg-surface-3"}`}>
+                      <IconByName name={l.icon} className="h-5 w-5 text-primary" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{l.label}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{l.description}</p>
@@ -181,7 +186,7 @@ export default function OnboardingOverlay() {
                           : "border-border bg-surface-2 hover:border-muted-foreground"
                       }`}
                     >
-                      <span className="text-base">{i.emoji}</span>
+                      <IconByName name={i.icon} className={`h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
                       <span className={`text-xs font-medium ${active ? "text-primary" : ""}`}>
                         {i.label}
                       </span>

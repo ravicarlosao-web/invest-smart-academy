@@ -97,7 +97,7 @@ export default function BookReader() {
           markBookComplete(bookId);
           setShowCompleted(true);
           setScrollPct(100);
-          toast.success("📚 Livro concluído! O próximo foi desbloqueado.", {
+          toast.success("Livro concluído! O próximo foi desbloqueado.", {
             duration: 5000,
           });
         }
@@ -127,7 +127,11 @@ export default function BookReader() {
     return (
       <div className="flex min-h-full items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <div className="text-4xl mb-3">🔒</div>
+          <div className="flex justify-center mb-3">
+        <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-surface-2 border border-border">
+          <Lock className="h-7 w-7 text-muted-foreground" />
+        </div>
+    </div>
           <h3 className="font-semibold mb-1">Livro Bloqueado</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Complete o livro anterior para desbloquear <strong>{book.title}</strong>.
