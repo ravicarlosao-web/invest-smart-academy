@@ -23,6 +23,7 @@ import Duelo        from "./pages/Duelo";
 import Biblioteca   from "./pages/Biblioteca";
 import BookReader   from "./pages/BookReader";
 import Estrategias  from "./pages/Estrategias";
+import Admin        from "./pages/Admin";
 import NotFound     from "./pages/NotFound.tsx";
 import UserStateSync from "./components/UserStateSync";
 
@@ -40,6 +41,9 @@ const App = () => (
           <Route path="/"          element={<Landing />} />
           <Route path="/entrar"    element={<Login />} />
           <Route path="/cadastrar" element={<Cadastrar />} />
+
+          {/* ── Painel de administração (autoprotegido por senha) ── */}
+          <Route path="/admin"     element={<Admin />} />
 
           {/* ── Páginas protegidas (requerem login) ──────────── */}
           <Route element={<AuthGuard />}>

@@ -15,10 +15,14 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
+  const headers: Record<string, string> = { ...(extraHeaders ?? {}) };
+  if (body) headers["Content-Type"] = "application/json";
+
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body:    body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -26,6 +30,18 @@ async function request<T>(
     throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** Helper used by admin endpoints — injects the x-admin-token header */
+function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let token = "";
+  try {
+    const raw = localStorage.getItem("trade-academy-admin");
+    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
+  } catch {
+    /* ignore */
+  }
+  return request<T>(method, path, body, token ? { "x-admin-token": token } : undefined);
 }
 
 export const api = {
@@ -83,5 +99,41 @@ export const api = {
       request<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
       request<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
+  },
+
+  /* ---------- Admin ---------- */
+  admin: {
+    /** Verify password — returns ok if hash matches, otherwise throws. */
+    login: (passwordHash: string) =>
+      request<{ ok: boolean }>("POST", "/admin/login", { passwordHash }),
+
+    overview: () =>
+      adminRequest<{
+        totals:    { users: number; trades: number; duelos: number; notifications: number };
+        learning:  { totalXp: number; avgXp: number; totalLessonsCompleted: number; avgStreak: number };
+        simulator: { wins: number; losses: number; liquidations: number; totalPnl: number; winRate: number };
+      }>("GET", "/admin/overview"),
+
+    users: () =>
+      adminRequest<Array<{
+        id: string; name: string | null; email: string | null; createdAt: number;
+        xp: number; streakDays: number; lastActivityDay: string | null;
+        completedLessons: number; simCashBalance: number; onboarded: boolean;
+      }>>("GET", "/admin/users"),
+
+    deleteUser:        (userId: string) => adminRequest<{ ok: boolean }>("DELETE", `/admin/users/${userId}`),
+    resetUserProgress: (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-progress`),
+    resetUserSim:      (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-sim`),
+
+    simulator: () =>
+      adminRequest<{
+        recent: Array<Record<string, unknown>>;
+        leaderboard: Array<{ userId: string; name: string; email: string; pnl: number; trades: number }>;
+      }>("GET", "/admin/simulator"),
+
+    getCurriculumOverride: () =>
+      adminRequest<{ value: { lessons: Record<string, unknown> } }>("GET", "/admin/curriculum"),
+    saveCurriculumOverride: (value: { lessons: Record<string, unknown> }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/curriculum", value),
   },
 } as const;

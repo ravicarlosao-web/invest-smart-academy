@@ -5,6 +5,7 @@ import progressRouter      from "./progress";
 import tradesRouter        from "./trades";
 import notificationsRouter from "./notifications";
 import duelosRouter        from "./duelos";
+import adminRouter         from "./admin";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/progress",      progressRouter);
 router.use("/trades",        tradesRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/duelos",        duelosRouter);
+router.use("/admin",         adminRouter);
 
 export default router;
