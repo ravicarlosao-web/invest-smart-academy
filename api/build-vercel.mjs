@@ -31,6 +31,11 @@ await build({
     path.resolve(root, "lib/db/node_modules"),
   ],
   logLevel: "info",
+  // Vercel's CJS runtime calls module.exports directly.
+  // esbuild wraps ESM default exports as { default: fn }, so we unwrap it.
+  footer: {
+    js: "if (typeof module.exports.default === 'function') module.exports = module.exports.default;",
+  },
 });
 
 console.log("✓ api/index.js built successfully");

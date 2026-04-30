@@ -57396,3 +57396,4 @@ object-assign/index.js:
   @license MIT
   *)
 */
+if (typeof module.exports.default === 'function') module.exports = module.exports.default;
