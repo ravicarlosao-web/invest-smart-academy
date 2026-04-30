@@ -15,10 +15,14 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
+  const headers: Record<string, string> = { ...(extraHeaders ?? {}) };
+  if (body) headers["Content-Type"] = "application/json";
+
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body:    body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -26,6 +30,18 @@ async function request<T>(
     throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** Helper used by admin endpoints — injects the x-admin-token header */
+function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let token = "";
+  try {
+    const raw = localStorage.getItem("trade-academy-admin");
+    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
+  } catch {
+    /* ignore */
+  }
+  return request<T>(method, path, body, token ? { "x-admin-token": token } : undefined);
 }
 
 export const api = {
