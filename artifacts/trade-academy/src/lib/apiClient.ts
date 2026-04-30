@@ -103,7 +103,6 @@ export const api = {
 
   /* ---------- Admin ---------- */
   admin: {
-    /** Verify password — returns ok if hash matches, otherwise throws. */
     login: (passwordHash: string) =>
       request<{ ok: boolean }>("POST", "/admin/login", { passwordHash }),
 
@@ -124,6 +123,7 @@ export const api = {
     deleteUser:        (userId: string) => adminRequest<{ ok: boolean }>("DELETE", `/admin/users/${userId}`),
     resetUserProgress: (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-progress`),
     resetUserSim:      (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-sim`),
+    adjustUserXp:      (userId: string, xp: number) => adminRequest<{ ok: boolean }>("PATCH", `/admin/users/${userId}/xp`, { xp }),
 
     simulator: () =>
       adminRequest<{
@@ -135,5 +135,17 @@ export const api = {
       adminRequest<{ value: { lessons: Record<string, unknown> } }>("GET", "/admin/curriculum"),
     saveCurriculumOverride: (value: { lessons: Record<string, unknown> }) =>
       adminRequest<{ ok: boolean }>("PUT", "/admin/curriculum", value),
+
+    getStrategies:  () => adminRequest<unknown[]>("GET", "/admin/strategies"),
+    saveStrategies: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/strategies", items),
+
+    getBooks:  () => adminRequest<unknown[]>("GET", "/admin/books"),
+    saveBooks: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/books", items),
+
+    getGlossary:  () => adminRequest<unknown[]>("GET", "/admin/glossary"),
+    saveGlossary: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/glossary", items),
+
+    getResources:  () => adminRequest<unknown[]>("GET", "/admin/resources"),
+    saveResources: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/resources", items),
   },
 } as const;

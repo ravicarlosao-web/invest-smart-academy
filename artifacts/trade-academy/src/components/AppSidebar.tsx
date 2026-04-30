@@ -11,7 +11,6 @@ import {
   Settings,
   Swords,
   Compass,
-  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,7 +26,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAppStore } from "@/store/useAppStore";
-import { useAdminStore } from "@/store/useAdminStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
 const mainItems = [
@@ -55,7 +53,6 @@ export function AppSidebar() {
 
   const xp = useAppStore((s) => s.progress.xp);
   const completed = useAppStore((s) => s.progress.completedLessons.length);
-  const adminToken = useAdminStore((s) => s.token);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -130,32 +127,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin nav — only when an admin session is active */}
-        {adminToken && (
-          <SidebarGroup>
-            {!collapsed && (
-              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-2 py-1">
-                Administração
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/admin")}
-                    className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-primary"
-                  >
-                    <NavLink to="/admin" className="flex items-center gap-3">
-                      <Shield className="h-[18px] w-[18px]" />
-                      {!collapsed && <span className="text-sm font-medium">Painel Admin</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
 
       {!collapsed && (
