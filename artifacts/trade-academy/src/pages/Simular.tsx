@@ -36,13 +36,18 @@ import {
 ============================================================ */
 
 const SPREAD_PCT: Record<string, number> = {
-  Cripto:      0.0005,  // 0.05%
-  Forex:       0.00015, // ~1.5 pips em EUR/USD
-  Ações:       0.0002,  // 0.02%
-  Commodities: 0.0004,  // 0.04%
-  Índices:     0.0002,  // 0.02%
+  Cripto:      0.0015,  // 0.15% — custo retail realista p/ cripto
+  Forex:       0.0004,  // ~4 pips EUR/USD — spread retail realista
+  Ações:       0.0008,  // 0.08% — custo realista de bolsa
+  Commodities: 0.001,   // 0.10% — ouro/petróleo realista
+  Índices:     0.0005,  // 0.05% — índice retail realista
 };
-const COMMISSION_RATE = 0.001; // 0.1% por operação
+const COMMISSION_RATE = 0.0015; // 0.15% por operação (corretagem realista)
+const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias em ms
+
+function slippagePct(): number {
+  return Math.random() * 0.0008; // 0–0.08% de impacto de mercado aleatório
+}
 
 function calcEntryWithCost(
   marketPrice: number,
@@ -51,11 +56,12 @@ function calcEntryWithCost(
   spreadOn: boolean,
   commOn: boolean,
 ): number {
-  const sp  = spreadOn ? (SPREAD_PCT[category] ?? 0.0003) : 0;
-  const com = commOn   ? COMMISSION_RATE                  : 0;
+  const sp   = spreadOn ? (SPREAD_PCT[category] ?? 0.0008) : 0;
+  const com  = commOn   ? COMMISSION_RATE                  : 0;
+  const slip = slippagePct(); // impacto de execução — sempre presente
   return side === "buy"
-    ? marketPrice * (1 + sp + com)
-    : marketPrice * (1 - sp - com);
+    ? marketPrice * (1 + sp + com + slip)
+    : marketPrice * (1 - sp - com - slip);
 }
 
 function estimateTradeCost(
@@ -65,9 +71,21 @@ function estimateTradeCost(
   spreadOn: boolean,
   commOn: boolean,
 ): number {
-  const sp  = spreadOn ? (SPREAD_PCT[category] ?? 0.0003) : 0;
+  const sp  = spreadOn ? (SPREAD_PCT[category] ?? 0.0008) : 0;
   const com = commOn   ? COMMISSION_RATE                  : 0;
   return marketPrice * size * (sp + com);
+}
+
+function fmtCountdown(ms: number): string {
+  if (ms <= 0) return "disponível agora";
+  const days  = Math.floor(ms / 86_400_000);
+  const hours = Math.floor((ms % 86_400_000) / 3_600_000);
+  const mins  = Math.floor((ms % 3_600_000)  / 60_000);
+  const secs  = Math.floor((ms % 60_000)     / 1_000);
+  if (days  > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  if (mins  > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
 }
 
 /* ============================================================
@@ -163,7 +181,8 @@ export default function Simular() {
   const placePendingOrder = useAppStore((s) => s.placePendingOrder);
   const cancelPendingOrder = useAppStore((s) => s.cancelPendingOrder);
   const startChallenge = useAppStore((s) => s.startChallenge);
-  const resetSim = useAppStore((s) => s.resetSim);
+  const resetSim      = useAppStore((s) => s.resetSim);
+  const simZeroedAt   = useAppStore((s) => s.simZeroedAt);
 
   const upnl = calcUnrealizedPnL(positions, priceMap);
 
@@ -217,6 +236,11 @@ export default function Simular() {
   const cooldownActive   = cooldownUntil != null && tickNow < cooldownUntil;
   const cooldownSecsLeft = cooldownActive ? Math.ceil((cooldownUntil! - tickNow) / 1000) : 0;
 
+  /* ── Quarentena de Conta Zerada (30 dias) ────────────── */
+  const bustCooldownEnd  = simZeroedAt != null ? simZeroedAt + COOLDOWN_MS : null;
+  const onResetCooldown  = bustCooldownEnd != null && tickNow < bustCooldownEnd;
+  const isBusted         = cash === 0 && positions.length === 0 && pendingOrders.length === 0;
+
   /* ── Custo Realista (Spread + Comissão) ─────────────── */
   const [spreadEnabled,     setSpreadEnabled]     = useState(true);
   const [commissionEnabled, setCommissionEnabled] = useState(true);
@@ -261,6 +285,38 @@ export default function Simular() {
 
       {/* Desafios ativos */}
       <ActiveChallengeBanner challenges={challenges} equityVal={equityVal} historyCount={history.length} />
+
+      {/* Conta zerada — banner de quarentena */}
+      {isBusted && (
+        <div className={`rounded-lg border p-4 ${onResetCooldown ? "border-bear/40 bg-bear/10" : "border-warning/40 bg-warning/10"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              {onResetCooldown ? (
+                <>
+                  <p className="text-sm font-bold text-bear">💸 Conta zerada — em quarentena de 30 dias</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Esta é a experiência real: não há dinheiro fácil no mercado.
+                    Reset disponível em: <span className="font-mono font-semibold text-foreground">{fmtCountdown(bustCooldownEnd! - tickNow)}</span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-warning">⚠️ Conta zerada — reset disponível</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Os 30 dias de quarentena passaram. Clique em "Reiniciar conta demo" no painel ao lado.
+                  </p>
+                </>
+              )}
+            </div>
+            {onResetCooldown && (
+              <div className="text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Zerou em</p>
+                <p className="font-mono text-xs">{simZeroedAt ? new Date(simZeroedAt).toLocaleDateString("pt-BR") : "—"}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Coluna principal — chart + tables (appears below order panel on mobile) */}
@@ -459,13 +515,19 @@ export default function Simular() {
           category={meta.category}
           spreadEnabled={spreadEnabled}
           commissionEnabled={commissionEnabled}
-          cooldownActive={cooldownActive}
+          cooldownActive={cooldownActive || (isBusted && onResetCooldown)}
           cooldownSecsLeft={cooldownSecsLeft}
           cooldownReason={cooldownReason}
+          bustCooldownEnd={bustCooldownEnd}
+          now={tickNow}
           onClearCooldown={() => setCooldownUntil(null)}
           onSubmitMarket={(order) => {
             if (cooldownActive) {
               toast.error("Trading bloqueado — aguarda o fim do cooldown.");
+              return;
+            }
+            if (isBusted && onResetCooldown) {
+              toast.error("Conta zerada. Aguarda o fim da quarentena de 30 dias.");
               return;
             }
             const entryPrice = calcEntryWithCost(
@@ -512,7 +574,14 @@ export default function Simular() {
               description: `${order.side === "buy" ? "Compra" : "Venda"} ${order.size} ${symbol} @ ${fmtPrice(order.triggerPrice!, meta.precision)}`,
             });
           }}
-          onReset={() => { resetSim(); toast.info("Conta demo reiniciada para $10.000."); }}
+          onReset={() => {
+            if (onResetCooldown) {
+              toast.error(`Reset bloqueado — quarentena termina em ${fmtCountdown(bustCooldownEnd! - tickNow)}`);
+              return;
+            }
+            resetSim();
+            toast.info("Conta demo reiniciada para $10.000.");
+          }}
         />
         </div>
       </div>
@@ -1068,6 +1137,7 @@ function OrderPanel({
   symbol, lastPrice, precision, cash, category,
   spreadEnabled, commissionEnabled,
   cooldownActive, cooldownSecsLeft, cooldownReason, onClearCooldown,
+  bustCooldownEnd, now,
   onSubmitMarket, onSubmitPending, onReset,
 }: {
   symbol: string;
@@ -1081,6 +1151,8 @@ function OrderPanel({
   cooldownSecsLeft: number;
   cooldownReason: string;
   onClearCooldown: () => void;
+  bustCooldownEnd: number | null;
+  now: number;
   onSubmitMarket: (o: OrderInput) => void;
   onSubmitPending: (o: OrderInput) => void;
   onReset: () => void;
@@ -1383,10 +1455,18 @@ function OrderPanel({
 
       {exceeds && <p className="text-center text-[11px] text-bear">Margem insuficiente. Reduza tamanho ou aumente alavancagem.</p>}
 
-      <div className="border-t border-border pt-2">
-        <Button variant="ghost" size="sm" onClick={onReset} className="w-full text-xs text-muted-foreground hover:text-foreground">
-          <RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reiniciar conta demo
-        </Button>
+      <div className="border-t border-border pt-2 space-y-1.5">
+        {bustCooldownEnd != null && now < bustCooldownEnd ? (
+          <div className="rounded-md border border-bear/30 bg-bear/10 px-3 py-2 text-center">
+            <p className="text-[11px] font-semibold text-bear">🔒 Conta em quarentena</p>
+            <p className="mt-0.5 font-mono text-xs font-bold text-foreground">{fmtCountdown(bustCooldownEnd - now)}</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Sinta o peso de perder dinheiro real.</p>
+          </div>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={onReset} className="w-full text-xs text-muted-foreground hover:text-foreground">
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reiniciar conta demo
+          </Button>
+        )}
       </div>
     </Card>
   );

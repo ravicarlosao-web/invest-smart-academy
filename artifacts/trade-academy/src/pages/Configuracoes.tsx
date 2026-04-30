@@ -16,9 +16,11 @@ export default function Configuracoes() {
 
   const xp = useAppStore((s) => s.progress.xp);
   const completedCount = useAppStore((s) => s.progress.completedLessons.length);
-  const resetProgress = useAppStore((s) => s.resetProgress);
+  const resetProgress  = useAppStore((s) => s.resetProgress);
   const resetSimulator = useAppStore((s) => s.resetSim);
-  const settings = useAppStore((s) => s.settings);
+  const canResetSim    = useAppStore((s) => s.canResetSim);
+  const simZeroedAt    = useAppStore((s) => s.simZeroedAt);
+  const settings       = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
 
   function handleResetProgress() {
@@ -32,6 +34,14 @@ export default function Configuracoes() {
   }
 
   function handleResetSim() {
+    if (!canResetSim()) {
+      const cooldownEnd = simZeroedAt != null ? simZeroedAt + 30 * 24 * 60 * 60 * 1000 : null;
+      const remaining = cooldownEnd ? cooldownEnd - Date.now() : 0;
+      const days = Math.ceil(remaining / 86_400_000);
+      toast.error(`Conta em quarentena — reset disponível em ${days} dia${days !== 1 ? "s" : ""}.`);
+      setConfirmReset(null);
+      return;
+    }
     if (confirmReset === "simulator") {
       resetSimulator();
       setConfirmReset(null);

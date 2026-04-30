@@ -173,6 +173,9 @@ interface AppState {
   duelos: DueloEntry[];
   booksProgress: Record<string, BookProgress>;
 
+  /** Timestamp (ms) when the account balance first hit $0. Null = never busted. */
+  simZeroedAt: number | null;
+
   // full reset (called on logout to clear active user state)
   resetAll: () => void;
 
@@ -198,6 +201,7 @@ interface AppState {
   recordEquity: (priceMap: Record<string, number>) => void;
   startChallenge: (id: string) => void;
   resetSim: () => void;
+  canResetSim: () => boolean;
 
   // notification actions
   addNotification: (n: Omit<AppNotification, "id" | "read" | "createdAt">) => void;
@@ -405,6 +409,7 @@ export const useAppStore = create<AppState>()(
       seenAchievements: [],
       duelos: [],
       booksProgress: {},
+      simZeroedAt: null,
 
       /* -------- Full reset (called on logout) -------- */
       resetAll: () =>
@@ -620,14 +625,17 @@ export const useAppStore = create<AppState>()(
           missions = tickMissions(missions, "trades", 1);
           if (pnl > 0) missions = tickMissions(missions, "profitable_trades", 1);
 
+          const clampedCash = Math.max(0, newCash);
+          const accountBusted = clampedCash <= 0 && newPositions.length === 0;
+
           return {
             sim: {
               ...s.sim,
-              cashBalance: newCash,
+              cashBalance: clampedCash,
               positions: newPositions,
               history: newHistory,
               challenges: updatedChallenges,
-              equityHistory: [...s.sim.equityHistory, { time: Date.now(), equity: newCash }].slice(-500),
+              equityHistory: [...s.sim.equityHistory, { time: Date.now(), equity: clampedCash }].slice(-500),
             },
             progress: {
               ...s.progress,
@@ -635,6 +643,7 @@ export const useAppStore = create<AppState>()(
               dailyMissions: missions,
               missionDate: t,
             },
+            ...(accountBusted && s.simZeroedAt == null ? { simZeroedAt: Date.now() } : {}),
           };
         }),
 
@@ -762,14 +771,25 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
-      resetSim: () =>
+      canResetSim: () => {
+        const { simZeroedAt } = get();
+        if (simZeroedAt == null) return true;
+        return Date.now() >= simZeroedAt + 30 * 24 * 60 * 60 * 1000;
+      },
+
+      resetSim: () => {
+        const { simZeroedAt } = get();
+        const cooldownEnd = simZeroedAt != null ? simZeroedAt + 30 * 24 * 60 * 60 * 1000 : null;
+        if (cooldownEnd != null && Date.now() < cooldownEnd) return;
         set({
           sim: {
             ...initialSim,
             challenges: buildInitialChallenges(),
             equityHistory: [{ time: Date.now(), equity: 10_000 }],
           },
-        }),
+          simZeroedAt: null,
+        });
+      },
 
       /* -------- Notifications -------- */
       addNotification: (n) =>
