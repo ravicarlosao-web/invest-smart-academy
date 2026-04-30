@@ -4,9 +4,6 @@
   "buildCommand": "pnpm --filter @workspace/db run build || true && node api/build-vercel.mjs && pnpm --filter @workspace/trade-academy build",
   "outputDirectory": "artifacts/trade-academy/dist/public",
   "framework": null,
-  "functions": {
-    "api/index.js": { "maxDuration": 30 }
-  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" },
     { "source": "/:path*",     "destination": "/index.html" }
