@@ -74,19 +74,19 @@ router.get("/overview", async (req, res) => {
     const totalDuelos      = Number(duelosCnt?.c ?? 0);
     const totalNotifications = Number(notifCnt?.c ?? 0);
 
-    const totalXp        = progressRows.reduce((s, r) => s + (r.xp ?? 0), 0);
+    const totalXp        = progressRows.reduce((s: number, r) => s + (r.xp ?? 0), 0);
     const avgXp          = progressRows.length ? totalXp / progressRows.length : 0;
     const totalLessons   = progressRows.reduce(
-      (s, r) => s + (JSON.parse(r.completedLessons || "[]") as unknown[]).length, 0,
+      (s: number, r) => s + (JSON.parse(r.completedLessons || "[]") as unknown[]).length, 0,
     );
     const avgStreak      = progressRows.length
-      ? progressRows.reduce((s, r) => s + (r.streakDays ?? 0), 0) / progressRows.length
+      ? progressRows.reduce((s: number, r) => s + (r.streakDays ?? 0), 0) / progressRows.length
       : 0;
 
-    const wins   = tradeRows.filter((t) => t.pnl > 0).length;
-    const losses = tradeRows.filter((t) => t.pnl <= 0).length;
+    const wins   = tradeRows.filter((t) => (t.pnl ?? 0) > 0).length;
+    const losses = tradeRows.filter((t) => (t.pnl ?? 0) <= 0).length;
     const liquidations = tradeRows.filter((t) => t.reason === "liquidation").length;
-    const totalPnl = tradeRows.reduce((s, t) => s + (t.pnl ?? 0), 0);
+    const totalPnl = tradeRows.reduce((s: number, t) => s + (t.pnl ?? 0), 0);
     const winRate  = tradeRows.length ? wins / tradeRows.length : 0;
 
     res.json({
