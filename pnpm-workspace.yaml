@@ -71,7 +71,6 @@ autoInstallPeers: false
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
-  - libsql
   - msw
   - unrs-resolver
 
