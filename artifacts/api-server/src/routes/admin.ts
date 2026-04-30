@@ -207,7 +207,8 @@ router.get("/simulator", async (req, res) => {
     const userRows = await db.select({
       id: usersTable.id, name: usersTable.name, email: usersTable.email,
     }).from(usersTable).all();
-    const userMap = new Map(userRows.map((u) => [u.id, u]));
+    type UserRow = typeof userRows[number];
+    const userMap = new Map<string, UserRow>(userRows.map((u): [string, UserRow] => [u.id, u]));
 
     const leaderboard = Array.from(byUser.entries())
       .map(([userId, agg]) => ({
