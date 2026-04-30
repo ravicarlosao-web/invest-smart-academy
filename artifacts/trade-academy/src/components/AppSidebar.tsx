@@ -11,6 +11,7 @@ import {
   Settings,
   Swords,
   Compass,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +27,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAppStore } from "@/store/useAppStore";
+import { useAdminStore } from "@/store/useAdminStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
 const mainItems = [
@@ -53,6 +55,7 @@ export function AppSidebar() {
 
   const xp = useAppStore((s) => s.progress.xp);
   const completed = useAppStore((s) => s.progress.completedLessons.length);
+  const adminToken = useAdminStore((s) => s.token);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
