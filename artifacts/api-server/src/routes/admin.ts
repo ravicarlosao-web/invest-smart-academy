@@ -120,7 +120,8 @@ router.get("/users", async (req, res) => {
 
     // join progress
     const progress = await db.select().from(progressTable).all();
-    const progMap = new Map(progress.map((p) => [p.userId, p]));
+    type ProgressRow = typeof progress[number];
+    const progMap = new Map<string, ProgressRow>(progress.map((p): [string, ProgressRow] => [p.userId, p]));
 
     const enriched = users.map((u) => {
       const p = progMap.get(u.id);
