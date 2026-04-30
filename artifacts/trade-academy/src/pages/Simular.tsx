@@ -18,7 +18,9 @@ import {
   CHALLENGES,
 } from "@/store/useAppStore";
 import {
-  SYMBOLS, SYMBOL_MAP, TIMEFRAMES, CATEGORIES, seedCandles, nextCandle, fmtPrice, fmtUSD,
+  SYMBOLS, SYMBOL_MAP, TIMEFRAMES, CATEGORIES,
+  seedCandles, priceTick, currentCandleStart,
+  fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
 import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2 } from "lucide-react";
@@ -92,9 +94,52 @@ function fmtCountdown(ms: number): string {
    PÁGINA PRINCIPAL
 ============================================================ */
 
+/** Estado por símbolo: velas históricas + vela live a formar-se */
+type SymData = { hist: Candle[]; live: Candle };
+
+/** Countdown até ao fecho da vela actual — como nas plataformas reais */
+function CandleCountdown({ intervalSec }: { intervalSec: number }) {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    function calc() {
+      const nowSec  = Math.floor(Date.now() / 1000);
+      const candleEnd = (Math.floor(nowSec / intervalSec) + 1) * intervalSec;
+      setRemaining(candleEnd - nowSec);
+    }
+    calc();
+    const iv = setInterval(calc, 1000);
+    return () => clearInterval(iv);
+  }, [intervalSec]);
+
+  function fmt(sec: number): string {
+    if (sec <= 0)      return "00:00";
+    if (intervalSec >= 86_400) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    if (intervalSec >= 3600) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+
+  return (
+    <span className="ml-1 font-mono text-[10px] text-muted-foreground/60 tabular-nums select-none" title="Tempo até ao fecho da vela">
+      ⏱ {fmt(remaining)}
+    </span>
+  );
+}
+
 export default function Simular() {
   const [symbol, setSymbol] = useState<string>("BTC/USD");
-  const [tfIdx, setTfIdx] = useState(0);
+  const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];
   const tf = TIMEFRAMES[tfIdx];
 
@@ -115,60 +160,125 @@ export default function Simular() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const [candlesBySymbol, setCandlesBySymbol] = useState<Record<string, Candle[]>>(() => {
-    const out: Record<string, Candle[]> = {};
-    for (const s of SYMBOLS) out[s.symbol] = seedCandles(s, 200, 60);
+  /* ─── Live-candle state ───────────────────────────────────────────────
+     symData[symbol] = { hist: Candle[], live: Candle }
+     - hist  → candles fechadas (não inclui a live)
+     - live  → vela em formação (actualizada a cada segundo)
+     O gráfico mostra [...hist, live].
+     Quando o relógio cruza o boundary do intervalo, a live é finalizada
+     e uma nova começa — exactamente como numa plataforma real.
+  ────────────────────────────────────────────────────────────────────── */
+
+  /** Ref com preços correntes (evita leituras de state stale no timer) */
+  const pricesRef = useRef<Record<string, number>>({});
+
+  function buildInitialSymData(intervalSec: number): Record<string, SymData> {
+    const out: Record<string, SymData> = {};
+    for (const s of SYMBOLS) {
+      const liveStart = currentCandleStart(intervalSec);
+      const hist      = seedCandles(s, 200, intervalSec, liveStart);
+      const lastPrice = hist[hist.length - 1]?.close ?? s.basePrice;
+      pricesRef.current[s.symbol] = lastPrice;
+      out[s.symbol] = {
+        hist,
+        live: { time: liveStart, open: lastPrice, high: lastPrice, low: lastPrice, close: lastPrice },
+      };
+    }
     return out;
-  });
+  }
 
+  const [symData, setSymData] = useState<Record<string, SymData>>(() =>
+    buildInitialSymData(TIMEFRAMES[0].seconds),
+  );
+
+  /* Re-initialise quando o timeframe muda */
   useEffect(() => {
-    setCandlesBySymbol((prev) => ({
-      ...prev,
-      [symbol]: seedCandles(meta, 200, tf.seconds),
-    }));
-  }, [symbol, tf.seconds, meta]);
+    setSymData(buildInitialSymData(tf.seconds));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tf.seconds]);
 
-  const evaluateStops = useAppStore((s) => s.evaluateStops);
+  const evaluateStops        = useAppStore((s) => s.evaluateStops);
   const evaluatePendingOrders = useAppStore((s) => s.evaluatePendingOrders);
-  const recordEquity = useAppStore((s) => s.recordEquity);
+  const recordEquity          = useAppStore((s) => s.recordEquity);
 
+  /* ─── Timer 1 Hz — tick de preço para todos os símbolos ──────────── */
   const tickRef = useRef<number | null>(null);
   useEffect(() => {
     tickRef.current = window.setInterval(() => {
-      setCandlesBySymbol((prev) => {
-        const out = { ...prev };
-        const newPrices: Record<string, number> = {};
+      const nowSec     = Math.floor(Date.now() / 1000);
+      const newPrices: Record<string, number> = {};
+
+      /* Gera novos preços fora do setState para chamar as funções da store */
+      for (const s of SYMBOLS) {
+        const cur = pricesRef.current[s.symbol] ?? s.basePrice;
+        newPrices[s.symbol] = priceTick(s, cur, tf.seconds);
+      }
+      pricesRef.current = newPrices;
+
+      /* Actualiza stops, ordens pendentes e equity com os novos preços */
+      for (const [sym, price] of Object.entries(newPrices)) {
+        evaluateStops(sym, price);
+        evaluatePendingOrders(sym, price);
+      }
+      recordEquity(newPrices);
+
+      /* Actualiza o estado visual (hist + live) */
+      setSymData((prev) => {
+        const next: Record<string, SymData> = {};
         for (const s of SYMBOLS) {
-          const arr = out[s.symbol];
-          if (!arr || arr.length === 0) continue;
-          const next = nextCandle(s, arr[arr.length - 1], tf.seconds);
-          out[s.symbol] = [...arr.slice(-499), next];
-          newPrices[s.symbol] = next.close;
-          evaluateStops(s.symbol, next.close);
-          evaluatePendingOrders(s.symbol, next.close);
+          const d         = prev[s.symbol];
+          const newPrice  = newPrices[s.symbol] ?? (d?.live.close ?? s.basePrice);
+          const expected  = Math.floor(nowSec / tf.seconds) * tf.seconds;
+
+          if (!d) { next[s.symbol] = d; continue; }
+
+          if (expected > d.live.time) {
+            /* ── Boundary cruzado: fecha vela live, abre nova ── */
+            next[s.symbol] = {
+              hist: [...d.hist.slice(-499), d.live],
+              live: { time: expected, open: newPrice, high: newPrice, low: newPrice, close: newPrice },
+            };
+          } else {
+            /* ── Ainda na mesma vela: actualiza high/low/close ── */
+            next[s.symbol] = {
+              hist: d.hist,
+              live: {
+                ...d.live,
+                close: newPrice,
+                high:  Math.max(d.live.high, newPrice),
+                low:   Math.min(d.live.low,  newPrice),
+              },
+            };
+          }
         }
-        recordEquity(newPrices);
-        return out;
+        return next;
       });
     }, 1000);
+
     return () => { if (tickRef.current) window.clearInterval(tickRef.current); };
   }, [tf.seconds, evaluateStops, evaluatePendingOrders, recordEquity]);
 
-  const candles = candlesBySymbol[symbol] ?? [];
-  const last = candles[candles.length - 1];
-  const prev = candles[candles.length - 2];
+  /* ─── Candles para o gráfico (hist + live) ───────────────────────── */
+  const candles = useMemo(() => {
+    const d = symData[symbol];
+    if (!d) return [] as Candle[];
+    return [...d.hist, d.live];
+  }, [symData, symbol]);
+
+  const last      = candles[candles.length - 1];
+  const prev      = candles[candles.length - 2];
   const lastPrice = last?.close ?? meta.basePrice;
-  const change = last && prev ? last.close - prev.close : 0;
+  const change    = last && prev ? last.close - prev.close : 0;
   const changePct = last && prev ? (change / prev.close) * 100 : 0;
 
   const priceMap = useMemo(() => {
     const m: Record<string, number> = {};
     for (const s of SYMBOLS) {
-      const arr = candlesBySymbol[s.symbol];
-      m[s.symbol] = arr?.[arr.length - 1]?.close ?? s.basePrice;
+      const d = symData[s.symbol];
+      m[s.symbol] = d?.live.close ?? s.basePrice;
     }
     return m;
-  }, [candlesBySymbol]);
+  }, [symData]);
 
   const cash = useAppStore((s) => s.sim.cashBalance);
   const positions = useAppStore((s) => s.sim.positions);
@@ -324,7 +434,7 @@ export default function Simular() {
           {/* Gráfico */}
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 {TIMEFRAMES.map((t, i) => (
                   <button
                     key={t.label}
@@ -336,6 +446,7 @@ export default function Simular() {
                     {t.label}
                   </button>
                 ))}
+                <CandleCountdown intervalSec={tf.seconds} />
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="font-mono text-[10px]">MM 20</Badge>

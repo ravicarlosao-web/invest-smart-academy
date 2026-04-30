@@ -1,11 +1,16 @@
 /**
  * Mercado simulado — gera candles com geometric brownian motion + ruído.
- * Cada símbolo tem volatilidade e drift próprios. Os candles avançam em tempo real
- * com um intervalo configurável (1s para demo).
+ * Cada símbolo tem volatilidade e drift próprios.
+ *
+ * Modo "tempo real":
+ *  - Price ticks chegam a 1 Hz para todos os timeframes.
+ *  - A vela LIVE acumula high/low/close a cada tick.
+ *  - Quando o relógio cruza o boundary do intervalo, a vela live é finalizada
+ *    e uma nova começa — idêntico ao comportamento de plataformas reais.
  */
 
 export interface Candle {
-  time: number; // unix segundos
+  time: number; // unix segundos (início da vela)
   open: number;
   high: number;
   low: number;
@@ -17,8 +22,8 @@ export interface SymbolMeta {
   name:       string;
   category:   "Forex" | "Cripto" | "Ações" | "Commodities" | "Índices";
   basePrice:  number;
-  volatility: number; // 0..1 — desvio padrão por step
-  drift:      number; // tendência leve por step
+  volatility: number; // desvio padrão POR VELA (candle-level)
+  drift:      number; // tendência leve por vela
   precision:  number; // casas decimais
 }
 
@@ -96,64 +101,102 @@ export const SYMBOL_MAP: Record<string, SymbolMeta> = Object.fromEntries(
   SYMBOLS.map((s) => [s.symbol, s]),
 );
 
+/* ──────────────────────────────────────────────────────────
+   Gerador de ruído gaussiano (Box-Muller)
+────────────────────────────────────────────────────────── */
 function randn() {
-  // Box-Muller
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
   while (v === 0) v = Math.random();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-/** Gera N candles históricos para inicializar o gráfico. */
-export function seedCandles(meta: SymbolMeta, count: number, intervalSec: number, endTime = Math.floor(Date.now() / 1000)): Candle[] {
+/* ──────────────────────────────────────────────────────────
+   Tempo real: início da vela actual alinhado ao intervalo
+────────────────────────────────────────────────────────── */
+export function currentCandleStart(intervalSec: number): number {
+  const nowSec = Math.floor(Date.now() / 1000);
+  return Math.floor(nowSec / intervalSec) * intervalSec;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Price tick — volatilidade escalada por sqrt(interval)
+   para que o corpo da vela seja consistente entre TFs.
+────────────────────────────────────────────────────────── */
+export function priceTick(meta: SymbolMeta, currentPrice: number, intervalSec: number): number {
+  // tickVol escala para que N ticks (=intervalSec) produzam ~meta.volatility de movimento
+  const tickVol   = meta.volatility / Math.sqrt(Math.max(1, intervalSec));
+  const tickDrift = meta.drift       / Math.max(1, intervalSec);
+  const change    = currentPrice * (tickDrift + tickVol * randn());
+  // Garante que o preço não cai para zero/negativo
+  return Math.max(currentPrice * 0.0001, currentPrice + change);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Seed de candles históricos (geração acelerada)
+   Termina em endTime — liveStart (a vela live começa aí)
+────────────────────────────────────────────────────────── */
+export function seedCandles(
+  meta: SymbolMeta,
+  count: number,
+  intervalSec: number,
+  endTime = Math.floor(Date.now() / 1000),
+): Candle[] {
   const candles: Candle[] = [];
   let price = meta.basePrice * (1 + (Math.random() - 0.5) * 0.05);
   let t = endTime - count * intervalSec;
-  // alinha em múltiplo do intervalo
-  t = t - (t % intervalSec);
+  t = t - (t % intervalSec); // alinha ao boundary
   for (let i = 0; i < count; i++) {
     const open = price;
     let high = open, low = open, close = open;
-    const ticks = 5;
+    // Simula N ticks acelerados por vela (usa volatilidade já por-vela)
+    const ticks = 8;
     for (let k = 0; k < ticks; k++) {
-      const change = close * (meta.drift + meta.volatility * randn() * 0.4);
+      const change = close * (meta.drift + meta.volatility * randn() * 0.35);
       close += change;
       if (close > high) high = close;
-      if (close < low) low = close;
+      if (close < low)  low  = close;
     }
+    close = Math.max(close, open * 0.0001);
+    high  = Math.max(high, open, close);
+    low   = Math.min(low, open, close);
     candles.push({ time: t, open, high, low, close });
     price = close;
-    t += intervalSec;
+    t    += intervalSec;
   }
   return candles;
 }
 
-/** Gera o próximo candle a partir do último. */
+/** @deprecated — mantido para compatibilidade. Usa priceTick + live candle em vez disto. */
 export function nextCandle(meta: SymbolMeta, prev: Candle, intervalSec: number): Candle {
   const open = prev.close;
   let close = open;
   let high = open, low = open;
-  const ticks = 5;
-  for (let i = 0; i < ticks; i++) {
+  for (let i = 0; i < 5; i++) {
     const change = close * (meta.drift + meta.volatility * randn());
     close += change;
     if (close > high) high = close;
-    if (close < low) low = close;
+    if (close < low)  low  = close;
   }
-  return {
-    time: prev.time + intervalSec,
-    open,
-    high,
-    low,
-    close,
-  };
+  return { time: prev.time + intervalSec, open, high, low, close };
 }
 
+/* ──────────────────────────────────────────────────────────
+   Timeframes disponíveis
+   1S  → nova vela a cada 1 segundo  (chart muito activo)
+   1m  → nova vela a cada 1 minuto
+   5m  → nova vela a cada 5 minutos
+   1h  → nova vela a cada 1 hora
+   4h  → nova vela a cada 4 horas
+   1D  → nova vela a cada 1 dia
+────────────────────────────────────────────────────────── */
 export const TIMEFRAMES = [
-  { label: "1m", seconds: 60 },
-  { label: "5m", seconds: 300 },
-  { label: "1h", seconds: 3600 },
-  { label: "1D", seconds: 86_400 },
+  { label: "1S",  seconds: 1       },
+  { label: "1m",  seconds: 60      },
+  { label: "5m",  seconds: 300     },
+  { label: "1h",  seconds: 3_600   },
+  { label: "4h",  seconds: 14_400  },
+  { label: "1D",  seconds: 86_400  },
 ] as const;
 
 export const CATEGORIES = ["Cripto", "Forex", "Ações", "Commodities", "Índices"] as const;
