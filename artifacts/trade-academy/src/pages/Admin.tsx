@@ -5,8 +5,9 @@ import {
   Trash2, RotateCcw, Search, Save, AlertTriangle, Trophy, Home,
   Compass, Library, BookMarked, BookText, Plus, Pencil, X, ChevronRight,
   BarChart3, GraduationCap, Star, ExternalLink, Tag, ChevronDown, ChevronUp,
-  Coins, PlayCircle, Lock,
+  Coins, PlayCircle, Lock, CreditCard, CheckCircle2, Clock, XCircle,
 } from "lucide-react";
+import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1452,18 +1453,251 @@ function VideosTab() {
 }
 
 /* =========================================================================
+ * Subscriptions tab
+ * ========================================================================= */
+function SubscriptionsTab() {
+  const [subs, setSubs]         = useState<SubscriptionWithUser[]>([]);
+  const [stats, setStats]       = useState<{ pending: number; active: number; expired: number; rejected: number; total: number } | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [loading, setLoading]   = useState(false);
+  const [busy, setBusy]         = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [data, st] = await Promise.all([
+        api.adminSubscriptions.list(filterStatus === "all" ? undefined : filterStatus),
+        api.adminSubscriptions.stats(),
+      ]);
+      setSubs(data);
+      setStats(st);
+    } catch {
+      toast.error("Erro ao carregar subscrições");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [filterStatus]);
+
+  async function handleApprove(id: string) {
+    setBusy(id);
+    try {
+      await api.adminSubscriptions.approve(id);
+      toast.success("Subscrição aprovada — acesso ativo por 30 dias");
+      load();
+    } catch {
+      toast.error("Erro ao aprovar");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleReject(id: string) {
+    setBusy(id);
+    try {
+      await api.adminSubscriptions.reject(id, rejectNote || undefined);
+      toast.success("Pedido rejeitado");
+      setRejectId(null);
+      setRejectNote("");
+      load();
+    } catch {
+      toast.error("Erro ao rejeitar");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, { label: string; className: string }> = {
+      pending:  { label: "Pendente",  className: "bg-warning/15 text-warning" },
+      active:   { label: "Ativo",     className: "bg-bull/15 text-bull" },
+      expired:  { label: "Expirado",  className: "bg-muted text-muted-foreground" },
+      rejected: { label: "Rejeitado", className: "bg-bear/15 text-bear" },
+    };
+    const cfg = map[status] ?? { label: status, className: "" };
+    return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.className}`}>{cfg.label}</span>;
+  };
+
+  const fmt = (ts: number) => new Date(ts).toLocaleDateString("pt-PT");
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold">Subscrições</h2>
+        <p className="text-sm text-muted-foreground">Gestão manual de pagamentos — 5.000 AOA/mês</p>
+      </div>
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Pendentes",  value: stats.pending,  icon: <Clock className="h-4 w-4 text-warning" />,          color: "border-warning/30" },
+            { label: "Ativos",     value: stats.active,   icon: <CheckCircle2 className="h-4 w-4 text-bull" />,       color: "border-bull/30" },
+            { label: "Expirados",  value: stats.expired,  icon: <XCircle className="h-4 w-4 text-muted-foreground" />, color: "" },
+            { label: "Rejeitados", value: stats.rejected, icon: <XCircle className="h-4 w-4 text-bear" />,            color: "border-bear/30" },
+          ].map((s) => (
+            <Card key={s.label} className={`p-4 ${s.color}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+                {s.icon}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="flex items-center gap-3">
+        {["all", "pending", "active", "expired", "rejected"].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              filterStatus === s
+                ? "bg-primary text-primary-foreground"
+                : "bg-surface-2 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {s === "all" ? "Todos" : s === "pending" ? "Pendente" : s === "active" ? "Ativo" : s === "expired" ? "Expirado" : "Rejeitado"}
+          </button>
+        ))}
+        <button onClick={load} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Modal de rejeição */}
+      {rejectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-sm p-5 space-y-3">
+            <h3 className="font-semibold">Rejeitar pedido</h3>
+            <div className="space-y-1">
+              <Label>Motivo (opcional)</Label>
+              <Input
+                placeholder="Ex: Referência não encontrada"
+                value={rejectNote}
+                onChange={(e) => setRejectNote(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setRejectId(null); setRejectNote(""); }}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" className="flex-1" disabled={!!busy} onClick={() => handleReject(rejectId)}>
+                {busy ? "A rejeitar…" : "Rejeitar"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">A carregar…</p>
+      ) : subs.length === 0 ? (
+        <Card className="p-8 text-center text-muted-foreground text-sm">
+          Nenhuma subscrição encontrada.
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aluno</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Ref. Pagamento</TableHead>
+                <TableHead>Pedido em</TableHead>
+                <TableHead>Expira em</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subs.map((sub) => (
+                <TableRow key={sub.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium text-sm">{sub.user.name}</p>
+                      <p className="text-xs text-muted-foreground">{sub.user.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{statusBadge(sub.status)}</TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs">
+                      {sub.paymentReference ?? <span className="text-muted-foreground italic">Não fornecida</span>}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-sm">{fmt(sub.createdAt)}</TableCell>
+                  <TableCell className="text-sm">
+                    {sub.expiresAt ? fmt(sub.expiresAt) : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {sub.amount.toLocaleString("pt-AO")} AOA
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1.5">
+                      {sub.status === "pending" && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs bg-bull hover:bg-bull/90"
+                            disabled={busy === sub.id}
+                            onClick={() => handleApprove(sub.id)}
+                          >
+                            {busy === sub.id ? "…" : "Aprovar"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs text-bear border-bear/40 hover:bg-bear/10"
+                            disabled={busy === sub.id}
+                            onClick={() => { setRejectId(sub.id); setRejectNote(""); }}
+                          >
+                            Rejeitar
+                          </Button>
+                        </>
+                      )}
+                      {sub.status === "active" && (
+                        <span className="text-xs text-bull flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Ativo
+                        </span>
+                      )}
+                      {(sub.status === "expired" || sub.status === "rejected") && (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
-  { id: "overview",    label: "Visão Geral",          icon: BarChart3 },
-  { id: "users",       label: "Alunos",               icon: Users },
-  { id: "curriculum",  label: "Trilha de Aprendizado", icon: GraduationCap },
-  { id: "videos",      label: "Vídeo Aulas",          icon: PlayCircle },
-  { id: "strategies",  label: "Estratégias",          icon: Compass },
-  { id: "books",       label: "Biblioteca",           icon: BookMarked },
-  { id: "glossary",    label: "Glossário",            icon: BookText },
-  { id: "resources",   label: "Recursos",             icon: Library },
-  { id: "simulator",   label: "Simulador",            icon: LineChartIcon },
+  { id: "overview",       label: "Visão Geral",          icon: BarChart3 },
+  { id: "subscriptions",  label: "Subscrições",          icon: CreditCard },
+  { id: "users",          label: "Alunos",               icon: Users },
+  { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap },
+  { id: "videos",         label: "Vídeo Aulas",          icon: PlayCircle },
+  { id: "strategies",     label: "Estratégias",          icon: Compass },
+  { id: "books",          label: "Biblioteca",           icon: BookMarked },
+  { id: "glossary",       label: "Glossário",            icon: BookText },
+  { id: "resources",      label: "Recursos",             icon: Library },
+  { id: "simulator",      label: "Simulador",            icon: LineChartIcon },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]["id"];
@@ -1482,15 +1716,16 @@ export default function Admin() {
   function handleLogout() { logout(); toast.success("Sessão encerrada"); }
 
   const TABS: Record<NavId, React.ReactNode> = {
-    overview:   <OverviewTab />,
-    users:      <UsersTab />,
-    curriculum: <CurriculumTab />,
-    videos:     <VideosTab />,
-    strategies: <StrategiesTab />,
-    books:      <BooksTab />,
-    glossary:   <GlossaryTab />,
-    resources:  <ResourcesTab />,
-    simulator:  <SimulatorTab />,
+    overview:      <OverviewTab />,
+    subscriptions: <SubscriptionsTab />,
+    users:         <UsersTab />,
+    curriculum:    <CurriculumTab />,
+    videos:        <VideosTab />,
+    strategies:    <StrategiesTab />,
+    books:         <BooksTab />,
+    glossary:      <GlossaryTab />,
+    resources:     <ResourcesTab />,
+    simulator:     <SimulatorTab />,
   };
 
   return (

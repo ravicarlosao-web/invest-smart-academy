@@ -20473,27 +20473,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module2.exports = Router9;
+    module2.exports = Router10;
     module2.exports.Route = Route;
-    function Router9(options) {
-      if (!(this instanceof Router9)) {
-        return new Router9(options);
+    function Router10(options) {
+      if (!(this instanceof Router10)) {
+        return new Router10(options);
       }
       const opts = options || {};
-      function router9(req, res, next) {
-        router9.handle(req, res, next);
+      function router10(req, res, next) {
+        router10.handle(req, res, next);
       }
-      Object.setPrototypeOf(router9, this);
-      router9.caseSensitive = opts.caseSensitive;
-      router9.mergeParams = opts.mergeParams;
-      router9.params = {};
-      router9.strict = opts.strict;
-      router9.stack = [];
-      return router9;
+      Object.setPrototypeOf(router10, this);
+      router10.caseSensitive = opts.caseSensitive;
+      router10.mergeParams = opts.mergeParams;
+      router10.params = {};
+      router10.strict = opts.strict;
+      router10.stack = [];
+      return router10;
     }
-    Router9.prototype = function() {
+    Router10.prototype = function() {
     };
-    Router9.prototype.param = function param(name, fn) {
+    Router10.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20513,7 +20513,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router9.prototype.handle = function handle(req, res, callback) {
+    Router10.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20640,7 +20640,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router9.prototype.use = function use(handler2) {
+    Router10.prototype.use = function use(handler2) {
       let offset = 0;
       let path = "/";
       if (typeof handler2 !== "function") {
@@ -20673,7 +20673,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router9.prototype.route = function route(path) {
+    Router10.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -20688,7 +20688,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router9.prototype[method] = function(path) {
+      Router10.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20871,13 +20871,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = require("node:path").resolve;
     var once = require_once();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router9 = null;
+      var router10 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20886,13 +20886,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router9 === null) {
-            router9 = new Router9({
+          if (router10 === null) {
+            router10 = new Router10({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router9;
+          return router10;
         }
       });
     };
@@ -20963,15 +20963,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router9 = this.router;
+      var router10 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router9.use(path, fn2);
+          return router10.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router9.use(path, function mounted_app(req, res, next) {
+        router10.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23498,7 +23498,7 @@ var require_express = __commonJS({
     var EventEmitter = require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -23520,8 +23520,8 @@ var require_express = __commonJS({
     exports2.application = proto;
     exports2.request = req;
     exports2.response = res;
-    exports2.Route = Router9.Route;
-    exports2.Router = Router9;
+    exports2.Route = Router10.Route;
+    exports2.Router = Router10;
     exports2.json = bodyParser.json;
     exports2.raw = bodyParser.raw;
     exports2.static = require_serve_static();
@@ -32074,12 +32074,12 @@ __export(server_exports, {
 module.exports = __toCommonJS(server_exports);
 
 // artifacts/api-server/src/app.ts
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // artifacts/api-server/src/routes/index.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 
 // artifacts/api-server/src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -44954,10 +44954,12 @@ __export(schema_exports, {
   insertDueloSchema: () => insertDueloSchema,
   insertNotificationSchema: () => insertNotificationSchema,
   insertProgressSchema: () => insertProgressSchema,
+  insertSubscriptionSchema: () => insertSubscriptionSchema,
   insertTradeSchema: () => insertTradeSchema,
   insertUserSchema: () => insertUserSchema,
   notificationsTable: () => notificationsTable,
   progressTable: () => progressTable,
+  subscriptionsTable: () => subscriptionsTable,
   tradesTable: () => tradesTable,
   usersTable: () => usersTable
 });
@@ -56457,6 +56459,32 @@ var adminSettingsTable = sqliteTable("admin_settings", {
   updatedAt: integer("updated_at").notNull()
 });
 
+// lib/db/src/schema/subscriptions.ts
+var subscriptionsTable = sqliteTable("subscriptions", {
+  id: text("id").primaryKey(),
+  // "sub_<ts>_<rand>"
+  userId: text("user_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  // "pending" | "active" | "expired" | "rejected"
+  amount: integer("amount").notNull().default(5e3),
+  // AOA
+  paymentReference: text("payment_reference"),
+  // referência bancária fornecida pelo aluno
+  notes: text("notes"),
+  // notas do admin (motivo de rejeição, etc.)
+  createdAt: integer("created_at").notNull(),
+  // Unix ms — quando o aluno pediu
+  expiresAt: integer("expires_at"),
+  // Unix ms — data de expiração (30 dias após aprovação)
+  approvedAt: integer("approved_at"),
+  // Unix ms — quando o admin aprovou
+  updatedAt: integer("updated_at").notNull()
+});
+var insertSubscriptionSchema = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createInsertSchema(subscriptionsTable).omit({ id: true })
+);
+
 // lib/db/src/index.ts
 var rawUrl = process.env["TURSO_DATABASE_URL"];
 var tursoToken = process.env["TURSO_AUTH_TOKEN"];
@@ -57032,18 +57060,188 @@ router7.put("/videos", async (req, res) => {
     res.status(500).json({ error: "internal" });
   }
 });
+router7.get("/subscriptions", async (req, res) => {
+  try {
+    const now = Date.now();
+    const status = req.query.status;
+    const subs = await db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt)).all();
+    for (const sub of subs) {
+      if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+        sub.status = "expired";
+      }
+    }
+    const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).all();
+    const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+    const result = subs.filter((s) => !status || s.status === status).map((s) => ({
+      ...s,
+      user: userMap[s.userId] ?? { id: s.userId, name: "\u2014", email: "\u2014" }
+    }));
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.get("/subscriptions/stats", async (req, res) => {
+  try {
+    const now = Date.now();
+    const subs = await db.select().from(subscriptionsTable).all();
+    for (const sub of subs) {
+      if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+        sub.status = "expired";
+      }
+    }
+    const stats = { pending: 0, active: 0, expired: 0, rejected: 0, total: subs.length };
+    for (const sub of subs) {
+      if (sub.status === "pending") stats.pending++;
+      if (sub.status === "active") stats.active++;
+      if (sub.status === "expired") stats.expired++;
+      if (sub.status === "rejected") stats.rejected++;
+    }
+    res.json(stats);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.patch("/subscriptions/:id/approve", async (req, res) => {
+  try {
+    const now = Date.now();
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1e3;
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    if (!sub) return res.status(404).json({ error: "not_found" });
+    await db.update(subscriptionsTable).set({
+      status: "active",
+      approvedAt: now,
+      expiresAt,
+      updatedAt: now
+    }).where(eq(subscriptionsTable.id, req.params.id));
+    res.json({ ok: true, expiresAt });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.patch("/subscriptions/:id/reject", async (req, res) => {
+  try {
+    const { notes } = req.body ?? {};
+    const now = Date.now();
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    if (!sub) return res.status(404).json({ error: "not_found" });
+    await db.update(subscriptionsTable).set({
+      status: "rejected",
+      notes: notes ?? null,
+      updatedAt: now
+    }).where(eq(subscriptionsTable.id, req.params.id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
 var admin_default = router7;
 
-// artifacts/api-server/src/routes/index.ts
+// artifacts/api-server/src/routes/subscriptions.ts
+var import_express8 = __toESM(require_express2(), 1);
 var router8 = (0, import_express8.Router)();
-router8.use(health_default);
-router8.use("/auth", auth_default);
-router8.use("/progress", progress_default);
-router8.use("/trades", trades_default);
-router8.use("/notifications", notifications_default);
-router8.use("/duelos", duelos_default);
-router8.use("/admin", admin_default);
-router8.get("/videos", async (req, res) => {
+function genId() {
+  return `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+router8.get("/:userId", async (req, res) => {
+  try {
+    const now = Date.now();
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.userId, req.params.userId)).orderBy(desc(subscriptionsTable.createdAt)).limit(1).get();
+    if (!sub) return res.json({ subscription: null });
+    if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+      await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+      sub.status = "expired";
+    }
+    res.json({ subscription: sub });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router8.post("/:userId/request", async (req, res) => {
+  try {
+    const { paymentReference } = req.body ?? {};
+    const now = Date.now();
+    const existing = await db.select().from(subscriptionsTable).where(
+      and(
+        eq(subscriptionsTable.userId, req.params.userId),
+        eq(subscriptionsTable.status, "pending")
+      )
+    ).get();
+    if (existing) {
+      return res.status(409).json({
+        error: "already_pending",
+        message: "J\xE1 tens um pedido de subscri\xE7\xE3o pendente."
+      });
+    }
+    const activeExisting = await db.select().from(subscriptionsTable).where(
+      and(
+        eq(subscriptionsTable.userId, req.params.userId),
+        eq(subscriptionsTable.status, "active")
+      )
+    ).get();
+    if (activeExisting && activeExisting.expiresAt && activeExisting.expiresAt > now) {
+      return res.status(409).json({
+        error: "already_active",
+        message: "A tua subscri\xE7\xE3o j\xE1 est\xE1 ativa."
+      });
+    }
+    const id = genId();
+    await db.insert(subscriptionsTable).values({
+      id,
+      userId: req.params.userId,
+      status: "pending",
+      amount: 5e3,
+      paymentReference: paymentReference ?? null,
+      createdAt: now,
+      updatedAt: now
+    });
+    res.json({ ok: true, id });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router8.patch("/:userId/reference", async (req, res) => {
+  try {
+    const { paymentReference } = req.body ?? {};
+    if (!paymentReference) {
+      return res.status(400).json({ error: "paymentReference required" });
+    }
+    const now = Date.now();
+    const sub = await db.select().from(subscriptionsTable).where(
+      and(
+        eq(subscriptionsTable.userId, req.params.userId),
+        eq(subscriptionsTable.status, "pending")
+      )
+    ).orderBy(desc(subscriptionsTable.createdAt)).limit(1).get();
+    if (!sub) return res.status(404).json({ error: "no_pending" });
+    await db.update(subscriptionsTable).set({ paymentReference, updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+var subscriptions_default = router8;
+
+// artifacts/api-server/src/routes/index.ts
+var router9 = (0, import_express9.Router)();
+router9.use(health_default);
+router9.use("/auth", auth_default);
+router9.use("/progress", progress_default);
+router9.use("/trades", trades_default);
+router9.use("/notifications", notifications_default);
+router9.use("/duelos", duelos_default);
+router9.use("/admin", admin_default);
+router9.use("/subscription", subscriptions_default);
+router9.get("/videos", async (req, res) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "content.videos")).get();
     const videos = row ? JSON.parse(row.value) : [];
@@ -57052,7 +57250,7 @@ router8.get("/videos", async (req, res) => {
     res.json([]);
   }
 });
-var routes_default = router8;
+var routes_default = router9;
 
 // artifacts/api-server/src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -57073,7 +57271,7 @@ var logger = (0, import_pino.default)({
 });
 
 // artifacts/api-server/src/app.ts
-var app = (0, import_express9.default)();
+var app = (0, import_express10.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -57094,8 +57292,8 @@ app.use(
   })
 );
 app.use((0, import_cors.default)());
-app.use(import_express9.default.json());
-app.use(import_express9.default.urlencoded({ extended: true }));
+app.use(import_express10.default.json());
+app.use(import_express10.default.urlencoded({ extended: true }));
 app.use("/api", routes_default);
 var app_default = app;
 

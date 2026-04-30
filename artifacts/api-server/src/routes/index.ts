@@ -6,6 +6,7 @@ import tradesRouter        from "./trades";
 import notificationsRouter from "./notifications";
 import duelosRouter        from "./duelos";
 import adminRouter         from "./admin";
+import subscriptionsRouter from "./subscriptions";
 import { db, adminSettingsTable, eq } from "@workspace/db";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use("/trades",        tradesRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/duelos",        duelosRouter);
 router.use("/admin",         adminRouter);
+router.use("/subscription",  subscriptionsRouter);
 
 /* Public video list — no auth required, students can fetch */
 router.get("/videos", async (req, res) => {

@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
+import { PaymentWall } from "@/components/PaymentWall";
 import { LEVELS, TOTAL_LESSONS } from "@/data/curriculum";
 import { fmtUSD } from "@/lib/market";
+import type { SubscriptionData } from "@/lib/apiClient";
 import {
   ACHIEVEMENTS,
   XP_RANKS,
@@ -42,8 +47,15 @@ type Tab = "conquistas" | "missoes" | "leaderboard";
 
 export default function Perfil() {
   const [tab, setTab] = useState<Tab>("conquistas");
+  const [showPaywall, setShowPaywall] = useState(false);
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
+  const user = useAuthStore((s) => s.user);
+  const { subscription, fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
+
+  useEffect(() => {
+    if (user) fetchSub(user.id);
+  }, [user, fetchSub]);
 
   const completedPct = (progress.completedLessons.length / TOTAL_LESSONS) * 100;
   const trades = sim.history;
@@ -126,6 +138,22 @@ export default function Perfil() {
           </div>
         </div>
       </Card>
+
+      {/* ── Modal de pagamento ── */}
+      {showPaywall && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
+            <PaymentWall onClose={() => setShowPaywall(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Subscrição ── */}
+      <SubscriptionCard
+        subscription={subscription}
+        isActive={hasActiveSubscription()}
+        onSubscribe={() => setShowPaywall(true)}
+      />
 
       {/* ── Stats row ── */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -449,5 +477,133 @@ function Row({ label, value, accent }: { label: string; value: string; accent?: 
       <span className="text-muted-foreground">{label}</span>
       <span className={`font-mono font-semibold ${color}`}>{value}</span>
     </div>
+  );
+}
+
+function SubscriptionCard({
+  subscription,
+  isActive,
+  onSubscribe,
+}: {
+  subscription: SubscriptionData | null;
+  isActive: boolean;
+  onSubscribe: () => void;
+}) {
+  const statusConfig = {
+    active: {
+      label: "Ativo",
+      color: "text-bull",
+      bg: "bg-bull/15",
+      icon: <CheckCircle2 className="h-4 w-4 text-bull" />,
+    },
+    pending: {
+      label: "Aguardando confirmação",
+      color: "text-warning",
+      bg: "bg-warning/15",
+      icon: <Clock className="h-4 w-4 text-warning" />,
+    },
+    expired: {
+      label: "Expirada",
+      color: "text-bear",
+      bg: "bg-bear/15",
+      icon: <Crown className="h-4 w-4 text-bear" />,
+    },
+    rejected: {
+      label: "Rejeitada",
+      color: "text-bear",
+      bg: "bg-bear/15",
+      icon: <Crown className="h-4 w-4 text-bear" />,
+    },
+  };
+
+  const status = subscription?.status ?? null;
+  const cfg = status ? statusConfig[status as keyof typeof statusConfig] : null;
+
+  const daysLeft = subscription?.expiresAt
+    ? Math.max(0, Math.ceil((subscription.expiresAt - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+
+  const fmt = (ts: number) =>
+    new Date(ts).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border bg-surface-1 px-5 py-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Crown className="h-4 w-4 text-amber-500" />
+          Subscrição Premium
+        </h3>
+        {cfg && (
+          <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.bg} ${cfg.color}`}>
+            {cfg.icon} {cfg.label}
+          </span>
+        )}
+      </div>
+
+      <div className="p-5">
+        {isActive && subscription ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Aprovado em</p>
+                <p className="font-medium">{subscription.approvedAt ? fmt(subscription.approvedAt) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Expira em</p>
+                <p className={`font-medium ${daysLeft !== null && daysLeft <= 7 ? "text-warning" : ""}`}>
+                  {subscription.expiresAt ? fmt(subscription.expiresAt) : "—"}
+                  {daysLeft !== null && ` (${daysLeft} dias)`}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Valor</p>
+                <p className="font-medium">{subscription.amount.toLocaleString("pt-AO")} AOA</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Ref. pagamento</p>
+                <p className="font-mono text-xs">{subscription.paymentReference ?? "—"}</p>
+              </div>
+            </div>
+            {daysLeft !== null && daysLeft <= 7 && (
+              <div className="flex items-center justify-between rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+                <p className="text-xs text-warning">A subscrição expira em breve</p>
+                <Button size="sm" variant="outline" onClick={onSubscribe} className="h-7 text-xs border-warning/50 text-warning">
+                  Renovar
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : status === "pending" ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Pedido enviado em {subscription?.createdAt ? fmt(subscription.createdAt) : "—"}. A aguardar confirmação do administrador.
+            </p>
+            {subscription?.paymentReference && (
+              <p className="text-xs text-muted-foreground">
+                Referência: <span className="font-mono">{subscription.paymentReference}</span>
+              </p>
+            )}
+            {!subscription?.paymentReference && (
+              <Button size="sm" variant="outline" onClick={onSubscribe}>
+                Adicionar referência de pagamento
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-2 text-center">
+            <p className="text-sm text-muted-foreground max-w-sm">
+              {status === "expired"
+                ? "A tua subscrição expirou. Renova para continuar com acesso ao conteúdo Intermediário e Avançado."
+                : status === "rejected"
+                  ? `Pedido rejeitado${subscription?.notes ? `: ${subscription.notes}` : ""}. Faz um novo pedido.`
+                  : "Subscreve por 5.000 AOA/mês para ter acesso aos níveis Intermediário e Avançado."}
+            </p>
+            <Button onClick={onSubscribe}>
+              {status === "expired" || status === "rejected" ? "Renovar subscrição" : "Subscrever agora"}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }

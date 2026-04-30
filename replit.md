@@ -18,8 +18,19 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-- **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language. No backend — all data is static/local.
-- **api-server** (`artifacts/api-server/`) — Express 5 backend. Currently only has a health check endpoint. Can be extended for user data persistence, leaderboards, etc.
+- **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language.
+- **api-server** (`artifacts/api-server/`) — Express 5 backend with full API: auth, progress, trades, notifications, duelos, subscriptions, admin.
+
+## Subscription/Payment System
+
+Manual payment system (5.000 AOA/month) for Angola:
+- **Iniciante** levels: FREE for all users
+- **Intermediário** and **Avançado** levels: require active subscription
+- Payment flow: user submits payment reference → admin approves in admin panel → 30-day access
+- DB table: `subscriptions` (pending/active/expired/rejected)
+- Frontend: `PaymentWall` component, `useSubscriptionStore`, payment wall in `/aprender`, subscription card in `/perfil`
+- Admin: "Subscrições" tab in `/admin` with approve/reject actions and stats
+- API routes: `GET/POST/PATCH /api/subscription/:userId`, `GET/PATCH /api/admin/subscriptions/*`
 
 ## Key Commands
 

@@ -77,6 +77,18 @@ export async function initDb(): Promise<void> {
       value       TEXT NOT NULL DEFAULT '{}',
       updated_at  INTEGER NOT NULL
     )`),
+    sql.raw(`CREATE TABLE IF NOT EXISTS subscriptions (
+      id                TEXT PRIMARY KEY,
+      user_id           TEXT NOT NULL,
+      status            TEXT NOT NULL DEFAULT 'pending',
+      amount            INTEGER NOT NULL DEFAULT 5000,
+      payment_reference TEXT,
+      notes             TEXT,
+      created_at        INTEGER NOT NULL,
+      expires_at        INTEGER,
+      approved_at       INTEGER,
+      updated_at        INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {

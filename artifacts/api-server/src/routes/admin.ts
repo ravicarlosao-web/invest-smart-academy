@@ -7,8 +7,10 @@ import {
   notificationsTable,
   duelosTable,
   adminSettingsTable,
+  subscriptionsTable,
   eq,
   desc,
+  and,
   sql,
 } from "@workspace/db";
 
@@ -358,6 +360,118 @@ router.put("/videos", async (req, res) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
     await setSetting("content.videos", items);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
+ * Subscrições — gestão manual de pagamentos (5.000 AOA/mês)
+ * ------------------------------------------------------------------------- */
+
+/** GET /api/admin/subscriptions  — lista todas as subscrições com info do utilizador */
+router.get("/subscriptions", async (req, res) => {
+  try {
+    const now    = Date.now();
+    const status = req.query.status as string | undefined;
+
+    const subs = await db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt)).all();
+
+    // Marca expiradas
+    for (const sub of subs) {
+      if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+        sub.status = "expired";
+      }
+    }
+
+    // Join com users
+    const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).all();
+    const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+
+    const result = subs
+      .filter((s) => !status || s.status === status)
+      .map((s) => ({
+        ...s,
+        user: userMap[s.userId] ?? { id: s.userId, name: "—", email: "—" },
+      }));
+
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** GET /api/admin/subscriptions/stats — contagem por status */
+router.get("/subscriptions/stats", async (req, res) => {
+  try {
+    const now  = Date.now();
+    const subs = await db.select().from(subscriptionsTable).all();
+
+    // Marca expiradas
+    for (const sub of subs) {
+      if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+        sub.status = "expired";
+      }
+    }
+
+    const stats = { pending: 0, active: 0, expired: 0, rejected: 0, total: subs.length };
+    for (const sub of subs) {
+      if (sub.status === "pending")  stats.pending++;
+      if (sub.status === "active")   stats.active++;
+      if (sub.status === "expired")  stats.expired++;
+      if (sub.status === "rejected") stats.rejected++;
+    }
+
+    res.json(stats);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** PATCH /api/admin/subscriptions/:id/approve — aprova e ativa por 30 dias */
+router.patch("/subscriptions/:id/approve", async (req, res) => {
+  try {
+    const now       = Date.now();
+    const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
+
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    if (!sub) return res.status(404).json({ error: "not_found" });
+
+    await db.update(subscriptionsTable).set({
+      status:     "active",
+      approvedAt: now,
+      expiresAt,
+      updatedAt:  now,
+    }).where(eq(subscriptionsTable.id, req.params.id));
+
+    res.json({ ok: true, expiresAt });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** PATCH /api/admin/subscriptions/:id/reject — rejeita com nota opcional */
+router.patch("/subscriptions/:id/reject", async (req, res) => {
+  try {
+    const { notes } = req.body ?? {};
+    const now = Date.now();
+
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    if (!sub) return res.status(404).json({ error: "not_found" });
+
+    await db.update(subscriptionsTable).set({
+      status:    "rejected",
+      notes:     notes ?? null,
+      updatedAt: now,
+    }).where(eq(subscriptionsTable.id, req.params.id));
+
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);

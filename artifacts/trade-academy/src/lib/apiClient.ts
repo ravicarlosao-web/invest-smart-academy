@@ -156,4 +156,48 @@ export const api = {
   videos: {
     list: () => request<unknown[]>("GET", "/videos"),
   },
+
+  /* ---------- Subscrições (aluno) ---------- */
+  subscription: {
+    get: (userId: string) =>
+      request<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
+    request: (userId: string, paymentReference?: string) =>
+      request<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, { paymentReference }),
+    updateReference: (userId: string, paymentReference: string) =>
+      request<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, { paymentReference }),
+  },
+
+  /* ---------- Subscrições (admin) ---------- */
+  adminSubscriptions: {
+    list: (status?: string) =>
+      adminRequest<SubscriptionWithUser[]>(
+        "GET",
+        status ? `/admin/subscriptions?status=${status}` : "/admin/subscriptions",
+      ),
+    stats: () =>
+      adminRequest<{ pending: number; active: number; expired: number; rejected: number; total: number }>(
+        "GET", "/admin/subscriptions/stats",
+      ),
+    approve: (id: string) =>
+      adminRequest<{ ok: boolean; expiresAt: number }>("PATCH", `/admin/subscriptions/${id}/approve`),
+    reject: (id: string, notes?: string) =>
+      adminRequest<{ ok: boolean }>("PATCH", `/admin/subscriptions/${id}/reject`, { notes }),
+  },
 } as const;
+
+export type SubscriptionData = {
+  id: string;
+  userId: string;
+  status: "pending" | "active" | "expired" | "rejected";
+  amount: number;
+  paymentReference: string | null;
+  notes: string | null;
+  createdAt: number;
+  expiresAt: number | null;
+  approvedAt: number | null;
+  updatedAt: number;
+};
+
+export type SubscriptionWithUser = SubscriptionData & {
+  user: { id: string; name: string; email: string };
+};

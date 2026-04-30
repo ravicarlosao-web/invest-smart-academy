@@ -4,3 +4,4 @@ export * from "./trades";
 export * from "./notifications";
 export * from "./duelos";
 export * from "./adminSettings";
+export * from "./subscriptions";
