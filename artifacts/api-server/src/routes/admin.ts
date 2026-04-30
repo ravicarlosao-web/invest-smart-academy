@@ -50,7 +50,7 @@ router.use(requireAdmin);
 /* ---------------------------------------------------------------------------
  * Overview
  * ------------------------------------------------------------------------- */
-router.get("/overview", async (_req, res) => {
+router.get("/overview", async (req, res) => {
   try {
     const [usersCnt]   = await db.select({ c: sql<number>`count(*)` }).from(usersTable).all();
     const [tradesCnt]  = await db.select({ c: sql<number>`count(*)` }).from(tradesTable).all();
@@ -109,7 +109,7 @@ router.get("/overview", async (_req, res) => {
 /* ---------------------------------------------------------------------------
  * Users
  * ------------------------------------------------------------------------- */
-router.get("/users", async (_req, res) => {
+router.get("/users", async (req, res) => {
   try {
     const users = await db.select({
       id:        usersTable.id,
@@ -180,7 +180,7 @@ router.post("/users/:userId/reset-sim", async (req, res) => {
 /* ---------------------------------------------------------------------------
  * Simulator monitor — recent trades + leaderboard
  * ------------------------------------------------------------------------- */
-router.get("/simulator", async (_req, res) => {
+router.get("/simulator", async (req, res) => {
   try {
     const recent = await db
       .select()
@@ -230,7 +230,7 @@ router.get("/simulator", async (_req, res) => {
  * Curriculum overrides — stored in admin_settings under key "curriculum.override"
  * Value is a JSON object: { lessons: { "<lessonId>": Partial<Lesson> } }
  * ------------------------------------------------------------------------- */
-router.get("/curriculum", async (_req, res) => {
+router.get("/curriculum", async (req, res) => {
   try {
     const row = await db
       .select()
