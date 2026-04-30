@@ -11,6 +11,7 @@ import {
   Settings,
   Swords,
   Compass,
+  PlayCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,13 +30,14 @@ import { useAppStore } from "@/store/useAppStore";
 import { TOTAL_LESSONS } from "@/data/curriculum";
 
 const mainItems = [
-  { title: "Dashboard",   url: "/dashboard",    icon: LayoutDashboard },
-  { title: "Aprender",    url: "/aprender",     icon: GraduationCap },
-  { title: "Simular",     url: "/simular",      icon: LineChart },
-  { title: "Estratégias", url: "/estrategias",  icon: Compass },
-  { title: "Duelos",      url: "/duelo",        icon: Swords },
-  { title: "Biblioteca",  url: "/biblioteca",   icon: BookMarked },
-  { title: "Perfil",      url: "/perfil",       icon: User2 },
+  { title: "Dashboard",    url: "/dashboard",     icon: LayoutDashboard },
+  { title: "Aprender",     url: "/aprender",      icon: GraduationCap },
+  { title: "Vídeo Aulas",  url: "/video-aulas",   icon: PlayCircle },
+  { title: "Simular",      url: "/simular",       icon: LineChart },
+  { title: "Estratégias",  url: "/estrategias",   icon: Compass },
+  { title: "Duelos",       url: "/duelo",         icon: Swords },
+  { title: "Biblioteca",   url: "/biblioteca",    icon: BookMarked },
+  { title: "Perfil",       url: "/perfil",        icon: User2 },
 ];
 
 const extraItems = [

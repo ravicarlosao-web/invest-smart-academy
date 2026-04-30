@@ -147,5 +147,13 @@ export const api = {
 
     getResources:  () => adminRequest<unknown[]>("GET", "/admin/resources"),
     saveResources: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/resources", items),
+
+    getVideos:  () => adminRequest<unknown[]>("GET", "/admin/videos"),
+    saveVideos: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/videos", items),
+  },
+
+  /* ---------- Public Videos (students) ---------- */
+  videos: {
+    list: () => request<unknown[]>("GET", "/videos"),
   },
 } as const;

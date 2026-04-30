@@ -23,6 +23,7 @@ import Duelo        from "./pages/Duelo";
 import Biblioteca   from "./pages/Biblioteca";
 import BookReader   from "./pages/BookReader";
 import Estrategias  from "./pages/Estrategias";
+import VideoAulas   from "./pages/VideoAulas";
 import Admin        from "./pages/Admin";
 import NotFound     from "./pages/NotFound.tsx";
 import UserStateSync from "./components/UserStateSync";
@@ -60,6 +61,8 @@ const App = () => (
               <Route path="/biblioteca"            element={<Biblioteca />} />
               <Route path="/biblioteca/:bookId"    element={<BookReader />} />
               <Route path="/estrategias"           element={<Estrategias />} />
+              <Route path="/video-aulas"           element={<VideoAulas />} />
+              <Route path="/video-aulas/:videoId"  element={<VideoAulas />} />
             </Route>
           </Route>
 

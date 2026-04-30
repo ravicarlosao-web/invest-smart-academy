@@ -5,7 +5,7 @@ import {
   Trash2, RotateCcw, Search, Save, AlertTriangle, Trophy, Home,
   Compass, Library, BookMarked, BookText, Plus, Pencil, X, ChevronRight,
   BarChart3, GraduationCap, Star, ExternalLink, Tag, ChevronDown, ChevronUp,
-  Coins,
+  Coins, PlayCircle, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { LEVELS } from "@/data/curriculum";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
 import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
+import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS } from "@/data/videos";
 
 /* =========================================================================
  * Login screen
@@ -1174,17 +1175,295 @@ function SimulatorTab() {
 }
 
 /* =========================================================================
+ * Videos admin tab
+ * ========================================================================= */
+const VIDEO_LEVELS: VideoLesson["level"][] = ["Iniciante", "Intermediário", "Avançado"];
+
+const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
+  creator: "", title: "", level: "Iniciante", youtubeUrl: "",
+  description: "", requiredXp: undefined, order: 99, duration: "",
+};
+
+function VideosTab() {
+  const [videos, setVideos]   = useState<VideoLesson[]>([]);
+  const [loaded, setLoaded]   = useState(false);
+  const [editing, setEditing] = useState<VideoLesson | null>(null);
+  const [isNew, setIsNew]     = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.admin.getVideos()
+      .then((r) => { setVideos((r as VideoLesson[]).sort((a, b) => a.order - b.order)); setLoaded(true); })
+      .catch(() => { toast.error("Erro ao carregar vídeos"); setLoaded(true); });
+  }, []);
+
+  async function save(updated: VideoLesson[]) {
+    setSaving(true);
+    try {
+      await api.admin.saveVideos(updated);
+      setVideos(updated.sort((a, b) => a.order - b.order));
+      toast.success("Vídeos actualizados");
+      setEditing(null);
+    } catch { toast.error("Falha ao salvar"); }
+    finally { setSaving(false); }
+  }
+
+  function openNew() {
+    setEditing({ id: uid(), ...BLANK_VIDEO, order: (videos.length + 1) * 10 });
+    setIsNew(true);
+    setPreview(null);
+  }
+
+  function openEdit(v: VideoLesson) { setEditing({ ...v }); setIsNew(false); setPreview(null); }
+
+  function handleCommit() {
+    if (!editing) return;
+    const updated = isNew
+      ? [...videos, editing]
+      : videos.map((v) => v.id === editing.id ? editing : v);
+    save(updated);
+  }
+
+  function moveUp(id: string) {
+    const arr = [...videos];
+    const i   = arr.findIndex((v) => v.id === id);
+    if (i <= 0) return;
+    [arr[i], arr[i - 1]] = [arr[i - 1], arr[i]];
+    const reordered = arr.map((v, idx) => ({ ...v, order: (idx + 1) * 10 }));
+    save(reordered);
+  }
+
+  function moveDown(id: string) {
+    const arr = [...videos];
+    const i   = arr.findIndex((v) => v.id === id);
+    if (i < 0 || i >= arr.length - 1) return;
+    [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+    const reordered = arr.map((v, idx) => ({ ...v, order: (idx + 1) * 10 }));
+    save(reordered);
+  }
+
+  const editYtId = editing?.youtubeUrl ? extractYouTubeId(editing.youtubeUrl) : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Vídeo Aulas</h2>
+          <p className="text-sm text-muted-foreground">
+            {videos.length} vídeo{videos.length !== 1 ? "s" : ""} · Adiciona aulas do YouTube para os alunos
+          </p>
+        </div>
+        <Button onClick={openNew}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo vídeo
+        </Button>
+      </div>
+
+      {/* Editor */}
+      {editing && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{isNew ? "Novo vídeo" : `Editar: ${editing.title}`}</CardTitle>
+            <CardDescription>
+              Cole a URL do YouTube — o player será incorporado internamente na plataforma.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label className="text-xs text-muted-foreground">Criador / Canal</Label>
+                <Input value={editing.creator} placeholder="Ex: Gustavo Cerbasi"
+                  onChange={(e) => setEditing({ ...editing, creator: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Nome da aula</Label>
+                <Input value={editing.title} placeholder="Ex: Como calcular o Stop Loss"
+                  onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Nível da aula</Label>
+                <Select value={editing.level} onValueChange={(v) => setEditing({ ...editing, level: v as VideoLesson["level"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{VIDEO_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Ordem de exibição</Label>
+                <Input type="number" value={editing.order}
+                  onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs text-muted-foreground">URL do vídeo no YouTube</Label>
+                <div className="flex gap-2">
+                  <Input value={editing.youtubeUrl} placeholder="https://www.youtube.com/watch?v=..."
+                    onChange={(e) => setEditing({ ...editing, youtubeUrl: e.target.value })} className="flex-1" />
+                  <Button variant="outline" size="sm" onClick={() => setPreview(editYtId)}
+                    disabled={!editYtId}>
+                    Pré-visualizar
+                  </Button>
+                </div>
+                {editing.youtubeUrl && !editYtId && (
+                  <p className="text-[11px] text-destructive mt-1">URL inválido — verifique o formato do link YouTube.</p>
+                )}
+                {editYtId && (
+                  <p className="text-[11px] text-bull mt-1">ID detectado: <span className="font-mono">{editYtId}</span></p>
+                )}
+              </div>
+
+              {/* Preview */}
+              {preview && editYtId && (
+                <div className="md:col-span-2">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Pré-visualização</Label>
+                  <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: "16/9", maxWidth: 480 }}>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${editYtId}?rel=0`}
+                      title="preview"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  XP mínimo para desbloquear <span className="text-muted-foreground/60">(0 = livre)</span>
+                </Label>
+                <Input type="number" min={0} value={editing.requiredXp ?? ""}
+                  placeholder="Deixe em branco para não exigir XP"
+                  onChange={(e) => setEditing({
+                    ...editing,
+                    requiredXp: e.target.value === "" ? undefined : Number(e.target.value),
+                  })} />
+                {editing.requiredXp && (
+                  <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                    <Lock className="h-2.5 w-2.5" /> Alunos com menos de {editing.requiredXp} XP não conseguem ver este vídeo.
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Duração <span className="text-muted-foreground/60">(ex: 12:34)</span></Label>
+                <Input value={editing.duration ?? ""} placeholder="12:34"
+                  onChange={(e) => setEditing({ ...editing, duration: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs text-muted-foreground">Descrição <span className="text-muted-foreground/60">(opcional)</span></Label>
+                <Textarea rows={2} value={editing.description ?? ""}
+                  onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+              <p className="text-[11px] text-muted-foreground">
+                <strong className="text-foreground">Aviso:</strong> Ao adicionar um vídeo do YouTube, o conteúdo
+                pertence ao criador original. O sistema apresenta uma nota automática de autoria aos alunos.
+                Certifica-te de que tens permissão ou que o vídeo é de acesso público.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleCommit} disabled={saving || !editing.title || !editing.creator || !editYtId}>
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                {saving ? "Salvando..." : isNew ? "Adicionar vídeo" : "Guardar alterações"}
+              </Button>
+              <Button variant="ghost" onClick={() => { setEditing(null); setPreview(null); }}>Cancelar</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty state */}
+      {loaded && videos.length === 0 && !editing && (
+        <Card className="border-dashed border-border/60">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <PlayCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="font-medium text-sm">Nenhum vídeo aula adicionado</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              Adiciona vídeos do YouTube para os alunos assistirem directamente na plataforma com o player interno.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Video list */}
+      {loaded && videos.length > 0 && (
+        <div className="space-y-2">
+          {videos.map((v, i) => {
+            const ytId = extractYouTubeId(v.youtubeUrl);
+            return (
+              <Card key={v.id} className="border-border/60">
+                <CardContent className="flex items-center gap-3 p-3">
+                  {/* Thumbnail */}
+                  <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-md bg-muted">
+                    {ytId ? (
+                      <img src={thumbnailUrl(ytId)} alt={v.title}
+                        className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <PlayCircle className="h-6 w-6 text-muted-foreground/30" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">{v.title}</span>
+                      <Badge className={cn("text-[10px]", LEVEL_COLORS[v.level])}>{v.level}</Badge>
+                      {v.requiredXp && (
+                        <Badge variant="outline" className="text-[10px]">
+                          <Lock className="h-2.5 w-2.5 mr-0.5" />{v.requiredXp} XP
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{v.creator}</p>
+                    {v.duration && <p className="text-[11px] text-muted-foreground/60 font-mono">{v.duration}</p>}
+                  </div>
+
+                  {/* Order controls */}
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveUp(v.id)} disabled={i === 0}>
+                      <ChevronRight className="h-3.5 w-3.5 -rotate-90" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveDown(v.id)} disabled={i === videos.length - 1}>
+                      <ChevronRight className="h-3.5 w-3.5 rotate-90" />
+                    </Button>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(v)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+                      onClick={() => { if (window.confirm(`Excluir "${v.title}"?`)) save(videos.filter((x) => x.id !== v.id)); }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
-  { id: "overview",    label: "Visão Geral",    icon: BarChart3 },
-  { id: "users",       label: "Alunos",          icon: Users },
+  { id: "overview",    label: "Visão Geral",          icon: BarChart3 },
+  { id: "users",       label: "Alunos",               icon: Users },
   { id: "curriculum",  label: "Trilha de Aprendizado", icon: GraduationCap },
-  { id: "strategies",  label: "Estratégias",     icon: Compass },
-  { id: "books",       label: "Biblioteca",      icon: BookMarked },
-  { id: "glossary",    label: "Glossário",       icon: BookText },
-  { id: "resources",   label: "Recursos",        icon: Library },
-  { id: "simulator",   label: "Simulador",       icon: LineChartIcon },
+  { id: "videos",      label: "Vídeo Aulas",          icon: PlayCircle },
+  { id: "strategies",  label: "Estratégias",          icon: Compass },
+  { id: "books",       label: "Biblioteca",           icon: BookMarked },
+  { id: "glossary",    label: "Glossário",            icon: BookText },
+  { id: "resources",   label: "Recursos",             icon: Library },
+  { id: "simulator",   label: "Simulador",            icon: LineChartIcon },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]["id"];
@@ -1206,6 +1485,7 @@ export default function Admin() {
     overview:   <OverviewTab />,
     users:      <UsersTab />,
     curriculum: <CurriculumTab />,
+    videos:     <VideosTab />,
     strategies: <StrategiesTab />,
     books:      <BooksTab />,
     glossary:   <GlossaryTab />,

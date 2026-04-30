@@ -341,4 +341,28 @@ router.put("/resources", async (req, res) => {
   }
 });
 
+/* ---------------------------------------------------------------------------
+ * Video Aulas — stored as admin_settings key "content.videos"
+ * Public GET is exposed at /videos (see routes/index.ts)
+ * ------------------------------------------------------------------------- */
+router.get("/videos", async (req, res) => {
+  try {
+    res.json(await getSetting("content.videos", []));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/videos", async (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : [];
+    await setSetting("content.videos", items);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;

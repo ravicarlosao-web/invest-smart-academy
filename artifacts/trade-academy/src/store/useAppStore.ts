@@ -173,6 +173,9 @@ interface AppState {
   duelos: DueloEntry[];
   booksProgress: Record<string, BookProgress>;
 
+  /** Set of video IDs the user has marked as watched */
+  watchedVideos: string[];
+
   /** Timestamp (ms) when the account balance first hit $0. Null = never busted. */
   simZeroedAt: number | null;
 
@@ -217,6 +220,9 @@ interface AppState {
   // books actions
   updateBookProgress: (bookId: string, scrollPercent: number) => void;
   markBookComplete:   (bookId: string) => void;
+
+  // videos actions
+  markVideoWatched: (videoId: string) => void;
 }
 
 const initialSettings: Settings = {
@@ -409,6 +415,7 @@ export const useAppStore = create<AppState>()(
       seenAchievements: [],
       duelos: [],
       booksProgress: {},
+      watchedVideos: [],
       simZeroedAt: null,
 
       /* -------- Full reset (called on logout) -------- */
@@ -428,6 +435,7 @@ export const useAppStore = create<AppState>()(
           seenAchievements:[],
           duelos:          [],
           booksProgress:   {},
+          watchedVideos:   [],
         }),
 
       /* -------- Onboarding / Settings -------- */
@@ -881,6 +889,13 @@ export const useAppStore = create<AppState>()(
             },
           };
         }),
+
+      markVideoWatched: (videoId) =>
+        set((s) => ({
+          watchedVideos: s.watchedVideos.includes(videoId)
+            ? s.watchedVideos
+            : [...s.watchedVideos, videoId],
+        })),
     }),
     {
       name: "tradeacademy-store-v2",
@@ -904,6 +919,7 @@ export const useAppStore = create<AppState>()(
           sim:           { ...current.sim,            ...(p.sim           ?? {}) },
           settings:      { ...current.settings,       ...(p.settings      ?? {}) },
           booksProgress: { ...current.booksProgress,  ...(p.booksProgress ?? {}) },
+          watchedVideos: p.watchedVideos ?? current.watchedVideos,
         };
       },
     },
