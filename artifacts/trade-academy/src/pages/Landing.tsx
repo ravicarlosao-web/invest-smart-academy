@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import {
   TrendingUp, BookOpen, Trophy, BarChart2, Shield,
   Zap, GraduationCap, Brain, ChevronRight, Twitter,
-  MessageSquare, Send,
+  MessageSquare, Send, Play, Video, Clock, LineChart,
+  CheckCircle, Lock, ArrowRight,
 } from "lucide-react";
 import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png";
 
@@ -20,23 +21,32 @@ const FEATURES = [
     desc: "Do básico ao avançado, com quizzes e revisão espaçada para fixares o conhecimento.",
   },
   {
-    icon: Shield,
-    title: "Simulador com dados reais",
-    desc: "Pratica com preços reais, abre posições e analisa o teu desempenho sem risco.",
+    icon: LineChart,
+    title: "Gráficos em tempo real",
+    desc: "Simulador com 6 timeframes (1S · 1m · 5m · 1h · 4h · 1D) que fecham nos segundos exactos do relógio — como plataformas profissionais.",
   },
   {
-    icon: Brain,
-    title: "Aprende sem arriscar",
-    desc: "Domina a gestão de risco, stop-loss e dimensionamento antes de usar dinheiro real.",
+    icon: Video,
+    title: "Vídeo Aulas curadas",
+    desc: "Os melhores vídeos de trading em português, com player personalizado e desbloqueio sequencial por XP.",
   },
 ];
 
 const STATS = [
-  { value: "40+",    label: "Aulas" },
-  { value: "8",      label: "Módulos" },
-  { value: "100%",   label: "Gratuito" },
-  { value: "PT",     label: "Em Português" },
+  { value: "40+", label: "Aulas" },
+  { value: "8",   label: "Módulos" },
+  { value: "6",   label: "Timeframes" },
+  { value: "PT",  label: "Em Português" },
 ];
+
+const VIDEO_FEATURES = [
+  { icon: Video,        text: "Vídeos curados dos melhores criadores portugueses de trading" },
+  { icon: Lock,         text: "Desbloqueio sequencial — cada vídeo abre ao concluíres o anterior" },
+  { icon: CheckCircle,  text: "Marca como assistido e acumula XP automaticamente" },
+  { icon: Play,         text: "Player sem anúncios ou branding do YouTube" },
+];
+
+const TF_ITEMS = ["1S", "1m", "5m", "1h", "4h", "1D"];
 
 /* ─── Components ────────────────────────────────────────── */
 function Nav() {
@@ -51,8 +61,8 @@ function Nav() {
 
       <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
         <a href="#funcionalidades" className="hover:text-white transition-colors">Funcionalidades</a>
-        <a href="#aulas" className="hover:text-white transition-colors">Aulas</a>
-        <a href="#simulador" className="hover:text-white transition-colors">Simulador</a>
+        <a href="#video-aulas"     className="hover:text-white transition-colors">Vídeo Aulas</a>
+        <a href="#simulador"       className="hover:text-white transition-colors">Simulador</a>
       </nav>
 
       <div className="flex items-center gap-3">
@@ -86,19 +96,15 @@ export default function Landing() {
 
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20 overflow-hidden">
-        {/* hero background image — spheres */}
         <img
           src={heroImage}
           alt=""
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover object-center opacity-80 pointer-events-none select-none"
         />
-        {/* dark vignette so text stays readable */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#060709]/60 via-transparent to-[#060709]" />
 
-        {/* content */}
         <div className="relative z-10 flex flex-col items-center gap-5 max-w-4xl mx-auto">
-          {/* badge */}
           <span className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 backdrop-blur-sm">
             <GraduationCap className="w-3.5 h-3.5 text-cyan-400" />
             Educação em Trading em Português
@@ -111,8 +117,8 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
-            40 aulas estruturadas do básico ao avançado, simulador com dados
-            reais e desafios de gestão de risco. Tudo gratuito, tudo em português.
+            40 aulas estruturadas, vídeo aulas curadas dos melhores criadores
+            e um simulador com gráficos em tempo real. Tudo gratuito, tudo em português.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
@@ -131,11 +137,9 @@ export default function Landing() {
             </Link>
           </div>
         </div>
-
-        {/* bottom fade handled by gradient above */}
       </section>
 
-      {/* ── APP MOCKUP strip ─────────────────────────────── */}
+      {/* ── APP MOCKUP ───────────────────────────────────── */}
       <section id="simulador" className="px-6 pt-0 pb-24 max-w-5xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-[#0d0f18] overflow-hidden shadow-2xl shadow-black/60">
           {/* fake browser bar */}
@@ -147,29 +151,48 @@ export default function Landing() {
               tradeacademy.app/simulador
             </div>
           </div>
-          {/* fake dashboard content */}
+
           <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {/* chart placeholder */}
-            <div className="sm:col-span-2 bg-[#13161e] rounded-xl p-4 h-36 flex flex-col justify-between">
+            {/* chart with timeframe buttons */}
+            <div className="sm:col-span-2 bg-[#13161e] rounded-xl p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500 font-medium">BTC/USD — Simulador</span>
+                <span className="text-xs text-gray-500 font-medium">BTC/USD</span>
                 <span className="text-xs text-green-400 font-semibold">+2.4%</span>
               </div>
-              {/* fake chart bars */}
-              <div className="flex items-end gap-1 h-16">
-                {[55,40,65,48,72,60,85,50,78,90,68,95,72,80,65,88,75].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-sm"
-                    style={{
-                      height: `${h}%`,
-                      background: i >= 14 ? "#22d3ee" : "rgba(255,255,255,0.08)",
-                    }}
-                  />
+              {/* timeframe buttons */}
+              <div className="flex gap-1 flex-wrap">
+                {TF_ITEMS.map((tf, i) => (
+                  <span
+                    key={tf}
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
+                      i === 1 ? "bg-cyan-500 text-[#060709]" : "text-gray-600"
+                    }`}
+                  >
+                    {tf}
+                  </span>
+                ))}
+                <span className="ml-auto text-[10px] text-gray-700 font-mono tabular-nums">⏱ 00:43</span>
+              </div>
+              {/* fake candles */}
+              <div className="flex items-end gap-0.5 h-16 mt-1">
+                {[
+                  [55,65],[40,55],[62,75],[48,60],[70,82],[58,72],[80,92],
+                  [50,62],[75,88],[88,95],[65,80],[90,98],[70,85],[78,90],[63,78],[85,95],[72,84],
+                ].map(([low, high], i) => (
+                  <div key={i} className="flex-1 flex flex-col justify-end items-center gap-0">
+                    <div
+                      className="w-full rounded-sm"
+                      style={{
+                        height: `${high - low}%`,
+                        background: i % 3 === 2 ? "#ef4444" : i >= 14 ? "#22d3ee" : "rgba(255,255,255,0.1)",
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
-            {/* stats cards */}
+
+            {/* stats */}
             <div className="flex sm:flex-col gap-3">
               <div className="flex-1 bg-[#13161e] rounded-xl p-3 flex flex-col gap-1">
                 <span className="text-[10px] text-gray-500">Saldo virtual</span>
@@ -182,7 +205,8 @@ export default function Landing() {
                 <span className="text-xs text-gray-500">32 trades</span>
               </div>
             </div>
-            {/* lessons row */}
+
+            {/* bottom row */}
             <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {["Gestão de Risco", "Price Action", "Psicologia do Trader"].map((title, i) => (
                 <div key={i} className="bg-[#13161e] rounded-xl p-3 flex items-center gap-3">
@@ -197,7 +221,19 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── SECTION: Líder em Educação ───────────────────── */}
+      {/* ── STATS ─────────────────────────────────────────── */}
+      <section className="py-16 px-6 border-t border-b border-white/5">
+        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {STATS.map((s) => (
+            <div key={s.label}>
+              <div className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">{s.value}</div>
+              <div className="text-sm text-gray-500 mt-2 uppercase tracking-wider">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── LÍDER ─────────────────────────────────────────── */}
       <section id="aulas" className="py-20 px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <span className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-gray-400 mb-6">
@@ -209,12 +245,12 @@ export default function Landing() {
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed">
             A TradeAcademy transforma a forma como os traders aprendem —
-            com conteúdo estruturado, prática real e sem riscos financeiros.
+            com conteúdo estruturado, vídeos curados e prática real sem riscos financeiros.
           </p>
         </div>
       </section>
 
-      {/* ── FEATURES grid ────────────────────────────────── */}
+      {/* ── FEATURES ──────────────────────────────────────── */}
       <section id="funcionalidades" className="py-4 px-6 pb-24">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f) => (
@@ -234,41 +270,228 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── STATS ────────────────────────────────────────── */}
-      <section className="py-16 px-6 border-t border-b border-white/5">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {STATS.map((s) => (
-            <div key={s.label}>
-              <div className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-                {s.value}
+      {/* ── VIDEO AULAS SECTION ───────────────────────────── */}
+      <section id="video-aulas" className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          {/* Text side */}
+          <div>
+            <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
+              <Video className="w-3.5 h-3.5" />
+              Novo · Vídeo Aulas
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
+              Os melhores vídeos de trading<br />
+              <span className="text-cyan-400">num só lugar.</span>
+            </h2>
+            <p className="text-gray-400 leading-relaxed mb-8">
+              Curámos os melhores criadores de conteúdo de trading em português.
+              Vê as aulas em vídeo com o nosso player personalizado — sem anúncios,
+              sem distrações, sem branding externo.
+            </p>
+
+            <ul className="space-y-3 mb-8">
+              {VIDEO_FEATURES.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="mt-0.5 w-5 h-5 rounded-full bg-cyan-500/15 flex items-center justify-center shrink-0">
+                    <item.icon className="w-3 h-3 text-cyan-400" />
+                  </div>
+                  <span className="text-sm text-gray-400">{item.text}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              to="/cadastrar"
+              className="inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-[#060709] font-bold px-6 py-3 rounded-full text-sm transition-colors"
+            >
+              Ver Vídeo Aulas <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Mockup video player */}
+          <div className="rounded-2xl border border-white/10 bg-[#0d0f18] overflow-hidden shadow-2xl shadow-black/40">
+            {/* player area */}
+            <div className="relative aspect-video bg-black">
+              {/* fake thumbnail */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-4xl font-extrabold text-white/10 uppercase tracking-widest">CANDLESTICK</div>
+                  <div className="mt-2 text-2xl font-bold text-white/20">Aula Zero</div>
+                </div>
               </div>
-              <div className="text-sm text-gray-500 mt-2 uppercase tracking-wider">{s.label}</div>
+
+              {/* custom player controls overlay */}
+              <div className="absolute inset-0 flex flex-col justify-between p-3">
+                {/* top — volume */}
+                <div className="flex justify-end">
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
+                    <div className="w-3 h-3 rounded-full bg-cyan-400/70" />
+                    <div className="w-12 h-0.5 bg-white/20 rounded-full overflow-hidden">
+                      <div className="w-3/4 h-full bg-white/60 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* center — controls */}
+                <div className="flex items-center justify-center gap-6">
+                  <div className="flex flex-col items-center text-white/60">
+                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                      <ChevronRight className="w-3 h-3 rotate-180" />
+                    </div>
+                    <span className="text-[8px] mt-0.5">10</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center">
+                    <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                  </div>
+                  <div className="flex flex-col items-center text-white/60">
+                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                      <ChevronRight className="w-3 h-3" />
+                    </div>
+                    <span className="text-[8px] mt-0.5">10</span>
+                  </div>
+                </div>
+
+                {/* bottom — progress */}
+                <div className="space-y-1.5">
+                  <div className="w-full h-0.5 bg-white/15 rounded-full overflow-hidden">
+                    <div className="w-1/3 h-full bg-cyan-400 rounded-full" />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-white/40 font-mono">
+                    <span>1:42</span>
+                    <span>4:08</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
+
+            {/* playlist item */}
+            <div className="p-3 border-t border-white/5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-7 rounded bg-[#13161e] flex items-center justify-center shrink-0">
+                  <Play className="w-3 h-3 text-cyan-400 fill-cyan-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-white truncate">Candlestick para iniciantes</p>
+                  <p className="text-[10px] text-gray-500">O Cara do Mercado · <span className="text-cyan-500/70">Iniciante</span></p>
+                </div>
+                <CheckCircle className="w-4 h-4 text-green-400 shrink-0 ml-auto" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── JOURNEY section ──────────────────────────────── */}
-      <section className="py-24 px-6 text-center">
+      {/* ── SIMULADOR REAL-TIME section ───────────────────── */}
+      <section className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          {/* Mockup — timeframe selector */}
+          <div className="order-last md:order-first rounded-2xl border border-white/10 bg-[#0d0f18] overflow-hidden shadow-2xl shadow-black/40 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-gray-500 font-semibold">BTC/USD</span>
+              <span className="text-sm font-bold text-green-400">$67 842</span>
+            </div>
+
+            {/* TF buttons with countdown */}
+            <div className="flex gap-1 items-center mb-4">
+              {TF_ITEMS.map((tf, i) => (
+                <span
+                  key={tf}
+                  className={`text-[11px] font-mono px-2 py-0.5 rounded font-semibold ${
+                    i === 1 ? "bg-cyan-500 text-[#060709]" : "text-gray-600 bg-white/5"
+                  }`}
+                >
+                  {tf}
+                </span>
+              ))}
+              <span className="ml-auto text-[10px] text-cyan-400/60 font-mono tabular-nums">⏱ 00:17</span>
+            </div>
+
+            {/* Candles */}
+            <div className="flex items-end gap-0.5 h-24">
+              {[
+                {h:40,bull:true},{h:55,bull:false},{h:48,bull:true},{h:65,bull:true},
+                {h:52,bull:false},{h:70,bull:true},{h:62,bull:false},{h:80,bull:true},
+                {h:72,bull:false},{h:88,bull:true},{h:76,bull:true},{h:92,bull:false},
+                {h:84,bull:true},{h:95,bull:true},{h:88,bull:false},{h:100,bull:true},
+              ].map((c, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-sm min-h-[4px]"
+                  style={{
+                    height: `${c.h}%`,
+                    background: c.bull
+                      ? i === 15 ? "#22d3ee" : "rgba(34,197,94,0.5)"
+                      : "rgba(239,68,68,0.5)",
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              {["RSI", "MACD", "MM 20"].map((ind) => (
+                <span key={ind} className="text-[10px] font-mono px-2 py-0.5 rounded border border-white/10 text-gray-600">
+                  {ind}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Text */}
+          <div>
+            <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
+              <LineChart className="w-3.5 h-3.5" />
+              Simulador · Gráficos reais
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
+              Pratica com gráficos<br />
+              <span className="text-cyan-400">que fecham no segundo certo.</span>
+            </h2>
+            <p className="text-gray-400 leading-relaxed mb-6">
+              O nosso simulador usa 6 timeframes com boundaries reais de relógio —
+              exactamente como o TradingView e o MetaTrader. A vela fecha ao segundo
+              exacto do intervalo, não quando o servidor quer.
+            </p>
+            <ul className="space-y-2 mb-8">
+              {[
+                "6 timeframes: 1S · 1m · 5m · 1h · 4h · 1D",
+                "Countdown ao fecho de cada vela, em tempo real",
+                "Indicadores: RSI, MACD, Média Móvel",
+                "Múltiplos activos: Cripto, Forex, Índices",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/cadastrar"
+              className="inline-flex items-center gap-2 border border-white/20 hover:border-cyan-500/40 text-white hover:text-cyan-400 font-semibold px-6 py-3 rounded-full text-sm transition-colors"
+            >
+              Experimentar o Simulador <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA final ─────────────────────────────────────── */}
+      <section className="py-24 px-6 border-t border-white/5 text-center">
         <div className="max-w-3xl mx-auto">
           <div className="border border-white/5 rounded-3xl px-8 py-14 bg-[#0d0f18] relative overflow-hidden">
-            {/* faint glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
             <h2 className="relative text-3xl md:text-4xl font-extrabold mb-4 leading-tight">
-              Qualquer pessoa pode aprender<br />
-              e dominar o trading.
+              Qualquer pessoa pode aprender<br />e dominar o trading.
             </h2>
             <p className="relative text-gray-400 mb-8 max-w-xl mx-auto">
-              Começa do zero hoje e percorre o caminho até à confiança real nos mercados —
-              sem gastar um cêntimo.
+              Começa do zero hoje: aulas escritas, vídeo aulas curadas e um simulador
+              profissional — sem gastar um cêntimo.
             </p>
             <div className="relative flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/cadastrar"
                 className="flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-[#060709] font-bold px-8 py-4 rounded-full text-base transition-colors"
               >
-                Começar gratuitamente
-                <ChevronRight className="w-4 h-4" />
+                Começar gratuitamente <ChevronRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/entrar"
@@ -281,13 +504,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── COMMUNITY + NEWSLETTER ───────────────────────── */}
+      {/* ── NEWSLETTER + COMMUNITY ────────────────────────── */}
       <section className="py-16 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h3 className="text-3xl font-bold mb-3 leading-tight">
-              Educação Primeiro.
-            </h3>
+            <h3 className="text-3xl font-bold mb-3 leading-tight">Educação Primeiro.</h3>
             <p className="text-gray-400 leading-relaxed">
               Sem custos ocultos. Sem promessas de enriquecimento.<br />
               Sem atalhos. Só conhecimento real.
@@ -336,7 +557,6 @@ export default function Landing() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* social icons */}
             {[Twitter, MessageSquare, Send].map((Icon, i) => (
               <button
                 key={i}
