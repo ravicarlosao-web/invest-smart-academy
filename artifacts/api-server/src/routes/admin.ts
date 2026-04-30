@@ -74,19 +74,19 @@ router.get("/overview", async (req, res) => {
     const totalDuelos      = Number(duelosCnt?.c ?? 0);
     const totalNotifications = Number(notifCnt?.c ?? 0);
 
-    const totalXp        = progressRows.reduce((s: number, r) => s + (r.xp ?? 0), 0);
+    const totalXp        = progressRows.reduce((s: number, r: any) => s + (r.xp ?? 0), 0);
     const avgXp          = progressRows.length ? totalXp / progressRows.length : 0;
     const totalLessons   = progressRows.reduce(
-      (s: number, r) => s + (JSON.parse(r.completedLessons || "[]") as unknown[]).length, 0,
+      (s: number, r: any) => s + (JSON.parse(r.completedLessons || "[]") as unknown[]).length, 0,
     );
     const avgStreak      = progressRows.length
-      ? progressRows.reduce((s: number, r) => s + (r.streakDays ?? 0), 0) / progressRows.length
+      ? progressRows.reduce((s: number, r: any) => s + (r.streakDays ?? 0), 0) / progressRows.length
       : 0;
 
-    const wins   = tradeRows.filter((t) => (t.pnl ?? 0) > 0).length;
-    const losses = tradeRows.filter((t) => (t.pnl ?? 0) <= 0).length;
-    const liquidations = tradeRows.filter((t) => t.reason === "liquidation").length;
-    const totalPnl = tradeRows.reduce((s: number, t) => s + (t.pnl ?? 0), 0);
+    const wins   = tradeRows.filter((t: any) => (t.pnl ?? 0) > 0).length;
+    const losses = tradeRows.filter((t: any) => (t.pnl ?? 0) <= 0).length;
+    const liquidations = tradeRows.filter((t: any) => t.reason === "liquidation").length;
+    const totalPnl = tradeRows.reduce((s: number, t: any) => s + (t.pnl ?? 0), 0);
     const winRate  = tradeRows.length ? wins / tradeRows.length : 0;
 
     res.json({
@@ -120,10 +120,9 @@ router.get("/users", async (req, res) => {
 
     // join progress
     const progress = await db.select().from(progressTable).all();
-    type ProgressRow = typeof progress[number];
-    const progMap = new Map<string, ProgressRow>(progress.map((p): [string, ProgressRow] => [p.userId, p]));
+    const progMap = new Map<string, any>(progress.map((p: any) => [p.userId, p]));
 
-    const enriched = users.map((u) => {
+    const enriched = users.map((u: any) => {
       const p = progMap.get(u.id);
       return {
         ...u,
@@ -207,8 +206,7 @@ router.get("/simulator", async (req, res) => {
     const userRows = await db.select({
       id: usersTable.id, name: usersTable.name, email: usersTable.email,
     }).from(usersTable).all();
-    type UserRow = typeof userRows[number];
-    const userMap = new Map<string, UserRow>(userRows.map((u): [string, UserRow] => [u.id, u]));
+    const userMap = new Map<string, any>(userRows.map((u: any) => [u.id, u]));
 
     const leaderboard = Array.from(byUser.entries())
       .map(([userId, agg]) => ({
