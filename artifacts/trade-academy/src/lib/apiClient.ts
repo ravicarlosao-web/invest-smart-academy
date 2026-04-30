@@ -100,4 +100,40 @@ export const api = {
     remove: (userId: string, id: string) =>
       request<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
   },
+
+  /* ---------- Admin ---------- */
+  admin: {
+    /** Verify password — returns ok if hash matches, otherwise throws. */
+    login: (passwordHash: string) =>
+      request<{ ok: boolean }>("POST", "/admin/login", { passwordHash }),
+
+    overview: () =>
+      adminRequest<{
+        totals:    { users: number; trades: number; duelos: number; notifications: number };
+        learning:  { totalXp: number; avgXp: number; totalLessonsCompleted: number; avgStreak: number };
+        simulator: { wins: number; losses: number; liquidations: number; totalPnl: number; winRate: number };
+      }>("GET", "/admin/overview"),
+
+    users: () =>
+      adminRequest<Array<{
+        id: string; name: string | null; email: string | null; createdAt: number;
+        xp: number; streakDays: number; lastActivityDay: string | null;
+        completedLessons: number; simCashBalance: number; onboarded: boolean;
+      }>>("GET", "/admin/users"),
+
+    deleteUser:        (userId: string) => adminRequest<{ ok: boolean }>("DELETE", `/admin/users/${userId}`),
+    resetUserProgress: (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-progress`),
+    resetUserSim:      (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-sim`),
+
+    simulator: () =>
+      adminRequest<{
+        recent: Array<Record<string, unknown>>;
+        leaderboard: Array<{ userId: string; name: string; email: string; pnl: number; trades: number }>;
+      }>("GET", "/admin/simulator"),
+
+    getCurriculumOverride: () =>
+      adminRequest<{ value: { lessons: Record<string, unknown> } }>("GET", "/admin/curriculum"),
+    saveCurriculumOverride: (value: { lessons: Record<string, unknown> }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/curriculum", value),
+  },
 } as const;
