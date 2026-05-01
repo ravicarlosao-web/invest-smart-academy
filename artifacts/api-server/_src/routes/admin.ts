@@ -45,7 +45,10 @@ async function createNotif(userId: string, type: string, title: string, message:
   } catch { /* best-effort */ }
 }
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"];
+if (!ADMIN_PASSWORD) {
+  throw new Error("ADMIN_PASSWORD environment variable is required");
+}
 const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
 const ADMIN_TOKEN_BUF = Buffer.from(ADMIN_TOKEN, "utf8");
 
