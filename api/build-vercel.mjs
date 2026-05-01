@@ -14,7 +14,7 @@ const req   = createRequire(path.resolve(root, "artifacts/api-server/package.jso
 const { build } = req("esbuild");
 
 await build({
-  entryPoints: [path.resolve(__dirname, "server.ts")],
+  entryPoints: [path.resolve(__dirname, "_server.ts")],
   bundle:      true,
   platform:    "node",
   format:      "cjs",

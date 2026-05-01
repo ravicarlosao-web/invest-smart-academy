@@ -37375,7 +37375,7 @@ var require_jsonwebtoken = __commonJS({
   }
 });
 
-// api/server.ts
+// api/_server.ts
 var server_exports = {};
 __export(server_exports, {
   default: () => handler
@@ -66866,7 +66866,7 @@ app.use((err, _req, res, _next) => {
 });
 var app_default = app;
 
-// api/server.ts
+// api/_server.ts
 function handler(req, res) {
   if (req.url && !req.url.startsWith("/api")) {
     req.url = "/api" + req.url;
