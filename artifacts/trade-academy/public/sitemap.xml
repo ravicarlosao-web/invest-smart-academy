@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+  xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0"
+>
+
+  <!-- Página inicial / Landing -->
+  <url>
+    <loc>https://tradeacademy.ao/</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://tradeacademy.ao/opengraph.jpg</image:loc>
+      <image:title>TradeAcademy Angola — Aprenda Trading em Português</image:title>
+      <image:caption>A primeira plataforma angolana de educação em trading e investimentos</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Registo / Login -->
+  <url>
+    <loc>https://tradeacademy.ao/register</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://tradeacademy.ao/login</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Dashboard -->
+  <url>
+    <loc>https://tradeacademy.ao/dashboard</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Aprender — Módulos de trading -->
+  <url>
+    <loc>https://tradeacademy.ao/aprender</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Simulador de mercado -->
+  <url>
+    <loc>https://tradeacademy.ao/simular</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Estratégias de trading -->
+  <url>
+    <loc>https://tradeacademy.ao/estrategias</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Duelos / Desafios -->
+  <url>
+    <loc>https://tradeacademy.ao/duelos</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- Perfil do aluno -->
+  <url>
+    <loc>https://tradeacademy.ao/perfil</loc>
+    <lastmod>2026-05-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>

@@ -1,14 +1,33 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-AO">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>TradeAcademy — Aprenda Trading do Zero ao Avançado</title>
-    <meta name="description" content="Plataforma educacional de trading com aulas interativas e simulador de mercado com $10.000 USD em conta demo. Aprenda Forex, ações e cripto." />
-    <meta name="author" content="TradeAcademy" />
+
+    <!-- ── Título e descrição ──────────────────────────────────────────────── -->
+    <title>TradeAcademy Angola — Aprenda Trading e Investimento em Português</title>
+    <meta name="description" content="A primeira plataforma angolana de educação em trading e investimentos. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo e estratégias profissionais. 100% em português." />
+    <meta name="author" content="TradeAcademy Angola" />
     <meta name="application-name" content="TradeAcademy" />
 
-    <!-- PWA -->
+    <!-- ── Keywords ───────────────────────────────────────────────────────── -->
+    <meta name="keywords" content="trading Angola, aprender trading Angola, forex Angola, investimento Angola, curso trading português, trading Luanda, análise técnica Angola, simulador trading, educação financeira Angola, mercado financeiro Angola, trading Kwanza, bolsa valores Angola, investir Angola, trading online Angola, curso forex gratuito, aprenda trading, candlestick Angola, gestão de risco trading, indicadores técnicos, TradeAcademy" />
+
+    <!-- ── Geolocalização Angola ──────────────────────────────────────────── -->
+    <meta name="geo.region" content="AO" />
+    <meta name="geo.placename" content="Angola, Luanda" />
+    <meta name="geo.position" content="-8.8368;13.2343" />
+    <meta name="ICBM" content="-8.8368, 13.2343" />
+    <meta name="language" content="Portuguese" />
+    <meta name="content-language" content="pt-AO" />
+
+    <!-- ── Canonical ─────────────────────────────────────────────────────── -->
+    <link rel="canonical" href="https://tradeacademy.ao/" />
+
+    <!-- ── Robots ─────────────────────────────────────────────────────────── -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+    <!-- ── PWA ────────────────────────────────────────────────────────────── -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#06b6d4" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -19,28 +38,235 @@
     <link rel="apple-touch-icon" sizes="152x152" href="/pwa-icon-152.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/pwa-icon-192.png" />
 
-    <!-- Favicons -->
+    <!-- ── Favicons ───────────────────────────────────────────────────────── -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
-    <!-- Fonts -->
+    <!-- ── Open Graph ─────────────────────────────────────────────────────── -->
+    <meta property="og:title" content="TradeAcademy Angola — Aprenda Trading em Português" />
+    <meta property="og:description" content="A primeira plataforma angolana de educação em trading. Aulas gratuitas, simulador com $10.000 demo e estratégias profissionais. Regista-te gratuitamente." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tradeacademy.ao/" />
+    <meta property="og:image" content="https://tradeacademy.ao/opengraph.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="TradeAcademy Angola — Plataforma de Trading em Português" />
+    <meta property="og:site_name" content="TradeAcademy Angola" />
+    <meta property="og:locale" content="pt_AO" />
+
+    <!-- ── Twitter / X ────────────────────────────────────────────────────── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@TradeAcademyAO" />
+    <meta name="twitter:title" content="TradeAcademy Angola — Aprenda Trading em Português" />
+    <meta name="twitter:description" content="Aulas gratuitas de trading, simulador com $10.000 demo e estratégias profissionais. 100% em português, feito para Angola." />
+    <meta name="twitter:image" content="https://tradeacademy.ao/opengraph.jpg" />
+
+    <!-- ── Fonts ──────────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="TradeAcademy — Aprenda Trading do Zero" />
-    <meta property="og:description" content="Aulas progressivas + simulador realista com $10.000 USD demo." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/opengraph.jpg" />
-    <meta property="og:site_name" content="TradeAcademy" />
+    <!-- ── Structured Data JSON-LD ────────────────────────────────────────── -->
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="TradeAcademy — Aprenda Trading do Zero" />
-    <meta name="twitter:description" content="Aulas progressivas + simulador realista com $10.000 USD demo." />
+    <!-- 1. Organização Educacional -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "TradeAcademy Angola",
+      "alternateName": "TradeAcademy",
+      "url": "https://tradeacademy.ao",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://tradeacademy.ao/pwa-icon-512.png",
+        "width": 512,
+        "height": 512
+      },
+      "description": "A primeira plataforma angolana de educação em trading e investimentos. Oferecemos aulas gratuitas de Forex, acções e criptomoedas, simulador de mercado com conta demo e estratégias profissionais, tudo em português.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "AO",
+        "addressLocality": "Luanda",
+        "addressRegion": "Luanda"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "Angola"
+      },
+      "knowsLanguage": "pt-AO",
+      "sameAs": [
+        "https://twitter.com/TradeAcademyAO"
+      ]
+    }
+    </script>
 
-    <!-- iOS safe area + prevent zoom on inputs -->
+    <!-- 2. WebSite com SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "TradeAcademy Angola",
+      "url": "https://tradeacademy.ao",
+      "description": "Plataforma angolana de educação em trading e investimentos em português",
+      "inLanguage": "pt-AO",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://tradeacademy.ao/aprender?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- 3. Curso de Trading -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": "Curso Completo de Trading em Português — Angola",
+      "description": "Aprenda trading do zero ao nível avançado com aulas interativas, simulador de mercado realista e estratégias profissionais. Curso gratuito em português, desenhado para o mercado angolano e lusófono.",
+      "url": "https://tradeacademy.ao/aprender",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "TradeAcademy Angola",
+        "url": "https://tradeacademy.ao"
+      },
+      "educationalLevel": ["Beginner", "Intermediate", "Advanced"],
+      "teaches": [
+        "Análise técnica de mercados financeiros",
+        "Forex — negociação de pares de moedas",
+        "Análise de candlestick e padrões gráficos",
+        "Gestão de risco e capital",
+        "Indicadores técnicos: RSI, MACD, Médias Móveis",
+        "Estratégias de scalping, day trading e swing trading",
+        "Cripto — Bitcoin, Ethereum e altcoins",
+        "Psicologia de trading e disciplina emocional"
+      ],
+      "courseMode": ["online", "self-paced"],
+      "inLanguage": "pt-AO",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "AOA",
+        "availability": "https://schema.org/InStock",
+        "category": "Gratuito — Nível Iniciante"
+      }
+    }
+    </script>
+
+    <!-- 4. FAQ — crítico para pesquisa por IA (Perplexity, Gemini, ChatGPT, etc.) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "O que é o TradeAcademy Angola?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "O TradeAcademy é a primeira plataforma angolana de educação em trading e investimentos financeiros. Oferecemos aulas gratuitas de Forex, acções, cripto e análise técnica em português, com simulador de mercado realista com $10.000 USD em conta demo."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "É possível aprender trading em Angola?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O TradeAcademy foi criado especificamente para o mercado angolano e lusófono. Pode aprender trading online a partir de Luanda ou qualquer parte de Angola, com aulas 100% em português e exemplos adaptados ao contexto africano."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "O curso de trading no TradeAcademy é gratuito?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O nível Iniciante é completamente gratuito e inclui aulas de fundamentos de mercado, candlestick, análise técnica básica e o simulador de trading. O acesso a conteúdo Intermediário e Avançado requer uma subscrição de 5.000 AOA por mês."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Como funciona o simulador de trading do TradeAcademy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "O simulador disponibiliza uma conta demo com $10.000 USD e gráficos de candlestick em tempo real com 6 timeframes: 1 segundo, 1 minuto, 5 minutos, 1 hora, 4 horas e diário. Pode abrir posições de compra e venda, definir stop loss e take profit, e praticar sem risco de perda real de dinheiro."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Que matérias são ensinadas no TradeAcademy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "O curso cobre: fundamentos de mercados financeiros, leitura de gráficos de candlestick, análise técnica (suporte e resistência, tendências, médias móveis, RSI, MACD, Bandas de Bollinger), Forex, cripto, acções, gestão de risco, estratégias de scalping e day trading, e psicologia do trader."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Posso fazer trading em Angola com Kwanza (AOA)?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O TradeAcademy ensina os conceitos e estratégias que pode aplicar em qualquer mercado. A plataforma inclui informação sobre corretoras que aceitam clientes angolanos e formas de depósito em Kwanza (AOA)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Qual é a diferença entre Forex, acções e criptomoedas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Forex é o mercado de câmbio de moedas como USD/EUR, com mais de 5 biliões de dólares negociados por dia e funcionamento 24 horas. Acções são participações em empresas cotadas em bolsa. Criptomoedas são activos digitais descentralizados como Bitcoin e Ethereum. O TradeAcademy ensina os três tipos de mercado."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Como subscrever o TradeAcademy Premium para conteúdo avançado?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A subscrição Premium custa 5.000 AOA por mês e dá acesso ao conteúdo Intermediário e Avançado. O pagamento é feito por transferência bancária. Após a transferência, submete a referência ou comprovativo na plataforma e o administrador activa o acesso em até 24 horas."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "O TradeAcademy tem aplicação móvel para Android e iOS?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O TradeAcademy é uma Progressive Web App (PWA) que pode ser instalada no telemóvel directamente pelo browser, sem necessidade de App Store ou Play Store. Funciona em Android e iOS e tem interface optimizada para mobile."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Qual é o melhor curso de trading em português para angolanos?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "O TradeAcademy é o único curso de trading em português criado especificamente para angolanos. Cobre todos os temas essenciais do zero ao avançado, com simulador prático, glossário de termos financeiros, biblioteca de livros recomendados e vídeo-aulas curadas, tudo gratuito no nível Iniciante."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- 5. SoftwareApplication (PWA) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TradeAcademy Angola",
+      "operatingSystem": "Android, iOS, Web",
+      "applicationCategory": "EducationApplication",
+      "description": "App de educação em trading e investimentos para Angola. Aulas gratuitas, simulador de mercado e estratégias profissionais em português.",
+      "url": "https://tradeacademy.ao",
+      "inLanguage": "pt-AO",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "AOA"
+      }
+    }
+    </script>
+
+    <!-- ── iOS safe area + prevent zoom on inputs ─────────────────────────── -->
     <style>
       :root { --sat: env(safe-area-inset-top); --sar: env(safe-area-inset-right); --sab: env(safe-area-inset-bottom); --sal: env(safe-area-inset-left); }
       @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
