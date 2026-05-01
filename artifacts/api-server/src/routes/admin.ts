@@ -31,6 +31,16 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
   try { return JSON.parse(raw) as T; } catch { return fallback; }
 }
 
+async function createNotif(userId: string, type: string, title: string, message: string, link?: string) {
+  const id = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await db.insert(notificationsTable).values({
+      id, userId, type, title, message,
+      link: link ?? null, isRead: 0, createdAt: Date.now(),
+    });
+  } catch { /* best-effort */ }
+}
+
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
 const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
 
@@ -644,6 +654,15 @@ router.patch("/subscriptions/:id/approve", async (req, res) => {
       updatedAt:  now,
     }).where(eq(subscriptionsTable.id, req.params.id));
 
+    /* Notificação para o aluno */
+    const expireDate = new Date(expiresAt).toLocaleDateString("pt-PT");
+    await createNotif(
+      sub.userId, "system",
+      "Subscrição Activada! 🎉",
+      `A tua subscrição foi aprovada. Tens acesso completo ao conteúdo Intermédio e Avançado até ${expireDate}.`,
+      "/aprender",
+    );
+
     res.json({ ok: true, expiresAt });
   } catch (err) {
     req.log.error(err);
@@ -665,6 +684,15 @@ router.patch("/subscriptions/:id/reject", async (req, res) => {
       notes:     notes ?? null,
       updatedAt: now,
     }).where(eq(subscriptionsTable.id, req.params.id));
+
+    /* Notificação para o aluno */
+    const noteText = notes ? ` Motivo: ${notes}` : " Contacta o suporte para mais informações.";
+    await createNotif(
+      sub.userId, "system",
+      "Pedido de subscrição rejeitado",
+      `O teu pedido de subscrição foi rejeitado.${noteText}`,
+      "/perfil",
+    );
 
     res.json({ ok: true });
   } catch (err) {

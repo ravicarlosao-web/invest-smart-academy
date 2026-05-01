@@ -1,8 +1,29 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
-import { db, subscriptionsTable, usersTable, eq, desc, and } from "@workspace/db";
+import { db, subscriptionsTable, notificationsTable, eq, desc, and } from "@workspace/db";
 
 const router = Router();
+
+/* ── Notification helper ─────────────────────────────────────────────────── */
+async function createNotif(userId: string, type: string, title: string, message: string, link?: string) {
+  const id = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await db.insert(notificationsTable).values({
+      id, userId, type, title, message,
+      link: link ?? null,
+      isRead:    0,
+      createdAt: Date.now(),
+    });
+  } catch { /* best-effort — never block the main response */ }
+}
+
+async function hasRecentNotif(userId: string, titleIncludes: string, withinMs: number): Promise<boolean> {
+  const cutoff = Date.now() - withinMs;
+  const rows = await db.select().from(notificationsTable)
+    .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.type, "system")))
+    .all();
+  return rows.some((n) => n.title.includes(titleIncludes) && n.createdAt >= cutoff);
+}
 
 router.param("userId", (req: Request, res: Response, next: NextFunction, userId: string) => {
   if (req.userId !== userId) {
@@ -38,6 +59,33 @@ router.get("/:userId", async (req, res) => {
         .set({ status: "expired", updatedAt: now })
         .where(eq(subscriptionsTable.id, sub.id));
       sub.status = "expired";
+
+      /* Notificação de expiração (deduplicada por 24h) */
+      const alreadySent = await hasRecentNotif(sub.userId, "expirou", 24 * 60 * 60 * 1000);
+      if (!alreadySent) {
+        await createNotif(
+          sub.userId, "system",
+          "Subscrição expirou",
+          "A tua subscrição expirou. Renova para manter o acesso ao conteúdo Intermédio e Avançado.",
+          "/perfil",
+        );
+      }
+    }
+
+    /* Aviso antecipado: 7 dias antes de expirar (deduplicado por 6 dias) */
+    if (sub.status === "active" && sub.expiresAt) {
+      const daysLeft = Math.ceil((sub.expiresAt - now) / (24 * 60 * 60 * 1000));
+      if (daysLeft <= 7 && daysLeft > 0) {
+        const alreadySent = await hasRecentNotif(sub.userId, "expira em", 6 * 24 * 60 * 60 * 1000);
+        if (!alreadySent) {
+          await createNotif(
+            sub.userId, "system",
+            `Subscrição expira em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}`,
+            `A tua subscrição expira em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}. Renova já para não perder o acesso.`,
+            "/perfil",
+          );
+        }
+      }
     }
 
     const { receiptData: _rd, ...rest } = sub;
@@ -161,6 +209,14 @@ router.post("/:userId/request", async (req, res) => {
       createdAt:        now,
       updatedAt:        now,
     });
+
+    /* Notificação de confirmação do pedido */
+    await createNotif(
+      req.params.userId, "system",
+      "Pedido de subscrição enviado",
+      "O teu pedido foi recebido e está a aguardar aprovação pelo admin. Receberás uma notificação assim que for processado.",
+      "/perfil",
+    );
 
     res.json({ ok: true, id });
   } catch (err) {
