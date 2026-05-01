@@ -1,7 +1,7 @@
 {
   "version": 2,
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @workspace/db run build || true && node api/build-vercel.mjs && pnpm --filter @workspace/trade-academy build",
+  "buildCommand": "pnpm --filter @workspace/db run build && pnpm --filter @workspace/api-zod run build && node api/build-vercel.mjs && pnpm --filter @workspace/trade-academy build",
   "outputDirectory": "artifacts/trade-academy/dist/public",
   "framework": null,
   "rewrites": [
