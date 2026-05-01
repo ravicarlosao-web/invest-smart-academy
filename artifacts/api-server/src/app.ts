@@ -35,6 +35,13 @@ function buildAllowedOrigins(): string[] {
     }
   }
 
+  // Vercel sets VERCEL_URL (deployment URL) and VERCEL_PROJECT_PRODUCTION_URL (canonical URL)
+  const vercelUrl = process.env["VERCEL_URL"];
+  if (vercelUrl) origins.push(`https://${vercelUrl}`);
+
+  const vercelProdUrl = process.env["VERCEL_PROJECT_PRODUCTION_URL"];
+  if (vercelProdUrl) origins.push(`https://${vercelProdUrl}`);
+
   if (process.env["NODE_ENV"] !== "production") {
     origins.push("http://localhost:3000", "http://localhost:5173");
   }
