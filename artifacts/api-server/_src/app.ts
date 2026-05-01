@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import pinoHttp from "pino-http";
+import pinoHttpModule from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pinoHttp = pinoHttpModule as any;
 
 const app = express();
 
@@ -122,12 +124,14 @@ app.use("/api",              generalLimiter);
 app.use("/api", router);
 
 /* ── 404 for unmatched API routes ────────────────────────────────────────── */
-app.use("/api", (_req, res) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use("/api", (_req: any, res: any) => {
   res.status(404).json({ error: "not_found" });
 });
 
 /* ── Global error handler ────────────────────────────────────────────────── */
-app.use((err: Error & { type?: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use((err: Error & { type?: string }, _req: any, res: any, _next: any) => {
   if (err.message.startsWith("CORS:")) {
     res.status(403).json({ error: "cors_forbidden", message: "Origem não permitida." });
     return;

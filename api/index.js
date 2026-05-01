@@ -66756,6 +66756,7 @@ var logger = (0, import_pino.default)({
 });
 
 // artifacts/api-server/_src/app.ts
+var pinoHttp = import_pino_http.default;
 var app = (0, import_express10.default)();
 app.set("trust proxy", 1);
 app.use(
@@ -66823,7 +66824,7 @@ var generalLimiter = rate_limit_default({
   message: rateLimitMessage
 });
 app.use(
-  (0, import_pino_http.default)({
+  pinoHttp({
     logger,
     serializers: {
       req(req) {

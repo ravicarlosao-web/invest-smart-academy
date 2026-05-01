@@ -4,7 +4,9 @@
     "outDir": "dist",
     "rootDir": "_src",
     "types": ["node"],
-    "noImplicitReturns": false
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "strict": false
   },
   "include": ["_src"],
   "references": [
