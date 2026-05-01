@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { PriceChart } from "@/components/PriceChart";
+import { PriceChart, type ChartType } from "@/components/PriceChart";
 import {
   useAppStore,
   calcUnrealizedPnL,
@@ -24,7 +24,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -342,12 +342,21 @@ export default function Simular() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [showRsi, setShowRsi] = useState(false);
   const [rsiPeriod, setRsiPeriod] = useState(14);
   const [showMacd, setShowMacd] = useState(false);
   const [macdFast, setMacdFast] = useState(12);
   const [macdSlow, setMacdSlow] = useState(26);
   const [macdSignal, setMacdSignal] = useState(9);
+
+  const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
+    { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
+    { id: "heikin-ashi",  label: "Heikin-Ashi",     short: "H.Ashi", Icon: Activity   },
+    { id: "bar",          label: "Barras OHLC",      short: "Barras", Icon: BarChart3  },
+    { id: "line",         label: "Linha",            short: "Linha",  Icon: Minus      },
+    { id: "area",         label: "Área",             short: "Área",   Icon: AreaChart  },
+  ];
 
   /* responsive chart height */
   const [windowWidth, setWindowWidth] = useState(() =>
@@ -681,6 +690,33 @@ export default function Simular() {
                 <CandleCountdown intervalSec={tf.seconds} />
               </div>
               <div className="flex items-center gap-2">
+                {/* ── Seletor de tipo de gráfico ── */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1 rounded border border-border/40 px-2 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2">
+                      {(() => { const ct = CHART_TYPES.find(t => t.id === chartType)!; return <><ct.Icon className="h-3 w-3" /><span>{ct.short}</span><ChevronDown className="h-2.5 w-2.5 opacity-60" /></>; })()}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-44 p-1">
+                    {CHART_TYPES.map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => setChartType(id)}
+                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-[11px] transition-colors ${
+                          chartType === id
+                            ? "bg-primary/15 text-primary font-semibold"
+                            : "text-foreground/80 hover:bg-surface-2"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {label}
+                        {chartType === id && <span className="ml-auto text-primary">✓</span>}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+
+                <div className="h-4 w-px bg-border/40" />
                 <Badge variant="outline" className="font-mono text-[10px]">MM 20</Badge>
                 <button
                   onClick={() => setShowRsi((v) => !v)}
@@ -808,6 +844,7 @@ export default function Simular() {
               <PriceChart
                 candles={candles}
                 precision={meta.precision}
+                chartType={chartType}
                 movingAverage={20}
                 showRsi={showRsi}
                 rsiPeriod={rsiPeriod}
