@@ -14,9 +14,9 @@ import {
   getRank,
   getNextRank,
   rankProgress,
-  buildLeaderboard,
   getDailyMissions,
 } from "@/data/gamification";
+import { api } from "@/lib/apiClient";
 import {
   Trophy,
   Flame,
@@ -345,7 +345,7 @@ export default function Perfil() {
         <div className="p-5">
           {tab === "conquistas"  && <AchievementsTab achievements={progress.achievements} />}
           {tab === "missoes"     && <MissoesTab progress={progress} />}
-          {tab === "leaderboard" && <LeaderboardTab xp={progress.xp} />}
+          {tab === "leaderboard" && <LeaderboardTab xp={progress.xp} userId={user?.id} />}
         </div>
       </Card>
     </div>
@@ -550,83 +550,109 @@ function MissoesTab({ progress }: { progress: ReturnType<typeof useAppStore.getS
 }
 
 /* ── Leaderboard Tab ── */
-function LeaderboardTab({ xp }: { xp: number }) {
-  const board = buildLeaderboard(xp);
-  const userEntry = board.find((e) => e.isCurrentUser);
+function LeaderboardTab({ xp, userId }: { xp: number; userId?: string }) {
+  const [board, setBoard] = useState<{ rank: number; userId: string; name: string; xp: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.leaderboard()
+      .then(setBoard)
+      .catch(() => setBoard([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const userEntry = board.find((e) => e.userId === userId);
 
   return (
     <div>
       <div className="mb-4">
-        <p className="text-sm font-medium">Top traders da semana</p>
-        <p className="text-xs text-muted-foreground">Ranking baseado em XP total acumulado</p>
+        <p className="text-sm font-medium">Ranking de alunos</p>
+        <p className="text-xs text-muted-foreground">Ordenado por XP total acumulado · Dados reais</p>
       </div>
 
-      <div className="space-y-2">
-        {board.slice(0, 10).map((entry) => {
-          const r = XP_RANKS.find((r) => r.id === entry.rankId) ?? XP_RANKS[0];
-          const isTop3 = entry.rank <= 3;
-          return (
-            <div
-              key={entry.id}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
-                entry.isCurrentUser
-                  ? "border-primary/40 bg-primary/5"
-                  : isTop3
-                  ? "border-warning/30 bg-warning/5"
-                  : "border-border bg-surface-1"
-              }`}
-            >
-              <div className="w-8 text-center">
-                {isTop3 ? (
-                  <Medal className={`h-5 w-5 mx-auto ${entry.rank === 1 ? "text-yellow-400" : entry.rank === 2 ? "text-slate-400" : "text-amber-600"}`} />
-                ) : (
-                  <span className="font-mono text-sm font-bold text-muted-foreground">#{entry.rank}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${entry.isCurrentUser ? "text-primary" : ""}`}>
-                  {entry.name} {entry.isCurrentUser && <span className="text-xs font-normal">(você)</span>}
-                </p>
-                <p className={`text-[11px] ${r.color} flex items-center gap-1`}>
-                  <IconByName name={r.icon} className="h-3 w-3 inline" />{r.label}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-sm font-bold">{entry.xp.toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground">XP</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {userEntry && userEntry.rank > 10 && (
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-xl bg-surface-1 animate-pulse" />
+          ))}
+        </div>
+      ) : board.length === 0 ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          <Trophy className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          <p>Ainda não há dados suficientes para o ranking.</p>
+          <p className="text-xs mt-1">Complete aulas para aparecer aqui!</p>
+        </div>
+      ) : (
         <>
-          <div className="my-3 flex items-center gap-2 text-muted-foreground">
-            <div className="flex-1 border-t border-dashed border-border" />
-            <span className="text-xs">···</span>
-            <div className="flex-1 border-t border-dashed border-border" />
+          <div className="space-y-2">
+            {board.slice(0, 10).map((entry) => {
+              const r = getRank(entry.xp);
+              const isTop3 = entry.rank <= 3;
+              const isMe = entry.userId === userId;
+              return (
+                <div
+                  key={entry.userId}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
+                    isMe
+                      ? "border-primary/40 bg-primary/5"
+                      : isTop3
+                      ? "border-warning/30 bg-warning/5"
+                      : "border-border bg-surface-1"
+                  }`}
+                >
+                  <div className="w-8 text-center">
+                    {isTop3 ? (
+                      <Medal className={`h-5 w-5 mx-auto ${entry.rank === 1 ? "text-yellow-400" : entry.rank === 2 ? "text-slate-400" : "text-amber-600"}`} />
+                    ) : (
+                      <span className="font-mono text-sm font-bold text-muted-foreground">#{entry.rank}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isMe ? "text-primary" : ""}`}>
+                      {entry.name}{isMe && <span className="ml-1 text-xs font-normal">(você)</span>}
+                    </p>
+                    <p className={`text-[11px] ${r.color} flex items-center gap-1`}>
+                      <IconByName name={r.icon} className="h-3 w-3 inline" />{r.label}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm font-bold">{entry.xp.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">XP</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3">
-            <span className="w-8 text-center font-mono text-sm font-bold text-muted-foreground">#{userEntry.rank}</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-primary">Você</p>
-              <p className={`text-[11px] ${getRank(xp).color} flex items-center gap-1`}>
-                <IconByName name={getRank(xp).icon} className="h-3 w-3 inline" />{getRank(xp).label}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-mono text-sm font-bold">{xp.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">XP</p>
-            </div>
-          </div>
+
+          {userEntry && userEntry.rank > 10 && (
+            <>
+              <div className="my-3 flex items-center gap-2 text-muted-foreground">
+                <div className="flex-1 border-t border-dashed border-border" />
+                <span className="text-xs">···</span>
+                <div className="flex-1 border-t border-dashed border-border" />
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3">
+                <span className="w-8 text-center font-mono text-sm font-bold text-muted-foreground">#{userEntry.rank}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-primary">{userEntry.name} <span className="text-xs font-normal">(você)</span></p>
+                  <p className={`text-[11px] ${getRank(xp).color} flex items-center gap-1`}>
+                    <IconByName name={getRank(xp).icon} className="h-3 w-3 inline" />{getRank(xp).label}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-sm font-bold">{xp.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground">XP</p>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 
       <div className="mt-4 rounded-xl bg-surface-2 p-3 text-center">
         <p className="text-xs text-muted-foreground">
           <Medal className="inline h-3 w-3 mr-1" />
-          Complete aulas e trades para subir no ranking
+          Complete aulas e quizzes para subir no ranking
         </p>
       </div>
     </div>

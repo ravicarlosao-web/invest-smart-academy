@@ -10,7 +10,7 @@ import adminRouter         from "./admin.js";
 import subscriptionsRouter from "./subscriptions.js";
 import { requireAuth }     from "../middlewares/auth.js";
 import {
-  db, asc, eq,
+  db, asc, desc, eq,
   glossaryTermsTable,
   strategiesTable,
   booksTable,
@@ -19,6 +19,8 @@ import {
   curriculumLevelsTable,
   curriculumLessonsTable,
   adminSettingsTable,
+  usersTable,
+  progressTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -195,6 +197,35 @@ router.get("/curriculum", async (_req: any, res: any) => {
         }),
     }));
     res.json(result);
+  } catch {
+    res.json([]);
+  }
+});
+
+/* ── Public leaderboard — top 20 users by XP ─────────────────────────── */
+router.get("/leaderboard", async (_req: any, res: any) => {
+  try {
+    const rows = await db
+      .select({
+        userId: progressTable.userId,
+        xp:     progressTable.xp,
+        name:   usersTable.name,
+        email:  usersTable.email,
+      })
+      .from(progressTable)
+      .innerJoin(usersTable, eq(progressTable.userId, usersTable.id))
+      .orderBy(desc(progressTable.xp))
+      .limit(20)
+      .all();
+
+    res.json(
+      rows.map((r: any, i: number) => ({
+        rank:   i + 1,
+        userId: r.userId,
+        name:   r.name ?? r.email?.split("@")[0] ?? "Utilizador",
+        xp:     r.xp ?? 0,
+      })),
+    );
   } catch {
     res.json([]);
   }

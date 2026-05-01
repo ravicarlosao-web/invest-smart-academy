@@ -176,6 +176,8 @@ export const api = {
   videos: {
     list: () => request<unknown[]>("GET", "/videos"),
   },
+  leaderboard: () =>
+    request<{ rank: number; userId: string; name: string; xp: number }[]>("GET", "/leaderboard"),
   content: {
     glossary:   () => request<unknown[]>("GET", "/glossary"),
     strategies: () => request<unknown[]>("GET", "/strategies"),
