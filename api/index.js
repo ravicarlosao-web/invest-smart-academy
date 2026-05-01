@@ -1,4 +1,3 @@
-"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -66781,6 +66780,7 @@ function buildAllowedOrigins() {
   if (vercelUrl) origins.push(`https://${vercelUrl}`);
   const vercelProdUrl = process.env["VERCEL_PROJECT_PRODUCTION_URL"];
   if (vercelProdUrl) origins.push(`https://${vercelProdUrl}`);
+  origins.push("https://invest-smart-academy.vercel.app");
   if (process.env["NODE_ENV"] !== "production") {
     origins.push("http://localhost:3000", "http://localhost:5173");
   }
@@ -66791,7 +66791,9 @@ logger.info({ allowedOrigins }, "CORS allowed origins");
 app.use(
   (0, import_cors.default)({
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (/^https:\/\/invest-smart-academy(-[a-z0-9]+)*\.vercel\.app$/.test(origin)) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true

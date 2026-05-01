@@ -35,12 +35,15 @@ function buildAllowedOrigins(): string[] {
     }
   }
 
-  // Vercel sets VERCEL_URL (deployment URL) and VERCEL_PROJECT_PRODUCTION_URL (canonical URL)
+  // Vercel system env vars (available at runtime in serverless functions)
   const vercelUrl = process.env["VERCEL_URL"];
   if (vercelUrl) origins.push(`https://${vercelUrl}`);
 
   const vercelProdUrl = process.env["VERCEL_PROJECT_PRODUCTION_URL"];
   if (vercelProdUrl) origins.push(`https://${vercelProdUrl}`);
+
+  // Hardcoded Vercel production domain as reliable fallback
+  origins.push("https://invest-smart-academy.vercel.app");
 
   if (process.env["NODE_ENV"] !== "production") {
     origins.push("http://localhost:3000", "http://localhost:5173");
@@ -55,7 +58,12 @@ logger.info({ allowedOrigins }, "CORS allowed origins");
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      // No origin header = same-origin, server-to-server, or curl
+      if (!origin) return cb(null, true);
+      // Check explicit allow-list
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // Allow any Vercel preview deployment for this project
+      if (/^https:\/\/invest-smart-academy(-[a-z0-9]+)*\.vercel\.app$/.test(origin)) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
