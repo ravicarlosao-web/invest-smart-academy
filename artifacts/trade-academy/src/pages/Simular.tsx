@@ -677,6 +677,22 @@ export default function Simular() {
                   onClick={() => setShowMacd((v) => !v)}
                   className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${showMacd ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"}`}
                 >MACD</button>
+                {/* ── Botão Coach IA ── */}
+                <button
+                  onClick={() => setFeedbackEnabled((v) => !v)}
+                  title={feedbackEnabled ? "Desactivar análise de trades" : "Activar análise de trades"}
+                  className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold transition-all ${
+                    feedbackEnabled
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-surface-2"
+                  }`}
+                >
+                  <Brain className="h-3 w-3" />
+                  <span className="hidden sm:inline">Coach IA</span>
+                  {feedbackEnabled && (
+                    <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-primary-foreground/80 animate-pulse" />
+                  )}
+                </button>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground">
