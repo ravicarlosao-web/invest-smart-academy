@@ -1,7 +1,11 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
-dist
+# lib/db/dist and lib/api-zod/dist are committed intentionally
+# for TypeScript project references on Vercel — do NOT add them here
+artifacts/*/dist
+scripts/dist
+lib/api-client-react/dist
 tmp
 out-tsc
 *.tsbuildinfo
@@ -47,3 +51,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Vercel build output — api/index.js is committed intentionally
+# Run: node api/build-vercel.mjs before committing backend changes
