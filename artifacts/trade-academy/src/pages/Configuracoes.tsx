@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Settings, RotateCcw, Bell, Globe, Shield, Info,
-  AlertTriangle, Palette, Sun, Moon, User, LogOut,
-  CreditCard, Crown, ChevronRight, Database, Zap,
-  Monitor, BookOpen,
+  AlertTriangle, Palette, Sun, Moon, LogOut,
+  CreditCard, Crown, ChevronRight, Database, Monitor,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
@@ -20,7 +19,7 @@ const VERSION = "1.2.0";
 const TOTAL_LESSONS = 40;
 
 export default function Configuracoes() {
-  const [confirmReset, setConfirmReset] = useState<"progress" | "simulator" | null>(null);
+  const [confirmReset, setConfirmReset] = useState<"progress" | null>(null);
   const { theme, setTheme } = useTheme();
 
   const user            = useAuthStore((s) => s.user);
@@ -29,9 +28,6 @@ export default function Configuracoes() {
   const completedCount  = useAppStore((s) => s.progress.completedLessons.length);
   const streakDays      = useAppStore((s) => s.progress.streakDays);
   const resetProgress   = useAppStore((s) => s.resetProgress);
-  const resetSimulator  = useAppStore((s) => s.resetSim);
-  const canResetSim     = useAppStore((s) => s.canResetSim);
-  const simZeroedAt     = useAppStore((s) => s.simZeroedAt);
   const settings        = useAppStore((s) => s.settings);
   const updateSettings  = useAppStore((s) => s.updateSettings);
   const { hasActiveSubscription, subscription } = useSubscriptionStore();
@@ -55,31 +51,13 @@ export default function Configuracoes() {
     }
   }
 
-  function handleResetSim() {
-    if (!canResetSim()) {
-      const cooldownEnd = simZeroedAt != null ? simZeroedAt + 30 * 24 * 60 * 60 * 1000 : null;
-      const remaining   = cooldownEnd ? cooldownEnd - Date.now() : 0;
-      const days        = Math.ceil(remaining / 86_400_000);
-      toast.error(`Conta em quarentena — reset disponível em ${days} dia${days !== 1 ? "s" : ""}.`);
-      setConfirmReset(null);
-      return;
-    }
-    if (confirmReset === "simulator") {
-      resetSimulator();
-      setConfirmReset(null);
-      toast.success("Conta do simulador reiniciada com $10.000.");
-    } else {
-      setConfirmReset("simulator");
-    }
-  }
-
   function handleLogout() {
     logout();
     toast.success("Sessão terminada.");
   }
 
   return (
-    <div className="container max-w-3xl py-6 lg:py-8 space-y-5">
+    <div className="container py-6 lg:py-8 space-y-5">
 
       {/* ── Header ── */}
       <div>
@@ -282,37 +260,18 @@ export default function Configuracoes() {
 
       {/* ── Dados e Privacidade ── */}
       <Section icon={Shield} title="Dados e Privacidade" accent="text-bear">
-        {/* Reset simulator */}
-        <div className="flex items-center justify-between py-4 border-b border-border/60">
-          <div>
-            <p className="text-sm font-medium">Reiniciar simulador</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Repõe a conta demo em $10.000 e apaga o histórico de trades
-            </p>
-          </div>
-          {confirmReset === "simulator" ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setConfirmReset(null)}
-                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleResetSim}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-bear hover:bg-bear/90 rounded-lg px-3 py-1.5 transition-colors"
-              >
-                <AlertTriangle className="h-3 w-3" /> Confirmar
-              </button>
+        {/* Simulator info */}
+        <div className="py-4 border-b border-border/60">
+          <div className="flex items-start gap-3 rounded-xl bg-surface-2 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Simulador de trading</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                O saldo da conta demo (início: $10.000) é automaticamente reposto ao fim de 30 dias.
+                Não é possível repor manualmente — pratica com disciplina.
+              </p>
             </div>
-          ) : (
-            <button
-              onClick={handleResetSim}
-              className="flex items-center gap-1.5 text-xs font-medium text-bear bg-bear/10 hover:bg-bear/20 rounded-lg px-3 py-1.5 transition-colors shrink-0"
-            >
-              <RotateCcw className="h-3 w-3" /> Reiniciar
-            </button>
-          )}
+          </div>
         </div>
 
         {/* Reset progress */}

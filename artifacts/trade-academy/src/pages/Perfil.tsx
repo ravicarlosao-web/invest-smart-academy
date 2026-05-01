@@ -92,7 +92,7 @@ export default function Perfil() {
   const expiringSoon = isActive && daysLeft !== null && daysLeft <= 7;
 
   return (
-    <div className="container max-w-6xl py-6 lg:py-8 space-y-5">
+    <div className="container py-6 lg:py-8 space-y-5">
 
       {/* ── Profile Header ── */}
       <Card className="overflow-hidden">

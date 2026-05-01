@@ -26,7 +26,7 @@ export default function Biblioteca() {
   const completedCount = completedBookIds.length;
 
   return (
-    <div className="min-h-full p-4 sm:p-6 max-w-3xl mx-auto w-full">
+    <div className="container py-6 lg:py-8">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-1">
