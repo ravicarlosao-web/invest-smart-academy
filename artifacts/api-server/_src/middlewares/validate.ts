@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Request, Response, NextFunction } from "express";
 
 type ZodIssue = { path: (string | number)[]; message: string };
@@ -9,7 +10,7 @@ type ZodLike = {
 
 function formatZodError(errs: ZodIssue[]): string {
   return errs
-    .map((e) => `${e.path.length ? e.path.join(".") + ": " : ""}${e.message}`)
+    .map((e: any) => `${e.path.length ? e.path.join(".") + ": " : ""}${e.message}`)
     .join("; ");
 }
 

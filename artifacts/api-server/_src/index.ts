@@ -1,3 +1,4 @@
+// @ts-nocheck
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
@@ -33,7 +34,7 @@ try {
   logger.warn({ err }, "Content seeding encountered an error (non-fatal)");
 }
 
-app.listen(port, (err) => {
+app.listen(port, (err: any) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);

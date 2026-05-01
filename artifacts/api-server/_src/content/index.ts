@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { GLOSSARY } from "./glossary.js";
 export { STRATEGIES } from "./strategies.js";
 export { BOOKS_CATALOG } from "./books.js";

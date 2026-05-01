@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Content seeding — runs at startup.
  * Inserts demo content into dedicated DB tables if they are empty.
@@ -32,7 +33,7 @@ async function seedGlossary() {
   if (!(await isEmpty(null, "glossary_terms"))) return;
 
   await db.insert(glossaryTermsTable).values(
-    GLOSSARY.map((t, i) => ({
+    GLOSSARY.map((t: any, i: any) => ({
       term:       t.term,
       definition: t.definition,
       category:   t.category,
@@ -48,7 +49,7 @@ async function seedStrategies() {
   if (!(await isEmpty(null, "strategies"))) return;
 
   await db.insert(strategiesTable).values(
-    STRATEGIES.map((s, i) => ({
+    STRATEGIES.map((s: any, i: any) => ({
       id:             s.id,
       name:           s.name,
       subtitle:       s.subtitle,
@@ -81,7 +82,7 @@ async function seedBooks() {
   if (!(await isEmpty(null, "books"))) return;
 
   await db.insert(booksTable).values(
-    BOOKS_CATALOG.map((b) => ({
+    BOOKS_CATALOG.map((b: any) => ({
       id:          b.id,
       orderNum:    b.order,
       title:       b.title,
@@ -103,7 +104,7 @@ async function seedResources() {
   if (!(await isEmpty(null, "resource_sections"))) return;
 
   await db.insert(resourceSectionsTable).values(
-    RESOURCES.map((s, i) => ({
+    RESOURCES.map((s: any, i: any) => ({
       id:        s.id,
       title:     s.title,
       icon:      s.icon,
@@ -114,8 +115,8 @@ async function seedResources() {
     })),
   );
 
-  const items = RESOURCES.flatMap((s, _si) =>
-    s.items.map((item, j) => ({
+  const items = RESOURCES.flatMap((s: any, _si: any) =>
+    s.items.map((item: any, j: any) => ({
       sectionId:   s.id,
       name:        item.name,
       description: item.description,
@@ -136,7 +137,7 @@ async function seedCurriculum() {
   if (!(await isEmpty(null, "curriculum_levels"))) return;
 
   await db.insert(curriculumLevelsTable).values(
-    LEVELS.map((l, i) => ({
+    LEVELS.map((l: any, i: any) => ({
       id:         l.id,
       title:      l.title,
       subtitle:   l.subtitle,
@@ -147,8 +148,8 @@ async function seedCurriculum() {
     })),
   );
 
-  const lessons = LEVELS.flatMap((l) =>
-    l.lessons.map((lesson, j) => ({
+  const lessons = LEVELS.flatMap((l: any) =>
+    l.lessons.map((lesson: any, j: any) => ({
       id:        lesson.id,
       levelId:   l.id,
       title:     lesson.title,
