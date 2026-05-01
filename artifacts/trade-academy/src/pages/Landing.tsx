@@ -5,7 +5,7 @@ import {
   Zap, GraduationCap, Brain, ChevronRight, Twitter,
   MessageSquare, Send, Play, Video, Clock, LineChart,
   CheckCircle, Lock, ArrowRight, Star, Crown, Users,
-  Flame,
+  Flame, Activity, Sparkles, Target, Award,
 } from "lucide-react";
 import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png";
 
@@ -22,20 +22,30 @@ const FEATURES = [
     desc: "Do básico ao avançado, com quizzes e revisão espaçada para fixares o conhecimento.",
   },
   {
-    icon: LineChart,
-    title: "Gráficos em tempo real",
-    desc: "Simulador com 6 timeframes (1S · 1m · 5m · 1h · 4h · 1D) que fecham nos segundos exactos do relógio — como plataformas profissionais.",
+    icon: Activity,
+    title: "5 tipos de gráfico",
+    desc: "Velas japonesas, Heikin-Ashi, Barras OHLC, Linha e Área — muda o tipo com um clique, como no TradingView.",
+  },
+  {
+    icon: Brain,
+    title: "Coach IA por trade",
+    desc: "Análise inteligente de cada operação: entrada, saída, risco e lições concretas para melhorares.",
   },
   {
     icon: Video,
     title: "Vídeo Aulas curadas",
     desc: "Os melhores vídeos de trading em português, com player personalizado e desbloqueio sequencial por XP.",
   },
+  {
+    icon: Award,
+    title: "XP, conquistas e missões",
+    desc: "Sistema de gamificação completo: XP por cada acção, conquistas desbloqueáveis e missões diárias.",
+  },
 ];
 
 const STATS = [
   { value: "40+", label: "Aulas" },
-  { value: "8",   label: "Módulos" },
+  { value: "5",   label: "Tipos de gráfico" },
   { value: "6",   label: "Timeframes" },
   { value: "PT",  label: "Em Português" },
 ];
@@ -153,8 +163,8 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
-            40 aulas estruturadas, vídeo aulas curadas dos melhores criadores
-            e um simulador com gráficos em tempo real. Nível Iniciante grátis — tudo em português.
+            40 aulas estruturadas, simulador com 5 tipos de gráfico, Coach IA por trade
+            e vídeo aulas curadas. Nível Iniciante totalmente grátis — tudo em português.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
@@ -195,8 +205,12 @@ export default function Landing() {
                 <span className="text-xs text-gray-500 font-medium">BTC/USD</span>
                 <span className="text-xs text-green-400 font-semibold">+2.4%</span>
               </div>
-              {/* timeframe buttons */}
-              <div className="flex gap-1 flex-wrap">
+              {/* chart type + timeframe buttons */}
+              <div className="flex gap-1 flex-wrap items-center">
+                {["Velas","H.Ashi","Barras","Linha","Área"].map((ct, i) => (
+                  <span key={ct} className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${i === 0 ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "text-gray-700"}`}>{ct}</span>
+                ))}
+                <span className="mx-1 text-gray-700">·</span>
                 {TF_ITEMS.map((tf, i) => (
                   <span
                     key={tf}
@@ -288,7 +302,7 @@ export default function Landing() {
 
       {/* ── FEATURES ──────────────────────────────────────── */}
       <section id="funcionalidades" className="py-4 px-6 pb-24">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
             <div
               key={f.title}
@@ -545,23 +559,24 @@ export default function Landing() {
           <div>
             <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
               <LineChart className="w-3.5 h-3.5" />
-              Simulador · Gráficos reais
+              Simulador · Gráficos profissionais
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
               Pratica com gráficos<br />
-              <span className="text-cyan-400">que fecham no segundo certo.</span>
+              <span className="text-cyan-400">como um profissional.</span>
             </h2>
             <p className="text-gray-400 leading-relaxed mb-6">
-              O nosso simulador usa 6 timeframes com boundaries reais de relógio —
-              exactamente como o TradingView e o MetaTrader. A vela fecha ao segundo
-              exacto do intervalo, não quando o servidor quer.
+              Escolhe entre 5 tipos de gráfico, 6 timeframes com velas que fecham
+              no segundo exacto — exactamente como o TradingView e o MetaTrader.
+              O Coach IA analisa cada trade e dá-te feedback imediato.
             </p>
             <ul className="space-y-2 mb-8">
               {[
+                "5 tipos: Velas · Heikin-Ashi · Barras · Linha · Área",
                 "6 timeframes: 1S · 1m · 5m · 1h · 4h · 1D",
                 "Countdown ao fecho de cada vela, em tempo real",
-                "Indicadores: RSI, MACD, Média Móvel",
-                "Múltiplos activos: Cripto, Forex, Índices",
+                "Coach IA com análise de risco por operação",
+                "Indicadores: RSI, MACD, Média Móvel 20",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
@@ -575,6 +590,99 @@ export default function Landing() {
             >
               Experimentar o Simulador <ArrowRight className="w-4 h-4" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── COACH IA ──────────────────────────────────────── */}
+      <section className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
+              <Brain className="w-3.5 h-3.5" />
+              Coach IA · Novo
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
+              Feedback inteligente<br />
+              <span className="text-cyan-400">em cada operação.</span>
+            </h2>
+            <p className="text-gray-400 leading-relaxed mb-6">
+              Após cada trade no simulador, o Coach IA analisa automaticamente
+              a tua entrada, saída, gestão de risco e disciplina — e dá-te
+              lições concretas para evoluíres mais rápido.
+            </p>
+            <ul className="space-y-3 mb-8">
+              {[
+                { icon: Target, text: "Avaliação de entrada e saída de posição" },
+                { icon: Shield, text: "Análise de gestão de risco e rácio R:R" },
+                { icon: Sparkles, text: "Sugestões personalizadas de melhoria" },
+                { icon: Flame, text: "Streak de consistência e progresso ao longo do tempo" },
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="mt-0.5 w-5 h-5 rounded-full bg-cyan-500/15 flex items-center justify-center shrink-0">
+                    <item.icon className="w-3 h-3 text-cyan-400" />
+                  </div>
+                  <span className="text-sm text-gray-400">{item.text}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/cadastrar"
+              className="inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-[#060709] font-bold px-6 py-3 rounded-full text-sm transition-colors"
+            >
+              Activar Coach IA <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Coach IA mockup card */}
+          <div className="rounded-2xl border border-white/10 bg-[#0d0f18] p-5 shadow-2xl shadow-black/40">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
+                <Brain className="w-3.5 h-3.5 text-cyan-400" />
+              </div>
+              <span className="text-sm font-semibold text-white">Coach IA</span>
+              <span className="ml-auto text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">Novo trade</span>
+            </div>
+
+            {/* trade summary */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {[
+                { label: "Resultado", value: "+$340", color: "text-green-400" },
+                { label: "R:R", value: "1:2.8", color: "text-cyan-400" },
+                { label: "Duração", value: "14 min", color: "text-gray-300" },
+              ].map((s) => (
+                <div key={s.label} className="bg-[#13161e] rounded-xl p-3 text-center">
+                  <div className={`text-base font-bold ${s.color}`}>{s.value}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* analysis lines */}
+            <div className="space-y-2.5">
+              {[
+                { label: "Entrada", text: "Boa entrada no suporte — aguardaste confirmação da vela.", ok: true },
+                { label: "Risco", text: "Stop-loss correcto a 1.5%. Mantiveste a disciplina.", ok: true },
+                { label: "Saída", text: "Saíste cedo. Poderias ter esperado a resistência seguinte.", ok: false },
+              ].map((row) => (
+                <div key={row.label} className="flex gap-2.5 items-start">
+                  <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${row.ok ? "bg-green-500/15" : "bg-amber-500/15"}`}>
+                    {row.ok
+                      ? <CheckCircle className="w-2.5 h-2.5 text-green-400" />
+                      : <Zap className="w-2.5 h-2.5 text-amber-400" />}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{row.label} </span>
+                    <span className="text-xs text-gray-400">{row.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-xs text-gray-500">Streak de <span className="text-orange-400 font-semibold">5 dias</span> consecutivos · +50 XP ganhos</span>
+            </div>
           </div>
         </div>
       </section>
