@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -325,6 +326,7 @@ function CandleCountdown({ intervalSec }: { intervalSec: number }) {
 }
 
 export default function Simular() {
+  useSEO({ title: "Simulador de Trading — TradeAcademy", noindex: true });
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { LEVELS, TOTAL_LESSONS } from "@/data/curriculum";
 import { fmtUSD } from "@/lib/market";
 
 export default function Dashboard() {
+  useSEO({ title: "Dashboard — TradeAcademy", noindex: true });
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
   const user = useAuthStore((s) => s.user);

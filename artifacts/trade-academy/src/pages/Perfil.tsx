@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -49,6 +50,7 @@ const CATEGORY_LABELS = {
 type Tab = "conquistas" | "missoes" | "leaderboard";
 
 export default function Perfil() {
+  useSEO({ title: "Perfil — TradeAcademy", noindex: true });
   const [tab, setTab] = useState<Tab>("conquistas");
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);

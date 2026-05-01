@@ -1,7 +1,14 @@
 import { Link } from "react-router-dom";
 import { TrendingUp, ArrowLeft } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Termos() {
+  useSEO({
+    title: "Termos de Serviço — TradeAcademy Angola",
+    description: "Termos e condições de utilização da plataforma TradeAcademy Angola — plataforma de educação em trading e investimentos em português.",
+    canonical: "/termos",
+  });
+
   return (
     <div className="min-h-screen bg-[#060709] text-white">
       {/* Nav */}

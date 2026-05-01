@@ -3,20 +3,34 @@
 # ── Motores de busca tradicionais ────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
+Disallow: /ta-painel-gestao
+Disallow: /dashboard
+Disallow: /aprender/
+Disallow: /simular
+Disallow: /perfil
+Disallow: /configuracoes
+Disallow: /duelo
+Disallow: /biblioteca/
+Disallow: /video-aulas/
+Disallow: /financeiro
 Crawl-delay: 2
 
 User-agent: Bingbot
 Allow: /
+Disallow: /ta-painel-gestao
+Disallow: /dashboard
 Crawl-delay: 3
 
 User-agent: DuckDuckBot
 Allow: /
+Disallow: /ta-painel-gestao
 
 User-agent: Slurp
 Allow: /
+Disallow: /ta-painel-gestao
 Crawl-delay: 5
 
-# ── Redes sociais ─────────────────────────────────────────────────────────────
+# ── Redes sociais — acesso total para preview de links ───────────────────────
 User-agent: Twitterbot
 Allow: /
 
@@ -33,10 +47,13 @@ User-agent: TelegramBot
 Allow: /
 
 # ── Bots de IA — pesquisa e indexação (CRÍTICO para SEO de IA) ───────────────
+# Permitir acesso total: estes bots alimentam resultados do ChatGPT, Gemini,
+# Perplexity, Claude — fontes crescentes de discovery para utilizadores.
 
 # OpenAI / ChatGPT
 User-agent: GPTBot
 Allow: /
+Disallow: /ta-painel-gestao
 
 User-agent: ChatGPT-User
 Allow: /
@@ -74,7 +91,7 @@ Allow: /
 User-agent: YouBot
 Allow: /
 
-# Amazon AI
+# Amazon AI / Alexa
 User-agent: Amazonbot
 Allow: /
 
@@ -83,6 +100,7 @@ User-agent: CCBot
 Allow: /
 
 # ── Bots de scraping agressivo — bloqueados ───────────────────────────────────
+# Não são motores de busca: apenas fazem scraping para concorrentes
 User-agent: AhrefsBot
 Disallow: /
 
@@ -99,6 +117,11 @@ Disallow: /
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /ta-painel-gestao
+Disallow: /dashboard
+Disallow: /perfil
+Disallow: /configuracoes
+Disallow: /financeiro
 Crawl-delay: 5
 
 # ── Sitemap ───────────────────────────────────────────────────────────────────

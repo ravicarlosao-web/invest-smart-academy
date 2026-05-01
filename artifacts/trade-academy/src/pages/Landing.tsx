@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/apiClient";
+import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 import {
   TrendingUp, BookOpen, Trophy, BarChart2, Shield,
@@ -135,6 +136,12 @@ export default function Landing() {
   const [subscribed, setSubscribed] = useState(false);
   const [priceAoa, setPriceAoa] = useState(5000);
   const [planName, setPlanName] = useState("Plano Mensal");
+
+  useSEO({
+    title: "TradeAcademy Angola — Curso de Trading em Português | Grátis",
+    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Coach IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
+    canonical: "/",
+  });
 
   useEffect(() => {
     api.public.getPlanConfig()

@@ -1,7 +1,14 @@
 import { Link } from "react-router-dom";
 import { TrendingUp, ArrowLeft } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Privacidade() {
+  useSEO({
+    title: "Política de Privacidade — TradeAcademy Angola",
+    description: "Política de privacidade e protecção de dados da plataforma TradeAcademy Angola — como recolhemos, usamos e protegemos os seus dados.",
+    canonical: "/privacidade",
+  });
+
   return (
     <div className="min-h-screen bg-[#060709] text-white">
       {/* Nav */}

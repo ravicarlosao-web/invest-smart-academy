@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { useNavigate } from "react-router-dom";
 import {
   Shield, LogOut, Users, LineChart as LineChartIcon, BookOpen, Activity,
@@ -2129,6 +2130,7 @@ type NavId = (typeof NAV_ITEMS)[number]["id"];
  * Main Admin shell
  * ========================================================================= */
 export default function Admin() {
+  useSEO({ title: "Painel de Gestão — TradeAcademy", noindex: true });
   const navigate                  = useNavigate();
   const { token, logout }         = useAdminStore();
   const [active, setActive]       = useState<NavId>("overview");

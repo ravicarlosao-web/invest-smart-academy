@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link, useNavigate } from "react-router-dom";
 import { TrendingUp, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 
 export default function Login() {
+  useSEO({
+    title: "Entrar — TradeAcademy Angola",
+    description: "Inicia sessão no TradeAcademy Angola e continua a aprender trading em português.",
+    canonical: "/entrar",
+  });
   const navigate   = useNavigate();
   const { login }  = useAuthStore();
 
