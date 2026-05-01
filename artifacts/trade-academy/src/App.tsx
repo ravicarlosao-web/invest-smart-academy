@@ -7,11 +7,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout    from "./components/AppLayout";
 import AuthGuard    from "./components/AuthGuard";
 
-import Landing      from "./pages/Landing";
-import Login        from "./pages/Login";
-import Cadastrar    from "./pages/Cadastrar";
-import Termos       from "./pages/Termos";
-import Privacidade  from "./pages/Privacidade";
+import Landing        from "./pages/Landing";
+import Login          from "./pages/Login";
+import Cadastrar      from "./pages/Cadastrar";
+import Termos         from "./pages/Termos";
+import Privacidade    from "./pages/Privacidade";
+import EsqueciSenha   from "./pages/EsqueciSenha";
+import RedefinirSenha from "./pages/RedefinirSenha";
 
 import Dashboard    from "./pages/Dashboard";
 import Aprender     from "./pages/Aprender";
@@ -47,8 +49,10 @@ const App = () => (
           <Route path="/login"         element={<Navigate to="/entrar" replace />} />
           <Route path="/cadastrar"     element={<Cadastrar />} />
           <Route path="/register"      element={<Navigate to="/cadastrar" replace />} />
-          <Route path="/termos"        element={<Termos />} />
-          <Route path="/privacidade"   element={<Privacidade />} />
+          <Route path="/termos"           element={<Termos />} />
+          <Route path="/privacidade"      element={<Privacidade />} />
+          <Route path="/esqueci-senha"    element={<EsqueciSenha />} />
+          <Route path="/redefinir-senha"  element={<RedefinirSenha />} />
 
           {/* ── Gestão interna (protegida por senha) ── */}
           <Route path="/ta-painel-gestao" element={<Admin />} />

@@ -10,6 +10,7 @@ import {
   FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
+  Mail, Send, CheckCircle,
 } from "lucide-react";
 import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -2415,12 +2416,193 @@ function SubscriptionsTab() {
 }
 
 /* =========================================================================
+ * Email Config tab
+ * ========================================================================= */
+function EmailConfigTab() {
+  const [cfg, setCfg]         = useState({ apiKey: "", fromEmail: "", fromName: "TradeAcademy", adminEmail: "" });
+  const [status, setStatus]   = useState<{ configured: boolean; keySource: string } | null>(null);
+  const [saving, setSaving]   = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [loaded, setLoaded]   = useState(false);
+
+  useEffect(() => {
+    api.admin.getEmailConfig()
+      .then((r) => {
+        setStatus({ configured: r.configured, keySource: r.keySource });
+        setCfg((prev) => ({ ...prev, fromEmail: r.fromEmail, fromName: r.fromName, adminEmail: r.adminEmail }));
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload: Record<string, string> = {
+        fromEmail: cfg.fromEmail,
+        fromName:  cfg.fromName,
+        adminEmail: cfg.adminEmail,
+      };
+      if (cfg.apiKey.trim()) payload.apiKey = cfg.apiKey.trim();
+      const r = await api.admin.saveEmailConfig(payload);
+      setStatus((prev) => ({ ...prev!, configured: r.configured, keySource: r.configured ? "database" : "none" }));
+      setCfg((prev) => ({ ...prev, apiKey: "" }));
+      toast.success(r.configured ? "Configurações de email guardadas" : "Configurações guardadas (sem chave API)");
+    } catch { toast.error("Erro ao guardar configurações"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleTest() {
+    if (!cfg.adminEmail.trim()) { toast.error("Introduz o email de destino para o teste."); return; }
+    setTesting(true);
+    try {
+      await api.admin.testEmailConfig(cfg.adminEmail.trim());
+      toast.success(`Email de teste enviado para ${cfg.adminEmail}`);
+    } catch (err: any) {
+      const reason = err?.message?.includes("sendgrid_not_configured")
+        ? "SendGrid não configurado. Guarda a API key primeiro."
+        : "Erro ao enviar email de teste. Verifica a chave API.";
+      toast.error(reason);
+    } finally { setTesting(false); }
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-semibold">Email / SendGrid</h2>
+        <p className="text-sm text-muted-foreground">
+          Configura o SendGrid para envio automático de emails — recuperação de password, aprovação e rejeição de subscrições.
+        </p>
+      </div>
+
+      {/* Status banner */}
+      {loaded && (
+        <Card className={cn("border", status?.configured ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5")}>
+          <CardContent className="flex items-center gap-3 p-4">
+            {status?.configured
+              ? <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              : <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />}
+            <div>
+              <p className={cn("text-sm font-semibold", status?.configured ? "text-emerald-400" : "text-amber-400")}>
+                {status?.configured ? "SendGrid configurado" : "SendGrid não configurado"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {status?.configured
+                  ? `Chave API activa (fonte: ${status.keySource === "database" ? "painel admin" : "variável de ambiente"}). Emails serão enviados automaticamente.`
+                  : "Sem chave API. Os emails de recuperação de password e subscrição não serão enviados."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Config form */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Credenciais SendGrid</CardTitle>
+          <CardDescription className="text-xs">
+            Obtém a tua API Key em{" "}
+            <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noreferrer" className="text-primary underline">
+              app.sendgrid.com
+            </a>
+            . Precisas de permissão <strong>Mail Send</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              API Key SendGrid
+              {status?.configured && <span className="ml-2 text-emerald-500">(chave guardada — deixa vazio para manter)</span>}
+            </Label>
+            <Input
+              type="password"
+              placeholder={status?.configured ? "••••••••••••••••••••••••• (chave activa)" : "SG.xxxxxxxxxxxxxxxxxxxxxxxx"}
+              value={cfg.apiKey}
+              onChange={(e) => setCfg((p) => ({ ...p, apiKey: e.target.value }))}
+              className="font-mono text-xs mt-1"
+              autoComplete="off"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Email remetente</Label>
+              <Input
+                type="email"
+                placeholder="noreply@tradeacademy.ao"
+                value={cfg.fromEmail}
+                onChange={(e) => setCfg((p) => ({ ...p, fromEmail: e.target.value }))}
+                className="mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Deve estar verificado no SendGrid.</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Nome remetente</Label>
+              <Input
+                placeholder="TradeAcademy"
+                value={cfg.fromName}
+                onChange={(e) => setCfg((p) => ({ ...p, fromName: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Email de administração (para testes)</Label>
+            <Input
+              type="email"
+              placeholder="admin@exemplo.com"
+              value={cfg.adminEmail}
+              onChange={(e) => setCfg((p) => ({ ...p, adminEmail: e.target.value }))}
+              className="mt-1"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleSave} disabled={saving || !loaded}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {saving ? "A guardar..." : "Guardar configurações"}
+            </Button>
+            <Button variant="outline" onClick={handleTest} disabled={testing || !status?.configured}>
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              {testing ? "A enviar..." : "Enviar email de teste"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* What gets sent */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Emails automáticos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { icon: "✅", title: "Subscrição aprovada", desc: "Enviado ao aluno quando o admin aprova o comprovativo de pagamento." },
+              { icon: "❌", title: "Subscrição rejeitada", desc: "Enviado ao aluno quando o admin rejeita o pedido, com nota opcional." },
+              { icon: "🔑", title: "Recuperação de password", desc: "Enviado quando o utilizador pede recuperação em /esqueci-senha. Link válido por 1 hora." },
+            ].map((item) => (
+              <div key={item.title} className="flex items-start gap-3 rounded-lg border border-border/50 bg-surface-1 p-3">
+                <span className="text-lg leading-none mt-0.5">{item.icon}</span>
+                <div>
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* =========================================================================
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
   { id: "overview",       label: "Dashboard",             icon: BarChart3,      group: "negocio" },
   { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
+  { id: "email",          label: "Email / SendGrid",      icon: Mail,           group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
   { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
   { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
@@ -2450,6 +2632,7 @@ export default function Admin() {
     overview:      <OverviewTab />,
     subscriptions: <SubscriptionsTab />,
     users:         <UsersTab />,
+    email:         <EmailConfigTab />,
     settings:      <SettingsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,

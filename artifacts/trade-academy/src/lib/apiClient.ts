@@ -81,6 +81,10 @@ export const api = {
       request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/login", data,
       ),
+    forgotPassword: (email: string) =>
+      request<{ ok: boolean }>("POST", "/auth/forgot-password", { email }),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ ok: boolean }>("POST", "/auth/reset-password", { token, newPassword }),
   },
 
   /* ---------- Progress ---------- */
@@ -188,6 +192,13 @@ export const api = {
       adminRequest<{ ok: boolean }>("PUT", "/admin/ai-config", cfg),
     testAiConfig: () =>
       adminRequest<{ ok: boolean; model: string }>("POST", "/admin/ai-config/test"),
+
+    getEmailConfig: () =>
+      adminRequest<{ configured: boolean; keySource: string; fromEmail: string; fromName: string; adminEmail: string }>("GET", "/admin/email-config"),
+    saveEmailConfig: (cfg: { apiKey?: string; fromEmail?: string; fromName?: string; adminEmail?: string }) =>
+      adminRequest<{ ok: boolean; configured: boolean }>("PUT", "/admin/email-config", cfg),
+    testEmailConfig: (to: string) =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/email-config/test", { to }),
 
     finance: () =>
       adminRequest<{

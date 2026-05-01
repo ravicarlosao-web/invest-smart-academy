@@ -28,6 +28,7 @@ const router = Router();
 
 import { createHash } from "node:crypto";
 import { AdminLoginBody, AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
+import { sendSubscriptionApprovalEmail, sendSubscriptionRejectionEmail, sendTestEmail } from "../lib/email.js";
 import { validate } from "../middlewares/validate.js";
 
 function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
@@ -736,7 +737,7 @@ router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
       updatedAt:  now,
     }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
-    /* Notificação para o aluno */
+    /* Notificação in-app para o aluno */
     const expireDate = new Date(expiresAt).toLocaleDateString("pt-PT");
     await createNotif(
       sub.userId, "system",
@@ -744,6 +745,15 @@ router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
       `A tua subscrição foi aprovada. Tens acesso completo ao conteúdo Intermédio e Avançado até ${expireDate}.`,
       "/aprender",
     );
+
+    /* Email de confirmação (fire-and-forget) */
+    const userRow = await db.select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable).where(eq(usersTable.id, sub.userId)).get();
+    if (userRow?.email) {
+      sendSubscriptionApprovalEmail({ to: userRow.email, name: userRow.name ?? "utilizador", expiresAt })
+        .then((r) => { if (!r.ok) console.warn("[email] approval failed:", r.reason); })
+        .catch(() => {});
+    }
 
     res.json({ ok: true, expiresAt });
   } catch (err) {
@@ -767,7 +777,7 @@ router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req:
       updatedAt: now,
     }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
-    /* Notificação para o aluno */
+    /* Notificação in-app para o aluno */
     const noteText = notes ? ` Motivo: ${notes}` : " Contacta o suporte para mais informações.";
     await createNotif(
       sub.userId, "system",
@@ -775,6 +785,15 @@ router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req:
       `O teu pedido de subscrição foi rejeitado.${noteText}`,
       "/perfil",
     );
+
+    /* Email de rejeição (fire-and-forget) */
+    const userRowR = await db.select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable).where(eq(usersTable.id, sub.userId)).get();
+    if (userRowR?.email) {
+      sendSubscriptionRejectionEmail({ to: userRowR.email, name: userRowR.name ?? "utilizador", notes: notes ?? undefined })
+        .then((r) => { if (!r.ok) console.warn("[email] rejection email failed:", r.reason); })
+        .catch(() => {});
+    }
 
     res.json({ ok: true });
   } catch (err) {
@@ -946,6 +965,76 @@ router.post("/ai-config/test", async (req: any, res: any) => {
       });
     }
     res.json({ ok: true, model: cfg.model });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ===========================================================================
+ * Email Config — GET / PUT /api/admin/email-config
+ * POST /api/admin/email-config/test
+ * ========================================================================= */
+
+/** GET /api/admin/email-config — returns config status (never returns key) */
+router.get("/email-config", async (req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const envKey = process.env["SENDGRID_API_KEY"];
+    res.json({
+      configured:     !!(cfg.apiKey || envKey),
+      keySource:      cfg.apiKey ? "database" : envKey ? "environment" : "none",
+      fromEmail:      cfg.fromEmail ?? "",
+      fromName:       cfg.fromName  ?? "TradeAcademy",
+      adminEmail:     cfg.adminEmail ?? "",
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** PUT /api/admin/email-config — saves config (apiKey may be empty to clear) */
+router.put("/email-config", async (req: any, res: any) => {
+  try {
+    const { apiKey, fromEmail, fromName, adminEmail } = req.body ?? {};
+    const now = Date.now();
+
+    /* Load existing to preserve key if new one is empty */
+    const existing = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
+    let current: any = {};
+    try { current = existing ? JSON.parse(existing.value) : {}; } catch { current = {}; }
+
+    const merged = {
+      apiKey:     apiKey     ?? current.apiKey ?? "",
+      fromEmail:  fromEmail  ?? current.fromEmail  ?? "noreply@tradeacademy.ao",
+      fromName:   fromName   ?? current.fromName   ?? "TradeAcademy",
+      adminEmail: adminEmail ?? current.adminEmail ?? "",
+    };
+
+    if (existing) {
+      await db.update(adminSettingsTable).set({ value: JSON.stringify(merged), updatedAt: now }).where(eq(adminSettingsTable.key, "email.config"));
+    } else {
+      await db.insert(adminSettingsTable).values({ key: "email.config", value: JSON.stringify(merged), updatedAt: now });
+    }
+
+    res.json({ ok: true, configured: !!merged.apiKey });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** POST /api/admin/email-config/test — sends test email to adminEmail */
+router.post("/email-config/test", async (req: any, res: any) => {
+  try {
+    const { to } = req.body ?? {};
+    if (!to || typeof to !== "string") return res.status(400).json({ error: "missing_to" });
+    const result = await sendTestEmail({ to });
+    if (!result.ok) return res.status(400).json({ error: "send_failed", reason: result.reason });
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
