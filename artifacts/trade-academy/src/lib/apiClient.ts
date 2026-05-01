@@ -200,6 +200,11 @@ export const api = {
     testEmailConfig: (to: string) =>
       adminRequest<{ ok: boolean }>("POST", "/admin/email-config/test", { to }),
 
+    getSeoConfig: () =>
+      adminRequest<SeoConfig>("GET", "/admin/seo-config"),
+    saveSeoConfig: (cfg: Partial<SeoConfig>) =>
+      adminRequest<{ ok: boolean; config: SeoConfig }>("PUT", "/admin/seo-config", cfg),
+
     finance: () =>
       adminRequest<{
         plan:    { priceAoa: number; planName: string };
@@ -275,3 +280,20 @@ export type SubscriptionData = {
 export type SubscriptionWithUser = SubscriptionData & {
   user: { id: string; name: string; email: string };
 };
+
+export type SeoConfig = {
+  siteName:      string;
+  shortName:     string;
+  domain:        string;
+  description:   string;
+  twitterHandle: string;
+  themeColor:    string;
+  priceAoa:      number;
+  geo:           string;
+  geoCity:       string;
+};
+
+/** Public — no auth needed */
+export function getSiteConfig(): Promise<SeoConfig> {
+  return request<SeoConfig>("GET", "/site-config");
+}

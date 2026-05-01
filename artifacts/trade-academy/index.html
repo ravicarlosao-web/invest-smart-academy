@@ -31,7 +31,8 @@
     <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
 
     <!-- ── PWA + App meta ─────────────────────────────────────────────────── -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- manifest served dynamically by API so admin panel changes take effect immediately -->
+    <link rel="manifest" href="/api-server/api/manifest" />
     <meta name="theme-color" content="#06b6d4" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -452,6 +453,48 @@
 
   <body>
     <div id="root"></div>
+    <!-- Patch canonical / OG meta from admin SEO config (runs before React hydrates) -->
+    <script>
+      (function () {
+        try {
+          fetch("/api-server/api/site-config")
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (cfg) {
+              if (!cfg || !cfg.domain) return;
+              var base = "https://" + cfg.domain;
+              var setMeta = function (sel, val) {
+                var el = document.querySelector(sel);
+                if (el) el.setAttribute(el.hasAttribute("href") ? "href" : "content", val);
+              };
+              var setMetaProp = function (prop, val) { setMeta('meta[property="' + prop + '"]', val); };
+              var setMetaName = function (name, val) { setMeta('meta[name="' + name + '"]', val); };
+              // Canonical
+              setMeta('link[rel="canonical"]', base + "/");
+              // Site name / title
+              if (cfg.siteName) {
+                document.title = cfg.siteName + " — Curso de Trading em Português";
+                setMetaName("application-name", cfg.siteName);
+                setMetaName("apple-mobile-web-app-title", cfg.shortName || cfg.siteName);
+                setMetaProp("og:site_name", cfg.siteName);
+              }
+              // OG / Twitter URLs
+              setMetaProp("og:url", base + "/");
+              setMetaProp("og:image", base + "/opengraph.jpg");
+              setMetaName("twitter:image", base + "/opengraph.jpg");
+              if (cfg.twitterHandle) setMetaName("twitter:site", cfg.twitterHandle);
+              // Theme color
+              if (cfg.themeColor) setMetaName("theme-color", cfg.themeColor);
+              // Description
+              if (cfg.description) {
+                setMetaName("description", cfg.description);
+                setMetaProp("og:description", cfg.description);
+                setMetaName("twitter:description", cfg.description);
+              }
+            })
+            .catch(function () {});
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

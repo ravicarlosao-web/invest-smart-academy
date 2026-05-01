@@ -253,4 +253,99 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+/* ── SEO / Site Config — public read ──────────────────────────────────── */
+const SEO_DEFAULTS = {
+  siteName:      "TradeAcademy Angola",
+  shortName:     "TradeAcademy",
+  domain:        "",
+  description:   "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
+  twitterHandle: "@TradeAcademyAO",
+  themeColor:    "#06b6d4",
+  priceAoa:      5000,
+  geo:           "AO",
+  geoCity:       "Luanda, Angola",
+};
+
+router.get("/site-config", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    res.json({ ...SEO_DEFAULTS, ...cfg });
+  } catch {
+    res.json(SEO_DEFAULTS);
+  }
+});
+
+/* ── Dynamic PWA manifest — always reflects latest seo.config ─────────── */
+router.get("/manifest", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const c = { ...SEO_DEFAULTS, ...cfg };
+
+    const baseUrl = c.domain ? `https://${c.domain}` : (process.env.APP_URL ?? "");
+
+    const manifest = {
+      name:             c.siteName,
+      short_name:       c.shortName,
+      description:      c.description,
+      start_url:        "/",
+      id:               baseUrl ? `${baseUrl}/` : "/",
+      scope:            "/",
+      display:          "standalone",
+      display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
+      orientation:      "portrait-primary",
+      background_color: "#060b17",
+      theme_color:      c.themeColor,
+      lang:             "pt-AO",
+      dir:              "ltr",
+      categories:       ["education", "finance"],
+      icons: [
+        { src: "/pwa-icon-72.png",  sizes: "72x72",   type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-96.png",  sizes: "96x96",   type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-128.png", sizes: "128x128", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-144.png", sizes: "144x144", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-152.png", sizes: "152x152", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "/pwa-icon-384.png", sizes: "384x384", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+      ],
+      screenshots: [
+        {
+          src: "/opengraph.jpg",
+          sizes: "1200x630",
+          type: "image/jpeg",
+          form_factor: "wide",
+          label: `${c.siteName} — Aprenda Trading`,
+        },
+      ],
+      shortcuts: [
+        {
+          name: "Aprender",
+          short_name: "Aulas",
+          description: "Continua de onde paraste",
+          url: "/aprender",
+          icons: [{ src: "/pwa-icon-96.png", sizes: "96x96" }],
+        },
+        {
+          name: "Simulador",
+          short_name: "Simular",
+          description: "Pratica no simulador",
+          url: "/simular",
+          icons: [{ src: "/pwa-icon-96.png", sizes: "96x96" }],
+        },
+      ],
+      prefer_related_applications: false,
+    };
+
+    res.setHeader("Content-Type", "application/manifest+json");
+    res.setHeader("Cache-Control", "no-cache, max-age=0");
+    res.json(manifest);
+  } catch {
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;

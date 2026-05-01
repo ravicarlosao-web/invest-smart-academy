@@ -10,9 +10,9 @@ import {
   FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
-  Mail, Send, CheckCircle,
+  Mail, Send, CheckCircle, Globe,
 } from "lucide-react";
-import type { SubscriptionWithUser } from "@/lib/apiClient";
+import type { SubscriptionWithUser, SeoConfig } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -2596,6 +2596,239 @@ function EmailConfigTab() {
 }
 
 /* =========================================================================
+ * SEO / Site Settings tab
+ * ========================================================================= */
+const SEO_EMPTY: SeoConfig = {
+  siteName: "TradeAcademy Angola", shortName: "TradeAcademy", domain: "",
+  description: "A primeira plataforma angolana de educação em trading.",
+  twitterHandle: "@TradeAcademyAO", themeColor: "#06b6d4", priceAoa: 5000,
+  geo: "AO", geoCity: "Luanda, Angola",
+};
+
+function SeoSettingsTab() {
+  const [cfg, setCfg]     = useState<SeoConfig>(SEO_EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.admin.getSeoConfig()
+      .then((r) => { setCfg(r); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  function set<K extends keyof SeoConfig>(key: K, val: SeoConfig[K]) {
+    setCfg((p) => ({ ...p, [key]: val }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await api.admin.saveSeoConfig(cfg);
+      toast.success("Configurações SEO guardadas. O manifesto PWA foi actualizado automaticamente.");
+    } catch { toast.error("Erro ao guardar configurações SEO"); }
+    finally { setSaving(false); }
+  }
+
+  const siteUrl = cfg.domain ? `https://${cfg.domain}` : null;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-semibold">SEO & Domínio</h2>
+        <p className="text-sm text-muted-foreground">
+          Configura o nome da plataforma, domínio e metadados de SEO. Ao guardares, o manifesto PWA é actualizado automaticamente.
+        </p>
+      </div>
+
+      {/* Domain status */}
+      {loaded && (
+        <Card className={cn("border", siteUrl ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5")}>
+          <CardContent className="flex items-center gap-3 p-4">
+            {siteUrl
+              ? <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              : <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />}
+            <div>
+              <p className={cn("text-sm font-semibold", siteUrl ? "text-emerald-400" : "text-amber-400")}>
+                {siteUrl ? `Domínio configurado: ${cfg.domain}` : "Sem domínio configurado"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {siteUrl
+                  ? "O canonical, Open Graph e o manifesto PWA apontam para este domínio."
+                  : "Sem domínio, os URLs de SEO ficam incompletos. Adiciona o domínio assim que estiver disponível."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Identity */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Identidade do site</CardTitle>
+          <CardDescription className="text-xs">O nome que aparece no browser, no PWA instalado e nos resultados de pesquisa.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Nome completo</Label>
+              <Input
+                placeholder="TradeAcademy Angola"
+                value={cfg.siteName}
+                onChange={(e) => set("siteName", e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Usado em títulos, JSON-LD e emails.</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Nome curto (PWA)</Label>
+              <Input
+                placeholder="TradeAcademy"
+                value={cfg.shortName}
+                onChange={(e) => set("shortName", e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Máx. ~12 caracteres — aparece no ícone instalado.</p>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Descrição</Label>
+            <textarea
+              rows={3}
+              placeholder="A plataforma angolana de educação em trading..."
+              value={cfg.description}
+              onChange={(e) => set("description", e.target.value)}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Domain */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Domínio</CardTitle>
+          <CardDescription className="text-xs">
+            Sem "https://" — ex: <code className="bg-muted px-1 rounded">tradeacademy.ao</code>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-xs text-muted-foreground">Domínio (sem https://)</Label>
+            <div className="flex items-center mt-1">
+              <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 py-2 text-xs text-muted-foreground">https://</span>
+              <Input
+                placeholder="tradeacademy.ao"
+                value={cfg.domain}
+                onChange={(e) => set("domain", e.target.value.replace(/^https?:\/\//, "").replace(/\/$/, ""))}
+                className="rounded-l-none font-mono text-sm"
+              />
+            </div>
+          </div>
+
+          {siteUrl && (
+            <div className="rounded-lg border border-border/50 bg-surface-1 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">URLs que serão usados em SEO</p>
+              {[
+                ["Canonical", siteUrl + "/"],
+                ["Open Graph", siteUrl + "/"],
+                ["OG Image", siteUrl + "/opengraph.jpg"],
+                ["Manifesto PWA", "/api-server/api/manifest"],
+              ].map(([label, url]) => (
+                <div key={label} className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground w-24 shrink-0">{label}</span>
+                  <code className="text-primary truncate">{url}</code>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Social & PWA extras */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Redes sociais & PWA</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Twitter / X Handle</Label>
+              <Input
+                placeholder="@TradeAcademyAO"
+                value={cfg.twitterHandle}
+                onChange={(e) => set("twitterHandle", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Cor do tema (PWA / browser)</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={cfg.themeColor}
+                  onChange={(e) => set("themeColor", e.target.value)}
+                  className="h-9 w-10 cursor-pointer rounded border border-input bg-transparent p-0.5"
+                />
+                <Input
+                  value={cfg.themeColor}
+                  onChange={(e) => set("themeColor", e.target.value)}
+                  className="font-mono text-sm"
+                  maxLength={7}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Região geo (ISO 3166)</Label>
+              <Input
+                placeholder="AO"
+                value={cfg.geo}
+                onChange={(e) => set("geo", e.target.value.toUpperCase())}
+                className="mt-1 uppercase"
+                maxLength={2}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Cidade / região</Label>
+              <Input
+                placeholder="Luanda, Angola"
+                value={cfg.geoCity}
+                onChange={(e) => set("geoCity", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-2">
+        <Button onClick={handleSave} disabled={saving || !loaded}>
+          <Save className="mr-1.5 h-3.5 w-3.5" />
+          {saving ? "A guardar..." : "Guardar configurações SEO"}
+        </Button>
+      </div>
+
+      {/* Instructions */}
+      <Card className="border-border/60 bg-muted/30">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">O que muda automaticamente ao guardar</p>
+          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+            <li>Manifesto PWA (<code className="bg-muted px-1 rounded">/api-server/api/manifest</code>) — nome, short_name, descrição, cor, id</li>
+            <li>Meta tags canonical, og:url, og:image actualizadas via script na página</li>
+            <li>Título do browser e apple-mobile-web-app-title</li>
+            <li>Twitter:site, og:site_name, og:description, meta description</li>
+          </ul>
+          <p className="text-xs text-muted-foreground mt-2">
+            <strong className="text-foreground">Nota:</strong> Para resultados de pesquisa do Google, as meta tags no HTML estático continuam a usar o placeholder até o site ser redeployado com o domínio definitivo. Isso é normal para uma SPA — o Google lerá os valores correctos após o deploy.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* =========================================================================
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
@@ -2603,6 +2836,7 @@ const NAV_ITEMS = [
   { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
   { id: "email",          label: "Email / SendGrid",      icon: Mail,           group: "negocio" },
+  { id: "seo",            label: "SEO & Domínio",         icon: Globe,          group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
   { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
   { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
@@ -2633,6 +2867,7 @@ export default function Admin() {
     subscriptions: <SubscriptionsTab />,
     users:         <UsersTab />,
     email:         <EmailConfigTab />,
+    seo:           <SeoSettingsTab />,
     settings:      <SettingsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,

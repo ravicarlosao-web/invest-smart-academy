@@ -1041,5 +1041,68 @@ router.post("/email-config/test", async (req: any, res: any) => {
   }
 });
 
+/* ===========================================================================
+ * SEO / Site Config — GET / PUT /api/admin/seo-config
+ * Stored in admin_settings key "seo.config"
+ * ========================================================================= */
+
+const SEO_DEFAULTS = {
+  siteName:      "TradeAcademy Angola",
+  shortName:     "TradeAcademy",
+  domain:        "",
+  description:   "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
+  twitterHandle: "@TradeAcademyAO",
+  themeColor:    "#06b6d4",
+  priceAoa:      5000,
+  geo:           "AO",
+  geoCity:       "Luanda, Angola",
+};
+
+router.get("/seo-config", async (req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    res.json({ ...SEO_DEFAULTS, ...cfg });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/seo-config", async (req: any, res: any) => {
+  try {
+    const { siteName, shortName, domain, description, twitterHandle, themeColor, priceAoa, geo, geoCity } = req.body ?? {};
+    const now = Date.now();
+
+    const existing = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let current: any = {};
+    try { current = existing ? JSON.parse(existing.value) : {}; } catch { current = {}; }
+
+    const merged = {
+      siteName:      siteName      ?? current.siteName      ?? SEO_DEFAULTS.siteName,
+      shortName:     shortName     ?? current.shortName     ?? SEO_DEFAULTS.shortName,
+      domain:        domain        ?? current.domain        ?? SEO_DEFAULTS.domain,
+      description:   description   ?? current.description   ?? SEO_DEFAULTS.description,
+      twitterHandle: twitterHandle ?? current.twitterHandle ?? SEO_DEFAULTS.twitterHandle,
+      themeColor:    themeColor    ?? current.themeColor    ?? SEO_DEFAULTS.themeColor,
+      priceAoa:      priceAoa      ?? current.priceAoa      ?? SEO_DEFAULTS.priceAoa,
+      geo:           geo           ?? current.geo           ?? SEO_DEFAULTS.geo,
+      geoCity:       geoCity       ?? current.geoCity       ?? SEO_DEFAULTS.geoCity,
+    };
+
+    if (existing) {
+      await db.update(adminSettingsTable).set({ value: JSON.stringify(merged), updatedAt: now }).where(eq(adminSettingsTable.key, "seo.config"));
+    } else {
+      await db.insert(adminSettingsTable).values({ key: "seo.config", value: JSON.stringify(merged), updatedAt: now });
+    }
+
+    res.json({ ok: true, config: merged });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;
 
