@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { db, tradesTable, eq, desc } from "@workspace/db";
 import { TradesBody } from "@workspace/api-zod";
-import { validate } from "../middlewares/validate";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 

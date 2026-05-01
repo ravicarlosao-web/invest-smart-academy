@@ -2,8 +2,8 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable, eq } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
-import { signToken } from "../middlewares/auth";
-import { validate } from "../middlewares/validate";
+import { signToken } from "../middlewares/auth.js";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 

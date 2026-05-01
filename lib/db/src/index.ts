@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/libsql/http";
 import { sql } from "drizzle-orm";
-import * as schema from "./schema";
+import * as schema from "./schema/index.js";
 
 const rawUrl    = process.env["TURSO_DATABASE_URL"];
 const tursoToken = process.env["TURSO_AUTH_TOKEN"];
@@ -209,7 +209,7 @@ export async function initDb(): Promise<void> {
   }
 }
 
-export * from "./schema";
+export * from "./schema/index.js";
 
 /* Re-export drizzle-orm query helpers so consumers don't need their own copy */
 export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull } from "drizzle-orm";

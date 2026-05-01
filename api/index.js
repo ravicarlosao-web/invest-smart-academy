@@ -37382,7 +37382,7 @@ __export(server_exports, {
 });
 module.exports = __toCommonJS(server_exports);
 
-// artifacts/api-server/src/app.ts
+// artifacts/api-server/_src/app.ts
 var import_express10 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 
@@ -38864,13 +38864,13 @@ var rateLimit = (passedOptions) => {
 };
 var rate_limit_default = rateLimit;
 
-// artifacts/api-server/src/app.ts
+// artifacts/api-server/_src/app.ts
 var import_pino_http = __toESM(require_logger(), 1);
 
-// artifacts/api-server/src/routes/index.ts
+// artifacts/api-server/_src/routes/index.ts
 var import_express9 = __toESM(require_express2(), 1);
 
-// artifacts/api-server/src/routes/health.ts
+// artifacts/api-server/_src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
@@ -43016,7 +43016,7 @@ var DueloPatchBody = external_exports.object({
   startEquity: external_exports.number().nonnegative().max(1e9).optional()
 }).strip();
 
-// artifacts/api-server/src/routes/health.ts
+// artifacts/api-server/_src/routes/health.ts
 var router = (0, import_express.Router)();
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
@@ -43024,7 +43024,7 @@ router.get("/healthz", (_req, res) => {
 });
 var health_default = router;
 
-// artifacts/api-server/src/routes/auth.ts
+// artifacts/api-server/_src/routes/auth.ts
 var import_express2 = __toESM(require_express2(), 1);
 
 // node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js
@@ -65388,7 +65388,7 @@ var db = drizzle({
   schema: schema_exports
 });
 
-// artifacts/api-server/src/middlewares/auth.ts
+// artifacts/api-server/_src/middlewares/auth.ts
 var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
 var JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) {
@@ -65414,7 +65414,7 @@ function signToken(payload) {
   return import_jsonwebtoken.default.sign(payload, JWT_SECRET, { expiresIn: "30d" });
 }
 
-// artifacts/api-server/src/middlewares/validate.ts
+// artifacts/api-server/_src/middlewares/validate.ts
 function formatZodError(errs) {
   return errs.map((e) => `${e.path.length ? e.path.join(".") + ": " : ""}${e.message}`).join("; ");
 }
@@ -65434,7 +65434,7 @@ function validate(schema) {
   };
 }
 
-// artifacts/api-server/src/routes/auth.ts
+// artifacts/api-server/_src/routes/auth.ts
 var router2 = (0, import_express2.Router)();
 var BCRYPT_ROUNDS = 12;
 router2.post("/register", validate(RegisterBody), async (req, res) => {
@@ -65489,7 +65489,7 @@ router2.post("/login", validate(LoginBody), async (req, res) => {
 });
 var auth_default = router2;
 
-// artifacts/api-server/src/routes/progress.ts
+// artifacts/api-server/_src/routes/progress.ts
 var import_express3 = __toESM(require_express2(), 1);
 var router3 = (0, import_express3.Router)();
 router3.param("userId", (req, res, next, userId) => {
@@ -65556,7 +65556,7 @@ router3.put("/:userId", validate(ProgressBody), async (req, res) => {
 });
 var progress_default = router3;
 
-// artifacts/api-server/src/routes/trades.ts
+// artifacts/api-server/_src/routes/trades.ts
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
 router4.param("userId", (req, res, next, userId) => {
@@ -65615,7 +65615,7 @@ router4.delete("/:userId", async (req, res) => {
 });
 var trades_default = router4;
 
-// artifacts/api-server/src/routes/notifications.ts
+// artifacts/api-server/_src/routes/notifications.ts
 var import_express5 = __toESM(require_express2(), 1);
 var router5 = (0, import_express5.Router)();
 router5.param("userId", (req, res, next, userId) => {
@@ -65674,7 +65674,7 @@ router5.delete("/:userId/:id", async (req, res) => {
 });
 var notifications_default = router5;
 
-// artifacts/api-server/src/routes/duelos.ts
+// artifacts/api-server/_src/routes/duelos.ts
 var import_express6 = __toESM(require_express2(), 1);
 var router6 = (0, import_express6.Router)();
 router6.param("userId", (req, res, next, userId) => {
@@ -65757,7 +65757,7 @@ router6.delete("/:userId/:id", async (req, res) => {
 });
 var duelos_default = router6;
 
-// artifacts/api-server/src/routes/admin.ts
+// artifacts/api-server/_src/routes/admin.ts
 var import_express7 = __toESM(require_express2(), 1);
 var import_node_crypto2 = require("node:crypto");
 var import_node_crypto3 = require("node:crypto");
@@ -66392,7 +66392,7 @@ router7.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req
 });
 var admin_default = router7;
 
-// artifacts/api-server/src/routes/subscriptions.ts
+// artifacts/api-server/_src/routes/subscriptions.ts
 var import_express8 = __toESM(require_express2(), 1);
 var router8 = (0, import_express8.Router)();
 async function createNotif2(userId, type, title, message, link) {
@@ -66579,7 +66579,7 @@ router8.patch("/:userId/reference", validate(SubscriptionReferenceBody), async (
 });
 var subscriptions_default = router8;
 
-// artifacts/api-server/src/routes/index.ts
+// artifacts/api-server/_src/routes/index.ts
 var router9 = (0, import_express9.Router)();
 router9.use(health_default);
 router9.use("/auth", auth_default);
@@ -66737,7 +66737,7 @@ function jsonParse2(raw, fallback) {
 }
 var routes_default = router9;
 
-// artifacts/api-server/src/lib/logger.ts
+// artifacts/api-server/_src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
 var isProduction = process.env.NODE_ENV === "production";
 var logger = (0, import_pino.default)({
@@ -66755,7 +66755,7 @@ var logger = (0, import_pino.default)({
   }
 });
 
-// artifacts/api-server/src/app.ts
+// artifacts/api-server/_src/app.ts
 var app = (0, import_express10.default)();
 app.set("trust proxy", 1);
 app.use(

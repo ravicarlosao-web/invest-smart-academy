@@ -1,13 +1,13 @@
 import { Router } from "express";
-import healthRouter        from "./health";
-import authRouter          from "./auth";
-import progressRouter      from "./progress";
-import tradesRouter        from "./trades";
-import notificationsRouter from "./notifications";
-import duelosRouter        from "./duelos";
-import adminRouter         from "./admin";
-import subscriptionsRouter from "./subscriptions";
-import { requireAuth }     from "../middlewares/auth";
+import healthRouter        from "./health.js";
+import authRouter          from "./auth.js";
+import progressRouter      from "./progress.js";
+import tradesRouter        from "./trades.js";
+import notificationsRouter from "./notifications.js";
+import duelosRouter        from "./duelos.js";
+import adminRouter         from "./admin.js";
+import subscriptionsRouter from "./subscriptions.js";
+import { requireAuth }     from "../middlewares/auth.js";
 import {
   db, asc, eq,
   glossaryTermsTable,

@@ -1,7 +1,7 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
-import { seedContent } from "./seed";
+import { seedContent } from "./seed.js";
 
 const rawPort = process.env["PORT"];
 

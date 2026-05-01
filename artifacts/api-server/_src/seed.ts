@@ -13,11 +13,11 @@ import {
   curriculumLevelsTable,
   curriculumLessonsTable,
 } from "@workspace/db";
-import { GLOSSARY } from "./content/glossary";
-import { STRATEGIES } from "./content/strategies";
-import { BOOKS_CATALOG } from "./content/books";
-import { RESOURCES } from "./content/resources";
-import { LEVELS } from "./content/curriculum";
+import { GLOSSARY } from "./content/glossary.js";
+import { STRATEGIES } from "./content/strategies.js";
+import { BOOKS_CATALOG } from "./content/books.js";
+import { RESOURCES } from "./content/resources.js";
+import { LEVELS } from "./content/curriculum.js";
 
 const NOW = Date.now();
 

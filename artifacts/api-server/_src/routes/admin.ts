@@ -27,7 +27,7 @@ const router = Router();
 
 import { createHash } from "node:crypto";
 import { AdminLoginBody, AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
-import { validate } from "../middlewares/validate";
+import { validate } from "../middlewares/validate.js";
 
 function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
