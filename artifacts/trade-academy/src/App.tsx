@@ -10,6 +10,8 @@ import AuthGuard    from "./components/AuthGuard";
 import Landing      from "./pages/Landing";
 import Login        from "./pages/Login";
 import Cadastrar    from "./pages/Cadastrar";
+import Termos       from "./pages/Termos";
+import Privacidade  from "./pages/Privacidade";
 
 import Dashboard    from "./pages/Dashboard";
 import Aprender     from "./pages/Aprender";
@@ -40,11 +42,13 @@ const App = () => (
         <UserStateSync />
         <Routes>
           {/* ── Páginas públicas ─────────────────────────────── */}
-          <Route path="/"          element={<Landing />} />
-          <Route path="/entrar"    element={<Login />} />
-          <Route path="/login"     element={<Navigate to="/entrar" replace />} />
-          <Route path="/cadastrar" element={<Cadastrar />} />
-          <Route path="/register"  element={<Navigate to="/cadastrar" replace />} />
+          <Route path="/"              element={<Landing />} />
+          <Route path="/entrar"        element={<Login />} />
+          <Route path="/login"         element={<Navigate to="/entrar" replace />} />
+          <Route path="/cadastrar"     element={<Cadastrar />} />
+          <Route path="/register"      element={<Navigate to="/cadastrar" replace />} />
+          <Route path="/termos"        element={<Termos />} />
+          <Route path="/privacidade"   element={<Privacidade />} />
 
           {/* ── Gestão interna (protegida por senha) ── */}
           <Route path="/ta-painel-gestao" element={<Admin />} />

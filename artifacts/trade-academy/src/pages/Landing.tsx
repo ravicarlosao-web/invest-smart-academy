@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/apiClient";
 import { Link } from "react-router-dom";
 import {
   TrendingUp, BookOpen, Trophy, BarChart2, Shield,
@@ -50,39 +51,41 @@ const STATS = [
   { value: "PT",  label: "Em Português" },
 ];
 
-const PLANS = [
-  {
-    name: "Iniciante",
-    price: "Grátis",
-    sub: "para sempre",
-    highlight: false,
-    features: [
-      "Nível 1 completo (Conceitos Básicos)",
-      "Simulador de trading ilimitado",
-      "Glossário e Recursos",
-      "Perfil com ranking real",
-      "Missões diárias e conquistas",
-    ],
-    cta: "Começar grátis",
-    to: "/cadastrar",
-  },
-  {
-    name: "Premium",
-    price: "5.000 AOA",
-    sub: "/ mês",
-    highlight: true,
-    features: [
-      "Tudo do plano Iniciante",
-      "Níveis Intermediário e Avançado",
-      "Vídeo Aulas curadas (desbloqueio sequencial)",
-      "Duelos contra outros traders",
-      "Biblioteca de livros e estratégias",
-      "Suporte prioritário",
-    ],
-    cta: "Subscrever agora",
-    to: "/cadastrar",
-  },
-];
+function buildPlans(priceAoa: number, planName: string) {
+  return [
+    {
+      name: "Iniciante",
+      price: "Grátis",
+      sub: "para sempre",
+      highlight: false,
+      features: [
+        "Nível 1 completo (Conceitos Básicos)",
+        "Simulador de trading ilimitado",
+        "Glossário e Recursos",
+        "Perfil com ranking real",
+        "Missões diárias e conquistas",
+      ],
+      cta: "Começar grátis",
+      to: "/cadastrar",
+    },
+    {
+      name: planName,
+      price: `${priceAoa.toLocaleString("pt-PT")} AOA`,
+      sub: "/ mês",
+      highlight: true,
+      features: [
+        "Tudo do plano Iniciante",
+        "Níveis Intermediário e Avançado",
+        "Vídeo Aulas curadas (desbloqueio sequencial)",
+        "Duelos contra outros traders",
+        "Biblioteca de livros e estratégias",
+        "Suporte prioritário",
+      ],
+      cta: "Subscrever agora",
+      to: "/cadastrar",
+    },
+  ];
+}
 
 const VIDEO_FEATURES = [
   { icon: Video,        text: "Vídeos curados dos melhores criadores portugueses de trading" },
@@ -130,6 +133,16 @@ function Nav() {
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [priceAoa, setPriceAoa] = useState(5000);
+  const [planName, setPlanName] = useState("Plano Mensal");
+
+  useEffect(() => {
+    api.public.getPlanConfig()
+      .then((cfg) => { setPriceAoa(cfg.priceAoa); setPlanName(cfg.planName); })
+      .catch(() => { /* usa valores por defeito */ });
+  }, []);
+
+  const PLANS = buildPlans(priceAoa, planName);
 
   function handleSubscribe(e: React.FormEvent) {
     e.preventDefault();
@@ -781,7 +794,10 @@ export default function Landing() {
           </div>
 
           <p className="text-xs text-gray-600 text-center md:text-right">
-            © {new Date().getFullYear()} TradeAcademy · Termos de Serviço · Política de Privacidade
+            © {new Date().getFullYear()} TradeAcademy ·{" "}
+            <Link to="/termos" className="hover:text-gray-400 transition-colors">Termos de Serviço</Link>
+            {" · "}
+            <Link to="/privacidade" className="hover:text-gray-400 transition-colors">Política de Privacidade</Link>
           </p>
         </div>
       </footer>

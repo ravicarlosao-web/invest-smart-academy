@@ -202,6 +202,17 @@ router.get("/curriculum", async (_req: any, res: any) => {
   }
 });
 
+/* ── Public plan config — price shown on landing page ────────────────── */
+router.get("/plan-config", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
+    const cfg = row ? (() => { try { return JSON.parse(row.value); } catch { return {}; } })() : {};
+    res.json({ priceAoa: cfg.priceAoa ?? 5000, planName: cfg.planName ?? "Plano Mensal" });
+  } catch {
+    res.json({ priceAoa: 5000, planName: "Plano Mensal" });
+  }
+});
+
 /* ── Public leaderboard — top 20 users by XP ─────────────────────────── */
 router.get("/leaderboard", async (_req: any, res: any) => {
   try {

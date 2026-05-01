@@ -65,6 +65,12 @@ function adminRequest<T>(method: string, path: string, body?: unknown): Promise<
 }
 
 export const api = {
+  /* ---------- Public (no auth) ---------- */
+  public: {
+    getPlanConfig: () =>
+      request<{ priceAoa: number; planName: string }>("GET", "/plan-config"),
+  },
+
   /* ---------- Auth ---------- */
   auth: {
     register: (data: { id: string; name: string; email: string; password: string }) =>

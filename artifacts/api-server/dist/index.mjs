@@ -66994,6 +66994,21 @@ router9.get("/curriculum", async (_req, res) => {
     res.json([]);
   }
 });
+router9.get("/plan-config", async (_req, res) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
+    const cfg = row ? (() => {
+      try {
+        return JSON.parse(row.value);
+      } catch {
+        return {};
+      }
+    })() : {};
+    res.json({ priceAoa: cfg.priceAoa ?? 5e3, planName: cfg.planName ?? "Plano Mensal" });
+  } catch {
+    res.json({ priceAoa: 5e3, planName: "Plano Mensal" });
+  }
+});
 router9.get("/leaderboard", async (_req, res) => {
   try {
     const rows = await db.select({
