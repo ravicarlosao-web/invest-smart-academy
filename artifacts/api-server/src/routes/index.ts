@@ -9,7 +9,7 @@ import adminRouter         from "./admin";
 import subscriptionsRouter from "./subscriptions";
 import { requireAuth }     from "../middlewares/auth";
 import {
-  db, asc,
+  db, asc, eq,
   glossaryTermsTable,
   strategiesTable,
   booksTable,
@@ -17,7 +17,7 @@ import {
   resourceItemsTable,
   curriculumLevelsTable,
   curriculumLessonsTable,
-  eq,
+  adminSettingsTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -33,8 +33,14 @@ router.use("/subscription",  requireAuth, subscriptionsRouter);
 
 /* ── Public content routes — no auth required ─────────────────────────── */
 
-router.get("/videos", (_req, res) => {
-  res.json([]);
+router.get("/videos", async (_req, res) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "content.videos")).get();
+    const videos = row ? (() => { try { return JSON.parse(row.value); } catch { return []; } })() : [];
+    res.json(videos);
+  } catch {
+    res.json([]);
+  }
 });
 
 router.get("/glossary", async (_req, res) => {
@@ -161,6 +167,12 @@ router.get("/curriculum", async (_req, res) => {
       .from(curriculumLessonsTable)
       .orderBy(asc(curriculumLessonsTable.sortOrder));
 
+    /* Load admin overrides (title / xp / summary / hidden per lesson ID) */
+    const overrideRow = await db.select().from(adminSettingsTable)
+      .where(eq(adminSettingsTable.key, "curriculum.override")).get();
+    const overrides: Record<string, { title?: string; xp?: number; summary?: string; hidden?: boolean }> =
+      overrideRow ? (() => { try { return (JSON.parse(overrideRow.value) as any).lessons ?? {}; } catch { return {}; } })() : {};
+
     const result = levels.map((lv) => ({
       id:         lv.id,
       title:      lv.title,
@@ -168,14 +180,18 @@ router.get("/curriculum", async (_req, res) => {
       difficulty: lv.difficulty,
       lessons: lessons
         .filter((ls) => ls.levelId === lv.id)
-        .map((ls) => ({
-          id:        ls.id,
-          title:     ls.title,
-          summary:   ls.summary,
-          xp:        ls.xp,
-          content:   jsonParse(ls.content, []),
-          questions: jsonParse(ls.questions, []),
-        })),
+        .filter((ls) => !overrides[ls.id]?.hidden)
+        .map((ls) => {
+          const ov = overrides[ls.id] ?? {};
+          return {
+            id:        ls.id,
+            title:     ov.title   ?? ls.title,
+            summary:   ov.summary ?? ls.summary,
+            xp:        ov.xp      ?? ls.xp,
+            content:   jsonParse(ls.content, []),
+            questions: jsonParse(ls.questions, []),
+          };
+        }),
     }));
     res.json(result);
   } catch {

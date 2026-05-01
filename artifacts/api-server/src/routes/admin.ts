@@ -8,8 +8,16 @@ import {
   duelosTable,
   adminSettingsTable,
   subscriptionsTable,
+  strategiesTable,
+  glossaryTermsTable,
+  booksTable,
+  resourceSectionsTable,
+  resourceItemsTable,
+  curriculumLevelsTable,
+  curriculumLessonsTable,
   eq,
   desc,
+  asc,
   and,
   sql,
 } from "@workspace/db";
@@ -17,6 +25,11 @@ import {
 const router = Router();
 
 import { createHash } from "node:crypto";
+
+function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try { return JSON.parse(raw) as T; } catch { return fallback; }
+}
 
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
 const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
@@ -251,12 +264,34 @@ router.put("/curriculum", async (req, res) => {
 });
 
 /* ---------------------------------------------------------------------------
- * Strategies — stored as admin_settings key "content.strategies"
- * Value: array of Strategy objects (additional ones, merged with static)
+ * Strategies — read/write directly to strategiesTable
  * ------------------------------------------------------------------------- */
 router.get("/strategies", async (req, res) => {
   try {
-    res.json(await getSetting("content.strategies", []));
+    const rows = await db.select().from(strategiesTable).orderBy(asc(strategiesTable.sortOrder)).all();
+    res.json(rows.map((r) => ({
+      id:             r.id,
+      name:           r.name,
+      subtitle:       r.subtitle,
+      icon:           r.icon,
+      timeframes:     jsonParse(r.timeframes, []),
+      markets:        jsonParse(r.markets, []),
+      riskLevel:      r.riskLevel,
+      winRate:        r.winRate,
+      riskReward:     r.riskReward,
+      difficulty:     r.difficulty,
+      description:    r.description,
+      howItWorks:     r.howItWorks,
+      setup:          jsonParse(r.setup, []),
+      entrySignals:   jsonParse(r.entrySignals, []),
+      exitSignals:    jsonParse(r.exitSignals, []),
+      riskManagement: jsonParse(r.riskManagement, []),
+      pros:           jsonParse(r.pros, []),
+      cons:           jsonParse(r.cons, []),
+      example:        r.example,
+      tags:           jsonParse(r.tags, []),
+      sortOrder:      r.sortOrder,
+    })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -265,9 +300,37 @@ router.get("/strategies", async (req, res) => {
 
 router.put("/strategies", async (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [];
-    await setSetting("content.strategies", items);
-    res.json({ ok: true });
+    const items: any[] = Array.isArray(req.body) ? req.body : [];
+    const now = Date.now();
+    await db.delete(strategiesTable);
+    if (items.length > 0) {
+      await db.insert(strategiesTable).values(items.map((it, i) => ({
+        id:             String(it.id ?? crypto.randomUUID()),
+        name:           String(it.name ?? ""),
+        subtitle:       String(it.subtitle ?? ""),
+        icon:           String(it.icon ?? ""),
+        timeframes:     JSON.stringify(it.timeframes ?? []),
+        markets:        JSON.stringify(it.markets ?? []),
+        riskLevel:      String(it.riskLevel ?? ""),
+        winRate:        String(it.winRate ?? ""),
+        riskReward:     String(it.riskReward ?? ""),
+        difficulty:     String(it.difficulty ?? ""),
+        description:    String(it.description ?? ""),
+        howItWorks:     String(it.howItWorks ?? ""),
+        setup:          JSON.stringify(it.setup ?? []),
+        entrySignals:   JSON.stringify(it.entrySignals ?? []),
+        exitSignals:    JSON.stringify(it.exitSignals ?? []),
+        riskManagement: JSON.stringify(it.riskManagement ?? []),
+        pros:           JSON.stringify(it.pros ?? []),
+        cons:           JSON.stringify(it.cons ?? []),
+        example:        String(it.example ?? ""),
+        tags:           JSON.stringify(it.tags ?? []),
+        sortOrder:      typeof it.sortOrder === "number" ? it.sortOrder : i,
+        createdAt:      now,
+        updatedAt:      now,
+      })));
+    }
+    res.json({ ok: true, count: items.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -275,11 +338,23 @@ router.put("/strategies", async (req, res) => {
 });
 
 /* ---------------------------------------------------------------------------
- * Books (Biblioteca) — stored as admin_settings key "content.books"
+ * Books (Biblioteca) — read/write directly to booksTable
  * ------------------------------------------------------------------------- */
 router.get("/books", async (req, res) => {
   try {
-    res.json(await getSetting("content.books", []));
+    const rows = await db.select().from(booksTable).orderBy(asc(booksTable.orderNum)).all();
+    res.json(rows.map((r) => ({
+      id:          r.id,
+      order:       r.orderNum,
+      title:       r.title,
+      author:      r.author,
+      cover:       r.cover,
+      category:    r.category,
+      description: r.description,
+      pages:       r.pages,
+      docxFile:    r.docxFile ?? undefined,
+      content:     r.content  ?? undefined,
+    })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -288,9 +363,26 @@ router.get("/books", async (req, res) => {
 
 router.put("/books", async (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [];
-    await setSetting("content.books", items);
-    res.json({ ok: true });
+    const items: any[] = Array.isArray(req.body) ? req.body : [];
+    const now = Date.now();
+    await db.delete(booksTable);
+    if (items.length > 0) {
+      await db.insert(booksTable).values(items.map((it, i) => ({
+        id:          String(it.id ?? crypto.randomUUID()),
+        orderNum:    typeof it.order === "number" ? it.order : i + 1,
+        title:       String(it.title ?? ""),
+        author:      String(it.author ?? ""),
+        cover:       String(it.cover ?? ""),
+        category:    String(it.category ?? ""),
+        description: String(it.description ?? ""),
+        pages:       Number(it.pages ?? 0),
+        docxFile:    it.docxFile ?? null,
+        content:     it.content  ?? null,
+        createdAt:   now,
+        updatedAt:   now,
+      })));
+    }
+    res.json({ ok: true, count: items.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -298,11 +390,18 @@ router.put("/books", async (req, res) => {
 });
 
 /* ---------------------------------------------------------------------------
- * Glossary — stored as admin_settings key "content.glossary"
+ * Glossary — read/write directly to glossaryTermsTable
  * ------------------------------------------------------------------------- */
 router.get("/glossary", async (req, res) => {
   try {
-    res.json(await getSetting("content.glossary", []));
+    const rows = await db.select().from(glossaryTermsTable).orderBy(asc(glossaryTermsTable.sortOrder)).all();
+    res.json(rows.map((r) => ({
+      id:         r.id,
+      term:       r.term,
+      definition: r.definition,
+      category:   r.category,
+      sortOrder:  r.sortOrder,
+    })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -311,9 +410,26 @@ router.get("/glossary", async (req, res) => {
 
 router.put("/glossary", async (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [];
-    await setSetting("content.glossary", items);
-    res.json({ ok: true });
+    const items: any[] = Array.isArray(req.body) ? req.body : [];
+    const now = Date.now();
+    await db.delete(glossaryTermsTable);
+    if (items.length > 0) {
+      /* glossaryTermsTable has autoIncrement PK — insert in batches of 100 */
+      const BATCH = 100;
+      for (let b = 0; b < items.length; b += BATCH) {
+        await db.insert(glossaryTermsTable).values(
+          items.slice(b, b + BATCH).map((it, i) => ({
+            term:       String(it.term ?? ""),
+            definition: String(it.definition ?? ""),
+            category:   String(it.category ?? "Geral"),
+            sortOrder:  typeof it.sortOrder === "number" ? it.sortOrder : b + i,
+            createdAt:  now,
+            updatedAt:  now,
+          })),
+        );
+      }
+    }
+    res.json({ ok: true, count: items.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -321,11 +437,29 @@ router.put("/glossary", async (req, res) => {
 });
 
 /* ---------------------------------------------------------------------------
- * Resources — stored as admin_settings key "content.resources"
+ * Resources — read/write directly to resourceSectionsTable + resourceItemsTable
  * ------------------------------------------------------------------------- */
 router.get("/resources", async (req, res) => {
   try {
-    res.json(await getSetting("content.resources", []));
+    const sections = await db.select().from(resourceSectionsTable).orderBy(asc(resourceSectionsTable.sortOrder)).all();
+    const items    = await db.select().from(resourceItemsTable).orderBy(asc(resourceItemsTable.sortOrder)).all();
+    res.json(sections.map((s) => ({
+      id:    s.id,
+      title: s.title,
+      icon:  s.icon,
+      color: s.color,
+      items: items
+        .filter((it) => it.sectionId === s.id)
+        .map((it) => ({
+          id:          it.id,
+          name:        it.name,
+          description: it.description,
+          url:         it.url   ?? undefined,
+          badge:       it.badge ?? undefined,
+          stars:       it.stars ?? undefined,
+          tags:        jsonParse(it.tags, []),
+        })),
+    })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -334,9 +468,41 @@ router.get("/resources", async (req, res) => {
 
 router.put("/resources", async (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [];
-    await setSetting("content.resources", items);
-    res.json({ ok: true });
+    const sections: any[] = Array.isArray(req.body) ? req.body : [];
+    const now = Date.now();
+    await db.delete(resourceItemsTable);
+    await db.delete(resourceSectionsTable);
+    for (let si = 0; si < sections.length; si++) {
+      const s = sections[si];
+      const sectionId = String(s.id ?? crypto.randomUUID());
+      await db.insert(resourceSectionsTable).values({
+        id:        sectionId,
+        title:     String(s.title ?? ""),
+        icon:      String(s.icon ?? ""),
+        color:     String(s.color ?? ""),
+        sortOrder: si,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const sectionItems: any[] = Array.isArray(s.items) ? s.items : [];
+      if (sectionItems.length > 0) {
+        await db.insert(resourceItemsTable).values(
+          sectionItems.map((it, ii) => ({
+            sectionId,
+            name:        String(it.name ?? ""),
+            description: String(it.description ?? ""),
+            url:         it.url   ?? null,
+            badge:       it.badge ?? null,
+            stars:       it.stars != null ? Number(it.stars) : null,
+            tags:        JSON.stringify(it.tags ?? []),
+            sortOrder:   ii,
+            createdAt:   now,
+            updatedAt:   now,
+          })),
+        );
+      }
+    }
+    res.json({ ok: true, sections: sections.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
