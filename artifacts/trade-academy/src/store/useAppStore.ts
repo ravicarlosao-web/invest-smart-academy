@@ -209,6 +209,7 @@ interface AppState {
   // notification actions
   addNotification: (n: Omit<AppNotification, "id" | "read" | "createdAt">) => void;
   markAllRead: () => void;
+  markRead: (id: string) => void;
   dismissNotification: (id: string) => void;
   markAchievementsSeen: (ids: string[]) => void;
 
@@ -809,6 +810,9 @@ export const useAppStore = create<AppState>()(
 
       markAllRead: () =>
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+
+      markRead: (id) =>
+        set((s) => ({ notifications: s.notifications.map((n) => n.id === id ? { ...n, read: true } : n) })),
 
       dismissNotification: (id) =>
         set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),

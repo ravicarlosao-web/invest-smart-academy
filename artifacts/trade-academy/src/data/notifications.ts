@@ -8,6 +8,7 @@ export interface AppNotification {
   createdAt: number;
   read: boolean;
   link?: string;
+  symbol?: string;
 }
 
 export const MARKET_ALERTS = [
@@ -28,6 +29,7 @@ export function randomMarketAlert(): Omit<AppNotification, "id" | "read" | "crea
     type: "market",
     title: `Alerta de mercado — ${a.symbol}`,
     message: `${a.symbol} ${a.verb} ${pct}% — ${a.hint}`,
-    link: "/simular",
+    symbol: a.symbol,
+    link: `/simular?symbol=${encodeURIComponent(a.symbol)}`,
   };
 }

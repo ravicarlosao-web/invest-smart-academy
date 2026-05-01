@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,6 +329,18 @@ export default function Simular() {
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];
   const tf = TIMEFRAMES[tfIdx];
+
+  /* ── Auto-switch symbol via ?symbol= query param (deep-link from notifications) ── */
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const paramSymbol = searchParams.get("symbol");
+    if (paramSymbol && SYMBOL_MAP[paramSymbol] && paramSymbol !== symbol) {
+      setSymbol(paramSymbol);
+      // Clean the param from the URL after applying it
+      setSearchParams((p) => { p.delete("symbol"); return p; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [showRsi, setShowRsi] = useState(false);
   const [rsiPeriod, setRsiPeriod] = useState(14);
