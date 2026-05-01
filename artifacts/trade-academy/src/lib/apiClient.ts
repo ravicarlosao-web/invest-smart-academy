@@ -182,6 +182,13 @@ export const api = {
     savePlanConfig: (cfg: { priceAoa: number; planName: string }) =>
       adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
 
+    getAiConfig: () =>
+      adminRequest<{ configured: boolean; keyPreview: string; model: string }>("GET", "/admin/ai-config"),
+    saveAiConfig: (cfg: { openaiKey?: string; model?: string }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/ai-config", cfg),
+    testAiConfig: () =>
+      adminRequest<{ ok: boolean; model: string }>("POST", "/admin/ai-config/test"),
+
     finance: () =>
       adminRequest<{
         plan:    { priceAoa: number; planName: string };

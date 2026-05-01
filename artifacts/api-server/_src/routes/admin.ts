@@ -877,4 +877,77 @@ router.get("/finance", async (req: any, res: any) => {
   }
 });
 
+/* ---------------------------------------------------------------------------
+ * AI Config — GET/PUT /admin/ai-config
+ * POST /admin/ai-config/test — validates the stored key against OpenAI API
+ * Stores { openaiKey, model } in admin_settings under key "ai.config"
+ * The GET endpoint returns the key partially masked for security.
+ * ------------------------------------------------------------------------- */
+router.get("/ai-config", async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting<{ openaiKey: string; model: string }>(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" },
+    );
+    const key = cfg.openaiKey;
+    const masked = key.length > 12
+      ? key.slice(0, 8) + "•".repeat(Math.min(key.length - 12, 20)) + key.slice(-4)
+      : key.length > 0 ? "•".repeat(key.length) : "";
+    res.json({ configured: key.length > 0, keyPreview: masked, model: cfg.model });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/ai-config", async (req: any, res: any) => {
+  try {
+    const { openaiKey, model } = req.body as { openaiKey?: string; model?: string };
+    const VALID_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"];
+    if (model !== undefined && !VALID_MODELS.includes(model)) {
+      return res.status(400).json({ error: "invalid_model" });
+    }
+    const current = await getSetting<{ openaiKey: string; model: string }>(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" },
+    );
+    const newKey = (openaiKey ?? current.openaiKey).trim();
+    await setSetting("ai.config", {
+      openaiKey: newKey,
+      model: model ?? current.model,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.post("/ai-config/test", async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting<{ openaiKey: string; model: string }>(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" },
+    );
+    if (!cfg.openaiKey) {
+      return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada." });
+    }
+    const testRes = await fetch("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${cfg.openaiKey}` },
+    });
+    if (!testRes.ok) {
+      const body = await testRes.json().catch(() => ({}));
+      return res.status(400).json({
+        error: "invalid_key",
+        message: body?.error?.message ?? "Chave inválida ou sem permissões.",
+      });
+    }
+    res.json({ ok: true, model: cfg.model });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;
+

@@ -9,6 +9,7 @@ import {
   Coins, PlayCircle, Lock, CreditCard, CheckCircle2, Clock, XCircle,
   FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
+  Brain, Eye, EyeOff, Loader2, Wifi, WifiOff,
 } from "lucide-react";
 import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -371,10 +372,23 @@ function SettingsTab() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  /* ── AI Config state ── */
+  const [aiCfg, setAiCfg]     = useState<{ configured: boolean; keyPreview: string; model: string } | null>(null);
+  const [aiKey, setAiKey]      = useState("");
+  const [aiModel, setAiModel]  = useState("gpt-4o-mini");
+  const [showKey, setShowKey]  = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiStatus, setAiStatus]   = useState<"idle" | "ok" | "error">("idle");
+  const [aiStatusMsg, setAiStatusMsg] = useState("");
+
   useEffect(() => {
     api.admin.getPlanConfig()
       .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
       .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
+    api.admin.getAiConfig()
+      .then((c) => { setAiCfg(c); setAiModel(c.model); })
+      .catch(() => {});
   }, []);
 
   async function save() {
@@ -390,6 +404,32 @@ function SettingsTab() {
   }
 
   const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
+
+  async function saveAi() {
+    if (!aiKey.trim() && aiModel === aiCfg?.model) { toast.error("Nada a guardar"); return; }
+    setAiSaving(true);
+    setAiStatus("idle");
+    try {
+      const payload: { openaiKey?: string; model?: string } = { model: aiModel };
+      if (aiKey.trim()) payload.openaiKey = aiKey.trim();
+      await api.admin.saveAiConfig(payload);
+      const updated = await api.admin.getAiConfig();
+      setAiCfg(updated); setAiModel(updated.model); setAiKey("");
+      toast.success("Configurações do Coach IA guardadas");
+    } catch { toast.error("Falha ao guardar"); }
+    finally { setAiSaving(false); }
+  }
+
+  async function testAi() {
+    setAiTesting(true); setAiStatus("idle"); setAiStatusMsg("");
+    try {
+      await api.admin.testAiConfig();
+      setAiStatus("ok"); setAiStatusMsg("Ligação bem-sucedida — chave válida.");
+    } catch (err: any) {
+      setAiStatus("error");
+      setAiStatusMsg(err?.message ?? "Chave inválida ou sem permissões.");
+    } finally { setAiTesting(false); }
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -475,6 +515,174 @@ function SettingsTab() {
             ].map((item) => (
               <li key={item} className="flex items-start gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-bull shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* ── Coach IA — AI Config ── */}
+      <div className="pt-2">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" /> Coach IA
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Configura a chave API da OpenAI para activar a análise inteligente de trades no simulador.
+        </p>
+      </div>
+
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="h-4 w-4 text-primary" /> Integração OpenAI
+            {aiCfg && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "ml-auto text-[10px] font-semibold",
+                  aiCfg.configured
+                    ? "border-bull/40 text-bull bg-bull/5"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                {aiCfg.configured ? "Chave configurada" : "Sem chave"}
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            A chave é guardada de forma segura no servidor e nunca exposta ao cliente.
+            Obtém a tua chave em{" "}
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 text-primary hover:opacity-80"
+            >
+              platform.openai.com/api-keys
+            </a>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+
+          {/* Current key preview */}
+          {aiCfg?.configured && (
+            <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 flex items-center gap-2">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="font-mono text-xs text-muted-foreground tracking-widest flex-1 truncate">
+                {aiCfg.keyPreview}
+              </span>
+              <span className="text-[10px] text-muted-foreground">chave actual</span>
+            </div>
+          )}
+
+          {/* New key input */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ai-key">
+              {aiCfg?.configured ? "Substituir chave API" : "Chave API da OpenAI"}
+            </Label>
+            <div className="relative max-w-sm">
+              <Input
+                id="ai-key"
+                type={showKey ? "text" : "password"}
+                value={aiKey}
+                onChange={(e) => setAiKey(e.target.value)}
+                placeholder="sk-proj-..."
+                className="pr-10 font-mono text-sm"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Deixa em branco se não quiseres alterar a chave existente.
+            </p>
+          </div>
+
+          {/* Model selector */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ai-model">Modelo</Label>
+            <Select value={aiModel} onValueChange={setAiModel}>
+              <SelectTrigger id="ai-model" className="max-w-sm">
+                <SelectValue placeholder="Selecciona modelo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-4o-mini">
+                  <span className="font-medium">GPT-4o Mini</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">Rápido e económico — recomendado</span>
+                </SelectItem>
+                <SelectItem value="gpt-4o">
+                  <span className="font-medium">GPT-4o</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">Mais capaz, maior custo</span>
+                </SelectItem>
+                <SelectItem value="gpt-4-turbo">
+                  <span className="font-medium">GPT-4 Turbo</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">Contexto longo</span>
+                </SelectItem>
+                <SelectItem value="gpt-3.5-turbo">
+                  <span className="font-medium">GPT-3.5 Turbo</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">Muito económico</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status badge after test */}
+          {aiStatus !== "idle" && (
+            <div className={cn(
+              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+              aiStatus === "ok"
+                ? "border-bull/40 bg-bull/5 text-bull"
+                : "border-bear/40 bg-bear/5 text-bear",
+            )}>
+              {aiStatus === "ok"
+                ? <Wifi className="h-4 w-4 shrink-0" />
+                : <WifiOff className="h-4 w-4 shrink-0" />}
+              <span>{aiStatusMsg}</span>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button onClick={saveAi} disabled={aiSaving}>
+              {aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+              {aiSaving ? "A guardar…" : "Guardar"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={testAi}
+              disabled={aiTesting || !aiCfg?.configured}
+              title={!aiCfg?.configured ? "Guarda primeiro uma chave para poder testar" : ""}
+            >
+              {aiTesting
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
+              {aiTesting ? "A testar…" : "Testar ligação"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Info about AI */}
+      <Card className="border-border/40 bg-muted/30">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">O que o Coach IA faz</p>
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            {[
+              "Analisa cada trade após ser fechado — entrada, saída, risco e R:R",
+              "Identifica padrões de comportamento: overtrading, FOMO, disciplina",
+              "Sugere melhorias com base no historial de operações da sessão",
+              "Funciona 100% no servidor — a chave nunca é enviada ao browser",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-1.5">
+                <Brain className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                 {item}
               </li>
             ))}

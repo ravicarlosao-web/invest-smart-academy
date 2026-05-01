@@ -47116,8 +47116,8 @@ var HttpStream = class extends Stream {
     let promise2;
     try {
       const request = createRequest();
-      const fetch = this.#fetch;
-      promise2 = fetch(request);
+      const fetch2 = this.#fetch;
+      promise2 = fetch2(request);
     } catch (error40) {
       promise2 = Promise.reject(error40);
     }
@@ -47337,11 +47337,11 @@ var HttpClient = class extends Client {
   }
 };
 async function findEndpoint(customFetch, clientUrl) {
-  const fetch = customFetch;
+  const fetch2 = customFetch;
   for (const endpoint of checkEndpoints) {
     const url2 = new URL(endpoint.versionPath, clientUrl);
     const request = new Request(url2.toString(), { method: "GET" });
-    const response = await fetch(request);
+    const response = await fetch2(request);
     await response.arrayBuffer();
     if (response.ok) {
       return endpoint;
@@ -66652,6 +66652,67 @@ router7.get("/finance", async (req, res) => {
         newActiveLast30
       }
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.get("/ai-config", async (req, res) => {
+  try {
+    const cfg = await getSetting(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" }
+    );
+    const key = cfg.openaiKey;
+    const masked = key.length > 12 ? key.slice(0, 8) + "\u2022".repeat(Math.min(key.length - 12, 20)) + key.slice(-4) : key.length > 0 ? "\u2022".repeat(key.length) : "";
+    res.json({ configured: key.length > 0, keyPreview: masked, model: cfg.model });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.put("/ai-config", async (req, res) => {
+  try {
+    const { openaiKey, model } = req.body;
+    const VALID_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"];
+    if (model !== void 0 && !VALID_MODELS.includes(model)) {
+      return res.status(400).json({ error: "invalid_model" });
+    }
+    const current = await getSetting(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" }
+    );
+    const newKey = (openaiKey ?? current.openaiKey).trim();
+    await setSetting("ai.config", {
+      openaiKey: newKey,
+      model: model ?? current.model
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.post("/ai-config/test", async (req, res) => {
+  try {
+    const cfg = await getSetting(
+      "ai.config",
+      { openaiKey: "", model: "gpt-4o-mini" }
+    );
+    if (!cfg.openaiKey) {
+      return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada." });
+    }
+    const testRes = await fetch("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${cfg.openaiKey}` }
+    });
+    if (!testRes.ok) {
+      const body = await testRes.json().catch(() => ({}));
+      return res.status(400).json({
+        error: "invalid_key",
+        message: body?.error?.message ?? "Chave inv\xE1lida ou sem permiss\xF5es."
+      });
+    }
+    res.json({ ok: true, model: cfg.model });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
