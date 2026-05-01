@@ -102,7 +102,7 @@ function Nav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/80 backdrop-blur-md border-b border-white/5">
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
+        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
         <span className="font-bold text-white tracking-tight">TradeAcademy</span>
       </Link>
 
@@ -781,7 +781,7 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-7 h-7 object-contain drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
+            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-7 h-7 object-contain" />
             <span className="font-bold text-white tracking-tight text-sm">TradeAcademy</span>
           </div>
 
