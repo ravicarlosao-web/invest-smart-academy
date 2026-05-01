@@ -48,6 +48,51 @@ const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
 const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
 const ADMIN_TOKEN_BUF = Buffer.from(ADMIN_TOKEN, "utf8");
 
+/* ── Protecção de força bruta ─────────────────────────────────────────────
+ * Máx 5 tentativas falhadas por IP → bloqueio de 30 minutos.
+ * Mapa limpo automaticamente para não acumular memória.
+ * ---------------------------------------------------------------------- */
+const MAX_ATTEMPTS   = 5;
+const LOCKOUT_MS     = 30 * 60 * 1000; // 30 minutos
+const CLEANUP_MS     = 60 * 60 * 1000; // limpeza a cada 1h
+
+interface LoginAttempt { count: number; lockedUntil: number | null; lastAttempt: number; }
+const loginAttempts = new Map<string, LoginAttempt>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of loginAttempts) {
+    if (now - data.lastAttempt > CLEANUP_MS) loginAttempts.delete(ip);
+  }
+}, CLEANUP_MS);
+
+function getIp(req: Request): string {
+  return String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "unknown").split(",")[0].trim();
+}
+
+function isLocked(ip: string): boolean {
+  const data = loginAttempts.get(ip);
+  if (!data) return false;
+  if (data.lockedUntil && Date.now() < data.lockedUntil) return true;
+  if (data.lockedUntil && Date.now() >= data.lockedUntil) {
+    loginAttempts.delete(ip);
+  }
+  return false;
+}
+
+function recordFailure(ip: string): { attempts: number; locked: boolean } {
+  const data = loginAttempts.get(ip) ?? { count: 0, lockedUntil: null, lastAttempt: 0 };
+  data.count++;
+  data.lastAttempt = Date.now();
+  if (data.count >= MAX_ATTEMPTS) {
+    data.lockedUntil = Date.now() + LOCKOUT_MS;
+  }
+  loginAttempts.set(ip, data);
+  return { attempts: data.count, locked: data.lockedUntil != null };
+}
+
+function resetAttempts(ip: string) { loginAttempts.delete(ip); }
+
 function safeTokenCompare(candidate: string): boolean {
   try {
     const candidateBuf = Buffer.alloc(ADMIN_TOKEN_BUF.length);
@@ -68,10 +113,30 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 /* POST /api/admin/login */
 router.post("/login", validate(AdminLoginBody), (req, res) => {
+  const ip = getIp(req);
+
+  if (isLocked(ip)) {
+    const data = loginAttempts.get(ip);
+    const minutesLeft = data?.lockedUntil ? Math.ceil((data.lockedUntil - Date.now()) / 60000) : 30;
+    return res.status(429).json({
+      error: "too_many_attempts",
+      message: `Acesso bloqueado. Tenta novamente em ${minutesLeft} minuto(s).`,
+    });
+  }
+
   const { passwordHash } = req.body as { passwordHash: string };
   if (!safeTokenCompare(passwordHash)) {
-    return res.status(401).json({ error: "invalid_password" });
+    const { attempts, locked } = recordFailure(ip);
+    const remaining = MAX_ATTEMPTS - attempts;
+    return res.status(401).json({
+      error: "invalid_password",
+      message: locked
+        ? `Acesso bloqueado por 30 minutos após ${MAX_ATTEMPTS} tentativas.`
+        : `Senha incorrecta. ${remaining > 0 ? `${remaining} tentativa(s) restante(s).` : ""}`,
+    });
   }
+
+  resetAttempts(ip);
   res.json({ ok: true });
 });
 

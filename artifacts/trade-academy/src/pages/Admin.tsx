@@ -37,14 +37,22 @@ function AdminLogin() {
   const login = useAdminStore((s) => s.login);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
     const res = await login(password);
     setLoading(false);
-    if (!res.ok) toast.error(res.error ?? "Falha no login");
-    else toast.success("Acesso liberado");
+    if (!res.ok) {
+      const isLocked = res.error === "too_many_attempts";
+      setLocked(isLocked);
+      setErrorMsg(res.message ?? res.error ?? "Senha incorrecta.");
+    } else {
+      toast.success("Acesso autorizado");
+    }
   }
 
   return (
@@ -54,22 +62,32 @@ function AdminLogin() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
             <Shield className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="mt-3">Painel de Administração</CardTitle>
-          <CardDescription>Acesso restrito. Informe a senha de administrador.</CardDescription>
+          <CardTitle className="mt-3">Área Restrita</CardTitle>
+          <CardDescription>Acesso exclusivo para administradores.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="adminpw">Senha</Label>
-              <Input id="adminpw" type="password" autoFocus value={password}
-                onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <Label htmlFor="adminpw">Senha de acesso</Label>
+              <Input
+                id="adminpw"
+                type="password"
+                autoFocus
+                value={password}
+                disabled={locked}
+                onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
+                placeholder="••••••••"
+              />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "A verificar..." : "Entrar"}
+            {errorMsg && (
+              <p className="text-[12px] text-destructive flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                {errorMsg}
+              </p>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || locked}>
+              {loading ? "A verificar..." : locked ? "Bloqueado" : "Entrar"}
             </Button>
-            <p className="text-[11px] text-muted-foreground text-center">
-              Defina <code className="font-mono">ADMIN_PASSWORD</code> no servidor para alterar a senha.
-            </p>
           </form>
         </CardContent>
       </Card>
