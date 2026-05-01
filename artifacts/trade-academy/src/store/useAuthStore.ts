@@ -61,9 +61,11 @@ export const useAuthStore = create<AuthState>()(
           return { ok: true };
         } catch (err: unknown) {
           const text = err instanceof Error ? err.message : "";
-          const msg = text.includes("401")
-            ? "E-mail ou password incorrectos."
-            : "Erro ao iniciar sessão. Tenta novamente.";
+          let msg = "Erro ao iniciar sessão. Tenta novamente.";
+          if (text.includes("401")) msg = "E-mail ou password incorrectos.";
+          else if (text.includes("422")) msg = "Dados inválidos. Verifica o e-mail e a password.";
+          else if (text.includes("429")) msg = "Demasiadas tentativas. Aguarda alguns minutos.";
+          else if (text.includes("Failed to fetch") || text.includes("NetworkError")) msg = "Sem ligação ao servidor. Verifica a tua internet.";
           return { ok: false, error: msg };
         }
       },

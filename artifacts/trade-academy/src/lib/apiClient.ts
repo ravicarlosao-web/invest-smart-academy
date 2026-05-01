@@ -25,7 +25,15 @@ async function request<T>(
     headers: Object.keys(headers).length ? headers : undefined,
     body:    body ? JSON.stringify(body) : undefined,
   });
+
   if (!res.ok) {
+    // Token expirado ou inválido → logout automático para limpar sessão
+    if (res.status === 401 && extraHeaders?.["Authorization"]) {
+      try {
+        const { useAuthStore } = await import("@/store/useAuthStore");
+        useAuthStore.getState().logout();
+      } catch { /* ignorar */ }
+    }
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
   }

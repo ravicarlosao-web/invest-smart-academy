@@ -42,7 +42,9 @@ const App = () => (
           {/* ── Páginas públicas ─────────────────────────────── */}
           <Route path="/"          element={<Landing />} />
           <Route path="/entrar"    element={<Login />} />
+          <Route path="/login"     element={<Navigate to="/entrar" replace />} />
           <Route path="/cadastrar" element={<Cadastrar />} />
+          <Route path="/register"  element={<Navigate to="/cadastrar" replace />} />
 
           {/* ── Painel de administração (autoprotegido por senha) ── */}
           <Route path="/admin"     element={<Admin />} />

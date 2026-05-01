@@ -359,7 +359,7 @@ function ReceiptUploader({
 }: {
   receipt: ReceiptFile | null;
   fileError: string | null;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
 }) {

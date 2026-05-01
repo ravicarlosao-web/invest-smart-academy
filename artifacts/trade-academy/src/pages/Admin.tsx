@@ -181,7 +181,7 @@ function UsersTab() {
     );
   }, [users, filter]);
 
-  async function action(label: string, fn: () => Promise<unknown>, userId: string, confirmMsg: string) {
+  async function action(label: string, fn: () => Promise<unknown>, userId: string, confirmMsg: string): Promise<void> {
     if (!window.confirm(confirmMsg)) return;
     setBusy(userId + label);
     try { await fn(); toast.success(`${label} concluído`); await reload(); }
@@ -192,7 +192,7 @@ function UsersTab() {
   async function saveXp() {
     if (!editXp) return;
     const val = Number(newXp);
-    if (isNaN(val) || val < 0) return toast.error("XP inválido");
+    if (isNaN(val) || val < 0) { toast.error("XP inválido"); return; }
     setBusy("xp");
     try {
       await api.admin.adjustUserXp(editXp.userId, val);
