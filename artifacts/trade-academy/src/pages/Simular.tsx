@@ -508,7 +508,10 @@ export default function Simular() {
   const [cooldownUntil, setCooldownUntil]   = useState<number | null>(null);
   const [cooldownReason, setCooldownReason] = useState("");
   const [tickNow, setTickNow]               = useState(Date.now());
-  const prevHistLen = useRef(history.length);
+  // Initialize to -1 so the first effect run (which may fire AFTER Zustand
+  // rehydrates from localStorage, causing history.length to jump from 0→N)
+  // is always treated as a "baseline snapshot" and never shows stale feedback.
+  const prevHistLen = useRef(-1);
 
   // Ticking clock — updates every second for the countdown
   useEffect(() => {
@@ -518,6 +521,12 @@ export default function Simular() {
 
   // Detect new trade closures and trigger cooldown if needed
   useEffect(() => {
+    // -1 means first run. Snapshot the current length (could be post-hydration)
+    // without treating existing trades as new ones.
+    if (prevHistLen.current === -1) {
+      prevHistLen.current = history.length;
+      return;
+    }
     if (history.length <= prevHistLen.current) {
       prevHistLen.current = history.length;
       return;

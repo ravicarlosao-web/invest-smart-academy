@@ -934,8 +934,14 @@ export const useAppStore = create<AppState>()(
         const p = (persisted ?? {}) as Partial<AppState>;
         const mergedProgress: ProgressState = { ...current.progress, ...(p.progress ?? {}) };
 
-        // v1 migration: retroactively apply xpBonus for already-unlocked achievements
-        if ((mergedProgress._achXpVer ?? 0) < 1) {
+        // v1 migration: retroactively apply xpBonus for already-unlocked achievements.
+        // IMPORTANT: check the *persisted* value, NOT the merged one.
+        // The initial state already has _achXpVer: 1, so after
+        // `{ ...current.progress, ...p.progress }` the merged value would
+        // already be 1 even for users who never ran this migration — making
+        // the `< 1` check always false. We must read from `p.progress` directly.
+        const persistedAchXpVer = (p.progress as Partial<ProgressState>)?._achXpVer ?? 0;
+        if (persistedAchXpVer < 1) {
           const retroXp = (mergedProgress.achievements ?? []).reduce(
             (sum, id) => sum + (ACHIEVEMENT_MAP[id]?.xpBonus ?? 0),
             0,
