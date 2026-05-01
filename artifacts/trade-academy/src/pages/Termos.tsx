@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 
 export default function Termos() {
@@ -14,9 +14,7 @@ export default function Termos() {
       {/* Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/90 backdrop-blur-md border-b border-white/5">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-white" />
-          </div>
+          <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
           <span className="font-bold text-white tracking-tight">TradeAcademy</span>
         </Link>
         <Link to="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">

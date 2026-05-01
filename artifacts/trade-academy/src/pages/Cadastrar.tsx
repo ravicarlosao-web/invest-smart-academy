@@ -162,9 +162,7 @@ export default function Cadastrar() {
 
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 mb-6">
-        <div className="w-9 h-9 rounded-xl bg-cyan-500 flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-white" />
-        </div>
+        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
         <span className="font-bold text-xl tracking-tight">TradeAcademy</span>
       </Link>
 

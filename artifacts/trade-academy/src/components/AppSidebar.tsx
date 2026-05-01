@@ -4,7 +4,6 @@ import {
   GraduationCap,
   LineChart,
   User2,
-  TrendingUp,
   BookOpen,
   Library,
   BookMarked,
@@ -62,8 +61,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-2 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
-            <TrendingUp className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">

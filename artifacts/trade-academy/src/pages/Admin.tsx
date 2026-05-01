@@ -2370,8 +2370,8 @@ export default function Admin() {
       )}>
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
-            <Shield className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
