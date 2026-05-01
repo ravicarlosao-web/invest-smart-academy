@@ -209,23 +209,23 @@ export default function Perfil() {
 
       {/* ── Tabs ── */}
       <Card className="overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-border scrollbar-none">
+        <div className="grid grid-cols-4 border-b border-border">
           {([
-            { id: "conquistas",  label: "Conquistas",    shortLabel: "Conquistas", icon: Award },
-            { id: "missoes",     label: "Missões Diárias", shortLabel: "Missões", icon: Target },
-            { id: "leaderboard", label: "Leaderboard",   shortLabel: "Ranking",   icon: Crown },
-            { id: "financeiro",  label: "Financeiro",    shortLabel: "Finanças",  icon: CreditCard },
+            { id: "conquistas",  label: "Conquistas", shortLabel: "Conquistas", icon: Award },
+            { id: "missoes",     label: "Missões",    shortLabel: "Missões",    icon: Target },
+            { id: "leaderboard", label: "Ranking",    shortLabel: "Ranking",    icon: Crown },
+            { id: "financeiro",  label: "Financeiro", shortLabel: "Finanças",   icon: CreditCard },
           ] as { id: Tab; label: string; shortLabel: string; icon: React.ElementType }[]).map(({ id, label, shortLabel, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex shrink-0 items-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors sm:px-5 ${
+              className={`flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-xs font-medium transition-colors sm:flex-row sm:gap-1.5 sm:py-3 sm:text-sm ${
                 tab === id
                   ? "border-b-2 border-primary text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <Icon className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">{label}</span>
               <span className="sm:hidden">{shortLabel}</span>
             </button>
