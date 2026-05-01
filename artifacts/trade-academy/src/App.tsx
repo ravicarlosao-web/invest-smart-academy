@@ -46,8 +46,8 @@ const App = () => (
           <Route path="/cadastrar" element={<Cadastrar />} />
           <Route path="/register"  element={<Navigate to="/cadastrar" replace />} />
 
-          {/* ── Painel de administração (autoprotegido por senha) ── */}
-          <Route path="/admin"     element={<Admin />} />
+          {/* ── Gestão interna (protegida por senha) ── */}
+          <Route path="/ta-painel-gestao" element={<Admin />} />
 
           {/* ── Páginas protegidas (requerem login) ──────────── */}
           <Route element={<AuthGuard />}>
