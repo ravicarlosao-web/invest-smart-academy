@@ -212,4 +212,4 @@ export async function initDb(): Promise<void> {
 export * from "./schema/index.js";
 
 /* Re-export drizzle-orm query helpers so consumers don't need their own copy */
-export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull, lt, lte, gt, gte } from "drizzle-orm";

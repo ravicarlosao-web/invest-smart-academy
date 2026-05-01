@@ -3,6 +3,7 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
 import { seedContent } from "./seed.js";
+import { startSubscriptionExpiryJob } from "./lib/subscriptionExpiry.js";
 
 const rawPort = process.env["PORT"];
 
@@ -33,6 +34,9 @@ try {
 } catch (err) {
   logger.warn({ err }, "Content seeding encountered an error (non-fatal)");
 }
+
+/* Start background job — expires overdue active subscriptions every 5 min */
+startSubscriptionExpiryJob();
 
 app.listen(port, (err: any) => {
   if (err) {
