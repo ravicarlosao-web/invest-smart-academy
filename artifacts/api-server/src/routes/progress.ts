@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { db, progressTable, eq } from "@workspace/db";
+import { ProgressBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -43,7 +45,7 @@ router.get("/:userId", async (req, res) => {
 });
 
 /** PUT /api/progress/:userId — upsert full progress + settings + onboarding */
-router.put("/:userId", async (req, res) => {
+router.put("/:userId", validate(ProgressBody), async (req, res) => {
   try {
     const body = req.body;
     const now  = Date.now();

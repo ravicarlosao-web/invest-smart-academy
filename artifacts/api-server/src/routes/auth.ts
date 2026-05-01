@@ -1,38 +1,25 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable, eq } from "@workspace/db";
+import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { signToken } from "../middlewares/auth";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
 const BCRYPT_ROUNDS = 12;
 
-/** POST /api/auth/register
- *  Body: { id, name, email, password }
- *  Server hashes the password with bcrypt (BCRYPT_ROUNDS rounds).
- */
-router.post("/register", async (req, res) => {
+/** POST /api/auth/register */
+router.post("/register", validate(RegisterBody), async (req, res) => {
   try {
     const { id, name, email, password } = req.body as {
       id: string; name: string; email: string; password: string;
     };
 
-    if (!id || !name || !email || !password) {
-      return res.status(400).json({ error: "missing_fields", message: "Todos os campos são obrigatórios." });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: "password_too_short", message: "A password deve ter pelo menos 6 caracteres." });
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "invalid_email", message: "E-mail inválido." });
-    }
-
     const existing = await db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(eq(usersTable.email, email.toLowerCase()))
+      .where(eq(usersTable.email, email))
       .get();
 
     if (existing) {
@@ -44,19 +31,19 @@ router.post("/register", async (req, res) => {
 
     await db.insert(usersTable).values({
       id,
-      name:         name.trim(),
-      email:        email.toLowerCase(),
+      name,
+      email,
       passwordHash,
-      createdAt:    now,
-      updatedAt:    now,
+      createdAt: now,
+      updatedAt: now,
     });
 
-    const token = signToken({ userId: id, email: email.toLowerCase() });
+    const token = signToken({ userId: id, email });
 
     return res.status(201).json({
       ok:   true,
       token,
-      user: { id, name: name.trim(), email: email.toLowerCase() },
+      user: { id, name, email },
     });
   } catch (err) {
     req.log.error(err);
@@ -64,21 +51,15 @@ router.post("/register", async (req, res) => {
   }
 });
 
-/** POST /api/auth/login
- *  Body: { email, password }
- */
-router.post("/login", async (req, res) => {
+/** POST /api/auth/login */
+router.post("/login", validate(LoginBody), async (req, res) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "missing_fields", message: "E-mail e password são obrigatórios." });
-    }
 
     const row = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email.toLowerCase()))
+      .where(eq(usersTable.email, email))
       .get();
 
     if (!row) {

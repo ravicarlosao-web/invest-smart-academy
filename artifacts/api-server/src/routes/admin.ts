@@ -1,4 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
+import { timingSafeEqual } from "node:crypto";
 import {
   db,
   usersTable,
@@ -25,6 +26,8 @@ import {
 const router = Router();
 
 import { createHash } from "node:crypto";
+import { AdminLoginBody, AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -43,19 +46,30 @@ async function createNotif(userId: string, type: string, title: string, message:
 
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
 const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
+const ADMIN_TOKEN_BUF = Buffer.from(ADMIN_TOKEN, "utf8");
+
+function safeTokenCompare(candidate: string): boolean {
+  try {
+    const candidateBuf = Buffer.alloc(ADMIN_TOKEN_BUF.length);
+    Buffer.from(candidate, "utf8").copy(candidateBuf);
+    return timingSafeEqual(candidateBuf, ADMIN_TOKEN_BUF);
+  } catch {
+    return false;
+  }
+}
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const token = String(req.header("x-admin-token") ?? "");
-  if (!token || token !== ADMIN_TOKEN) {
+  if (!token || !safeTokenCompare(token)) {
     return res.status(401).json({ error: "unauthorized" });
   }
   next();
 }
 
 /* POST /api/admin/login */
-router.post("/login", (req, res) => {
-  const { passwordHash } = req.body as { passwordHash?: string };
-  if (!passwordHash || passwordHash !== ADMIN_TOKEN) {
+router.post("/login", validate(AdminLoginBody), (req, res) => {
+  const { passwordHash } = req.body as { passwordHash: string };
+  if (!safeTokenCompare(passwordHash)) {
     return res.status(401).json({ error: "invalid_password" });
   }
   res.json({ ok: true });
@@ -200,10 +214,9 @@ router.post("/users/:userId/reset-sim", async (req, res) => {
 });
 
 /* Adjust user XP */
-router.patch("/users/:userId/xp", async (req, res) => {
+router.patch("/users/:userId/xp", validate(AdminXpBody), async (req, res) => {
   try {
     const { xp } = req.body as { xp: number };
-    if (typeof xp !== "number") return res.status(400).json({ error: "xp must be a number" });
     const existing = await db.select().from(progressTable).where(eq(progressTable.userId, req.params.userId)).get();
     if (!existing) return res.status(404).json({ error: "user_not_found" });
     await db.update(progressTable).set({ xp }).where(eq(progressTable.userId, req.params.userId));
@@ -671,9 +684,9 @@ router.patch("/subscriptions/:id/approve", async (req, res) => {
 });
 
 /** PATCH /api/admin/subscriptions/:id/reject — rejeita com nota opcional */
-router.patch("/subscriptions/:id/reject", async (req, res) => {
+router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req, res) => {
   try {
-    const { notes } = req.body ?? {};
+    const { notes } = req.body;
     const now = Date.now();
 
     const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();

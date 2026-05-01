@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
@@ -10,17 +11,23 @@ const app = express();
 /* ── Trust proxy (Replit runs behind a proxy) ───────────────────────────── */
 app.set("trust proxy", 1);
 
+/* ── Security headers (Helmet) ───────────────────────────────────────────── */
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+  }),
+);
+
 /* ── CORS ────────────────────────────────────────────────────────────────── */
 function buildAllowedOrigins(): string[] {
   const origins: string[] = [];
 
-  /* Env var for custom production domain, e.g. "https://tradeacademy.ao" */
   const custom = process.env["ALLOWED_ORIGIN"];
   if (custom) {
     origins.push(...custom.split(",").map((s) => s.trim()).filter(Boolean));
   }
 
-  /* Replit dev domain(s) — comma-separated */
   const replitDomains = process.env["REPLIT_DOMAINS"];
   if (replitDomains) {
     for (const d of replitDomains.split(",").map((s) => s.trim())) {
@@ -28,7 +35,6 @@ function buildAllowedOrigins(): string[] {
     }
   }
 
-  /* Fallback: allow localhost in development */
   if (process.env["NODE_ENV"] !== "production") {
     origins.push("http://localhost:3000", "http://localhost:5173");
   }
@@ -42,7 +48,6 @@ logger.info({ allowedOrigins }, "CORS allowed origins");
 app.use(
   cors({
     origin(origin, cb) {
-      /* Same-origin requests (no Origin header) or allowed origins */
       if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
@@ -53,33 +58,20 @@ app.use(
 /* ── Rate limiters ───────────────────────────────────────────────────────── */
 const rateLimitMessage = { error: "too_many_requests", message: "Demasiadas tentativas. Tenta novamente mais tarde." };
 
-/** Auth routes: 15 requests / 15 min per IP */
 const authLimiter = rateLimit({
-  windowMs:         15 * 60 * 1000,
-  max:              15,
-  standardHeaders:  true,
-  legacyHeaders:    false,
-  message:          rateLimitMessage,
-  skipSuccessfulRequests: false,
+  windowMs: 15 * 60 * 1000, max: 15,
+  standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
 });
 
-/** Admin login: 5 requests / 15 min per IP (stricter) */
 const adminLoginLimiter = rateLimit({
-  windowMs:         15 * 60 * 1000,
-  max:              5,
-  standardHeaders:  true,
-  legacyHeaders:    false,
-  message:          rateLimitMessage,
+  windowMs: 15 * 60 * 1000, max: 5,
+  standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
   skipSuccessfulRequests: true,
 });
 
-/** General API: 200 requests / 15 min per IP */
 const generalLimiter = rateLimit({
-  windowMs:         15 * 60 * 1000,
-  max:              200,
-  standardHeaders:  true,
-  legacyHeaders:    false,
-  message:          rateLimitMessage,
+  windowMs: 15 * 60 * 1000, max: 200,
+  standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
 });
 
 /* ── Logging ─────────────────────────────────────────────────────────────── */
@@ -87,21 +79,26 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
-      req(req) {
-        return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
-      },
-      res(res) {
-        return { statusCode: res.statusCode };
-      },
+      req(req) { return { id: req.id, method: req.method, url: req.url?.split("?")[0] }; },
+      res(res)  { return { statusCode: res.statusCode }; },
     },
   }),
 );
 
-/* ── Body parsing ────────────────────────────────────────────────────────── */
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
+/* ── Body parsing — per-route limits ─────────────────────────────────────── */
+/* Auth & admin-login: small body only, no file uploads here */
+app.use("/api/auth",        express.json({ limit: "50kb" }));
+app.use("/api/admin/login", express.json({ limit: "50kb" }));
 
-/* ── Apply rate limiters to specific paths ───────────────────────────────── */
+/* Subscription: base64 receipt can be up to 5 MB → ~7 MB base64 */
+app.use("/api/subscription", express.json({ limit: "8mb" }));
+app.use("/api/admin/subscriptions", express.json({ limit: "8mb" }));
+
+/* Everything else: generous but not unlimited */
+app.use(express.json({ limit: "256kb" }));
+app.use(express.urlencoded({ extended: false, limit: "16kb" }));
+
+/* ── Rate limiters ───────────────────────────────────────────────────────── */
 app.use("/api/auth",         authLimiter);
 app.use("/api/admin/login",  adminLoginLimiter);
 app.use("/api",              generalLimiter);
@@ -109,10 +106,23 @@ app.use("/api",              generalLimiter);
 /* ── Routes ──────────────────────────────────────────────────────────────── */
 app.use("/api", router);
 
-/* ── Global error handler (CORS errors + uncaught route errors) ──────────── */
+/* ── 404 for unmatched API routes ────────────────────────────────────────── */
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "not_found" });
+});
+
+/* ── Global error handler ────────────────────────────────────────────────── */
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err.message.startsWith("CORS:")) {
     res.status(403).json({ error: "cors_forbidden", message: "Origem não permitida." });
+    return;
+  }
+  if (err.type === "entity.too.large") {
+    res.status(413).json({ error: "payload_too_large", message: "Pedido demasiado grande." });
+    return;
+  }
+  if (err.type === "entity.parse.failed") {
+    res.status(400).json({ error: "invalid_json", message: "JSON inválido." });
     return;
   }
   logger.error(err);

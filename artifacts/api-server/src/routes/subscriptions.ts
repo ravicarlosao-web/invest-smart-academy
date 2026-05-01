@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { db, subscriptionsTable, notificationsTable, eq, desc, and } from "@workspace/db";
+import { SubscriptionRequestBody, SubscriptionReferenceBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -161,9 +163,9 @@ router.get("/:userId/receipt/:id", async (req, res) => {
  * POST /api/subscription/:userId/request
  * Cria pedido de subscrição. Body: { paymentReference?, receiptData?, receiptMimeType?, receiptFilename? }
  */
-router.post("/:userId/request", async (req, res) => {
+router.post("/:userId/request", validate(SubscriptionRequestBody), async (req, res) => {
   try {
-    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body ?? {};
+    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body;
     const now = Date.now();
 
     const existing = await db
@@ -229,12 +231,9 @@ router.post("/:userId/request", async (req, res) => {
  * PATCH /api/subscription/:userId/reference
  * Atualiza referência e/ou comprovativo de um pedido pendente.
  */
-router.patch("/:userId/reference", async (req, res) => {
+router.patch("/:userId/reference", validate(SubscriptionReferenceBody), async (req, res) => {
   try {
-    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body ?? {};
-    if (!paymentReference && !receiptData) {
-      return res.status(400).json({ error: "paymentReference or receiptData required" });
-    }
+    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body;
     const now = Date.now();
 
     const sub = await db

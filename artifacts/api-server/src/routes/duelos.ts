@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
-import { db, duelosTable, eq, desc } from "@workspace/db";
+import { db, duelosTable, eq, desc, and } from "@workspace/db";
+import { DueloCreateBody, DueloPatchBody } from "@workspace/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -46,23 +48,26 @@ router.get("/code/:code", async (req, res) => {
 });
 
 /** POST /api/duelos/:userId — create a new duelo */
-router.post("/:userId", async (req, res) => {
+router.post("/:userId", validate(DueloCreateBody), async (req, res) => {
   try {
-    const b      = req.body;
-    const id     = `duelo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const code   = b.code ?? btoa(JSON.stringify({ ...b, id })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const b    = req.body;
+    const id   = `duelo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const code = b.code
+      ?? Buffer.from(JSON.stringify({ id, userId: req.params.userId }))
+           .toString("base64url")
+           .slice(0, 32);
 
     await db.insert(duelosTable).values({
       id,
       userId:         req.params.userId,
-      title:          String(b.title),
-      targetEquity:   Number(b.targetEquity),
-      startBalance:   Number(b.startBalance),
-      maxDrawdownPct: Number(b.maxDrawdownPct),
-      maxTrades:      Number(b.maxTrades),
-      expiresAt:      Number(b.expiresAt),
+      title:          b.title,
+      targetEquity:   b.targetEquity,
+      startBalance:   b.startBalance,
+      maxDrawdownPct: b.maxDrawdownPct,
+      maxTrades:      b.maxTrades,
+      expiresAt:      b.expiresAt,
       createdAt:      Date.now(),
-      startEquity:    Number(b.startEquity ?? 0),
+      startEquity:    b.startEquity ?? 0,
       accepted:       b.accepted ? 1 : 0,
       code,
     });
@@ -75,16 +80,22 @@ router.post("/:userId", async (req, res) => {
 });
 
 /** PATCH /api/duelos/:userId/:id — update (e.g. accept, update startEquity) */
-router.patch("/:userId/:id", async (req, res) => {
+router.patch("/:userId/:id", validate(DueloPatchBody), async (req, res) => {
   try {
     const b = req.body;
+
+    const update: Record<string, unknown> = {};
+    if (b.accepted   != null) update.accepted    = b.accepted ? 1 : 0;
+    if (b.startEquity != null) update.startEquity = b.startEquity;
+
+    if (Object.keys(update).length === 0) {
+      return res.status(422).json({ error: "validation_error", message: "Nenhum campo para actualizar." });
+    }
+
     await db
       .update(duelosTable)
-      .set({
-        accepted:    b.accepted != null ? (b.accepted ? 1 : 0) : undefined,
-        startEquity: b.startEquity != null ? Number(b.startEquity) : undefined,
-      })
-      .where(eq(duelosTable.id, req.params.id));
+      .set(update)
+      .where(and(eq(duelosTable.id, req.params.id), eq(duelosTable.userId, req.params.userId)));
 
     res.json({ ok: true });
   } catch (err) {
@@ -93,10 +104,16 @@ router.patch("/:userId/:id", async (req, res) => {
   }
 });
 
-/** DELETE /api/duelos/:userId/:id */
+/** DELETE /api/duelos/:userId/:id — only the owner can delete their own duelo */
 router.delete("/:userId/:id", async (req, res) => {
   try {
-    await db.delete(duelosTable).where(eq(duelosTable.id, req.params.id));
+    const result = await db
+      .delete(duelosTable)
+      .where(and(eq(duelosTable.id, req.params.id), eq(duelosTable.userId, req.params.userId)));
+
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({ error: "not_found", message: "Duelo não encontrado." });
+    }
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
