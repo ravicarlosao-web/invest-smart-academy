@@ -18,7 +18,7 @@ router.get("/:userId", async (req, res) => {
     const rows = await db
       .select()
       .from(notificationsTable)
-      .where(eq(notificationsTable.userId, req.params.userId))
+      .where(eq(notificationsTable.userId, String(req.params.userId)))
       .orderBy(desc(notificationsTable.createdAt))
       .limit(limit)
       .all();
@@ -58,7 +58,7 @@ router.patch("/:userId/read-all", async (req, res) => {
     await db
       .update(notificationsTable)
       .set({ isRead: 1 })
-      .where(eq(notificationsTable.userId, req.params.userId));
+      .where(eq(notificationsTable.userId, String(req.params.userId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -71,7 +71,7 @@ router.delete("/:userId/:id", async (req, res) => {
   try {
     await db
       .delete(notificationsTable)
-      .where(eq(notificationsTable.id, req.params.id));
+      .where(eq(notificationsTable.id, String(req.params.id)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);

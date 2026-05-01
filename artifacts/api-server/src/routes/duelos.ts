@@ -19,7 +19,7 @@ router.get("/:userId", async (req, res) => {
     const rows = await db
       .select()
       .from(duelosTable)
-      .where(eq(duelosTable.userId, req.params.userId))
+      .where(eq(duelosTable.userId, String(req.params.userId)))
       .orderBy(desc(duelosTable.createdAt))
       .all();
 
@@ -36,7 +36,7 @@ router.get("/code/:code", async (req, res) => {
     const row = await db
       .select()
       .from(duelosTable)
-      .where(eq(duelosTable.code, req.params.code))
+      .where(eq(duelosTable.code, String(req.params.code)))
       .get();
 
     if (!row) return res.status(404).json({ error: "not_found" });
@@ -53,13 +53,13 @@ router.post("/:userId", validate(DueloCreateBody), async (req, res) => {
     const b    = req.body;
     const id   = `duelo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const code = b.code
-      ?? Buffer.from(JSON.stringify({ id, userId: req.params.userId }))
+      ?? Buffer.from(JSON.stringify({ id, userId: String(req.params.userId) }))
            .toString("base64url")
            .slice(0, 32);
 
     await db.insert(duelosTable).values({
       id,
-      userId:         req.params.userId,
+      userId: String(req.params.userId),
       title:          b.title,
       targetEquity:   b.targetEquity,
       startBalance:   b.startBalance,
@@ -95,7 +95,7 @@ router.patch("/:userId/:id", validate(DueloPatchBody), async (req, res) => {
     await db
       .update(duelosTable)
       .set(update)
-      .where(and(eq(duelosTable.id, req.params.id), eq(duelosTable.userId, req.params.userId)));
+      .where(and(eq(duelosTable.id, String(req.params.id)), eq(duelosTable.userId, String(req.params.userId))));
 
     res.json({ ok: true });
   } catch (err) {
@@ -109,7 +109,7 @@ router.delete("/:userId/:id", async (req, res) => {
   try {
     const result = await db
       .delete(duelosTable)
-      .where(and(eq(duelosTable.id, req.params.id), eq(duelosTable.userId, req.params.userId)));
+      .where(and(eq(duelosTable.id, String(req.params.id)), eq(duelosTable.userId, String(req.params.userId))));
 
     if (result.rowsAffected === 0) {
       return res.status(404).json({ error: "not_found", message: "Duelo não encontrado." });

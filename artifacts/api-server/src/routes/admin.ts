@@ -260,7 +260,7 @@ router.delete("/users/:userId", async (req, res) => {
 
 router.post("/users/:userId/reset-progress", async (req, res) => {
   try {
-    await db.delete(progressTable).where(eq(progressTable.userId, req.params.userId));
+    await db.delete(progressTable).where(eq(progressTable.userId, String(req.params.userId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -270,7 +270,7 @@ router.post("/users/:userId/reset-progress", async (req, res) => {
 
 router.post("/users/:userId/reset-sim", async (req, res) => {
   try {
-    await db.delete(tradesTable).where(eq(tradesTable.userId, req.params.userId));
+    await db.delete(tradesTable).where(eq(tradesTable.userId, String(req.params.userId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -282,9 +282,9 @@ router.post("/users/:userId/reset-sim", async (req, res) => {
 router.patch("/users/:userId/xp", validate(AdminXpBody), async (req, res) => {
   try {
     const { xp } = req.body as { xp: number };
-    const existing = await db.select().from(progressTable).where(eq(progressTable.userId, req.params.userId)).get();
+    const existing = await db.select().from(progressTable).where(eq(progressTable.userId, String(req.params.userId))).get();
     if (!existing) return res.status(404).json({ error: "user_not_found" });
-    await db.update(progressTable).set({ xp }).where(eq(progressTable.userId, req.params.userId));
+    await db.update(progressTable).set({ xp }).where(eq(progressTable.userId, String(req.params.userId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -669,7 +669,7 @@ router.get("/subscriptions/:id/receipt", async (req, res) => {
     const sub = await db
       .select()
       .from(subscriptionsTable)
-      .where(eq(subscriptionsTable.id, req.params.id))
+      .where(eq(subscriptionsTable.id, String(req.params.id)))
       .get();
 
     if (!sub || !sub.receiptData) {
@@ -722,7 +722,7 @@ router.patch("/subscriptions/:id/approve", async (req, res) => {
     const now       = Date.now();
     const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
 
-    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
     await db.update(subscriptionsTable).set({
@@ -730,7 +730,7 @@ router.patch("/subscriptions/:id/approve", async (req, res) => {
       approvedAt: now,
       expiresAt,
       updatedAt:  now,
-    }).where(eq(subscriptionsTable.id, req.params.id));
+    }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
     /* Notificação para o aluno */
     const expireDate = new Date(expiresAt).toLocaleDateString("pt-PT");
@@ -754,14 +754,14 @@ router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req,
     const { notes } = req.body;
     const now = Date.now();
 
-    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
     await db.update(subscriptionsTable).set({
       status:    "rejected",
       notes:     notes ?? null,
       updatedAt: now,
-    }).where(eq(subscriptionsTable.id, req.params.id));
+    }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
     /* Notificação para o aluno */
     const noteText = notes ? ` Motivo: ${notes}` : " Contacta o suporte para mais informações.";

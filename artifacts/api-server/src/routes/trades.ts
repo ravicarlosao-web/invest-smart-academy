@@ -20,7 +20,7 @@ router.get("/:userId", async (req, res) => {
     const rows = await db
       .select()
       .from(tradesTable)
-      .where(eq(tradesTable.userId, req.params.userId))
+      .where(eq(tradesTable.userId, String(req.params.userId)))
       .orderBy(desc(tradesTable.closedAt))
       .limit(limit)
       .all();
@@ -35,7 +35,7 @@ router.get("/:userId", async (req, res) => {
 /** POST /api/trades/:userId — insert one or many trades */
 router.post("/:userId", validate(TradesBody), async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = String(req.params.userId);
     const raw    = req.body;
     const items  = Array.isArray(raw) ? raw : [raw];
 
@@ -68,7 +68,7 @@ router.post("/:userId", validate(TradesBody), async (req, res) => {
 /** DELETE /api/trades/:userId — wipe all trades for user */
 router.delete("/:userId", async (req, res) => {
   try {
-    await db.delete(tradesTable).where(eq(tradesTable.userId, req.params.userId));
+    await db.delete(tradesTable).where(eq(tradesTable.userId, String(req.params.userId)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);

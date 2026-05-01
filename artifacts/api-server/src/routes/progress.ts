@@ -19,7 +19,7 @@ router.get("/:userId", async (req, res) => {
     const row = await db
       .select()
       .from(progressTable)
-      .where(eq(progressTable.userId, req.params.userId))
+      .where(eq(progressTable.userId, String(req.params.userId)))
       .get();
 
     if (!row) return res.status(404).json({ error: "not_found" });
@@ -51,7 +51,7 @@ router.put("/:userId", validate(ProgressBody), async (req, res) => {
     const now  = Date.now();
 
     const row = {
-      userId:           req.params.userId,
+      userId: String(req.params.userId),
       xp:               body.xp               ?? 0,
       streakDays:       body.streakDays        ?? 0,
       lastActivityDay:  body.lastActivityDay   ?? null,

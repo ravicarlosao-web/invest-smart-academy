@@ -112,7 +112,7 @@ app.use("/api", (_req, res) => {
 });
 
 /* ── Global error handler ────────────────────────────────────────────────── */
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error & { type?: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err.message.startsWith("CORS:")) {
     res.status(403).json({ error: "cors_forbidden", message: "Origem não permitida." });
     return;

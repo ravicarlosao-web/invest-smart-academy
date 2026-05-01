@@ -48,7 +48,7 @@ router.get("/:userId", async (req, res) => {
     const sub = await db
       .select()
       .from(subscriptionsTable)
-      .where(eq(subscriptionsTable.userId, req.params.userId))
+      .where(eq(subscriptionsTable.userId, String(req.params.userId)))
       .orderBy(desc(subscriptionsTable.createdAt))
       .limit(1)
       .get();
@@ -108,7 +108,7 @@ router.get("/:userId/history", async (req, res) => {
     const subs = await db
       .select()
       .from(subscriptionsTable)
-      .where(eq(subscriptionsTable.userId, req.params.userId))
+      .where(eq(subscriptionsTable.userId, String(req.params.userId)))
       .orderBy(desc(subscriptionsTable.createdAt))
       .all();
 
@@ -138,8 +138,8 @@ router.get("/:userId/receipt/:id", async (req, res) => {
       .from(subscriptionsTable)
       .where(
         and(
-          eq(subscriptionsTable.id, req.params.id),
-          eq(subscriptionsTable.userId, req.params.userId),
+          eq(subscriptionsTable.id, String(req.params.id)),
+          eq(subscriptionsTable.userId, String(req.params.userId)),
         ),
       )
       .get();
@@ -173,7 +173,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req, r
       .from(subscriptionsTable)
       .where(
         and(
-          eq(subscriptionsTable.userId, req.params.userId),
+          eq(subscriptionsTable.userId, String(req.params.userId)),
           eq(subscriptionsTable.status, "pending"),
         ),
       )
@@ -188,7 +188,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req, r
       .from(subscriptionsTable)
       .where(
         and(
-          eq(subscriptionsTable.userId, req.params.userId),
+          eq(subscriptionsTable.userId, String(req.params.userId)),
           eq(subscriptionsTable.status, "active"),
         ),
       )
@@ -201,7 +201,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req, r
     const id = genId();
     await db.insert(subscriptionsTable).values({
       id,
-      userId:           req.params.userId,
+      userId: String(req.params.userId),
       status:           "pending",
       amount:           5000,
       paymentReference: paymentReference ?? null,
@@ -214,7 +214,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req, r
 
     /* Notificação de confirmação do pedido */
     await createNotif(
-      req.params.userId, "system",
+      String(req.params.userId), "system",
       "Pedido de subscrição enviado",
       "O teu pedido foi recebido e está a aguardar aprovação pelo admin. Receberás uma notificação assim que for processado.",
       "/perfil",
@@ -241,7 +241,7 @@ router.patch("/:userId/reference", validate(SubscriptionReferenceBody), async (r
       .from(subscriptionsTable)
       .where(
         and(
-          eq(subscriptionsTable.userId, req.params.userId),
+          eq(subscriptionsTable.userId, String(req.params.userId)),
           eq(subscriptionsTable.status, "pending"),
         ),
       )
