@@ -66,6 +66,17 @@ Manual payment system (5.000 AOA/month) for Angola:
 
 The frontend (`trade-academy`) calls `/api` by default. This is routed to the `api-server` artifact by the shared proxy. If you move the api-server to a different path, set the `VITE_API_BASE_URL` environment variable in the trade-academy artifact to the new prefix (e.g. `/api`).
 
+## Required Secrets
+
+All secrets must be set in Replit Secrets before the api-server will start:
+
+| Secret | Description |
+|---|---|
+| `TURSO_DATABASE_URL` | libsql:// URL from turso.tech |
+| `TURSO_AUTH_TOKEN` | Turso auth token |
+| `JWT_SECRET` | Secret used to sign user login tokens |
+| `ADMIN_PASSWORD` | Password for the admin panel (required — server will not start without it) |
+
 ## Database (Turso)
 
 The backend uses Turso (serverless SQLite) via `@libsql/client`. You need two secrets:
