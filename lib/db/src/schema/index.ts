@@ -5,3 +5,8 @@ export * from "./notifications";
 export * from "./duelos";
 export * from "./adminSettings";
 export * from "./subscriptions";
+export * from "./glossaryTerms";
+export * from "./strategies";
+export * from "./books";
+export * from "./resources";
+export * from "./curriculum";

@@ -89,6 +89,105 @@ export async function initDb(): Promise<void> {
       approved_at       INTEGER,
       updated_at        INTEGER NOT NULL
     )`),
+
+    /* ── Content tables ─────────────────────────────────────────────────── */
+    sql.raw(`CREATE TABLE IF NOT EXISTS glossary_terms (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      term        TEXT NOT NULL,
+      definition  TEXT NOT NULL,
+      category    TEXT NOT NULL,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS strategies (
+      id              TEXT PRIMARY KEY,
+      name            TEXT NOT NULL,
+      subtitle        TEXT NOT NULL,
+      icon            TEXT NOT NULL,
+      timeframes      TEXT NOT NULL DEFAULT '[]',
+      markets         TEXT NOT NULL DEFAULT '[]',
+      risk_level      TEXT NOT NULL,
+      win_rate        TEXT NOT NULL,
+      risk_reward     TEXT NOT NULL,
+      difficulty      TEXT NOT NULL,
+      description     TEXT NOT NULL,
+      how_it_works    TEXT NOT NULL,
+      setup           TEXT NOT NULL DEFAULT '[]',
+      entry_signals   TEXT NOT NULL DEFAULT '[]',
+      exit_signals    TEXT NOT NULL DEFAULT '[]',
+      risk_management TEXT NOT NULL DEFAULT '[]',
+      pros            TEXT NOT NULL DEFAULT '[]',
+      cons            TEXT NOT NULL DEFAULT '[]',
+      example         TEXT NOT NULL,
+      tags            TEXT NOT NULL DEFAULT '[]',
+      sort_order      INTEGER NOT NULL DEFAULT 0,
+      created_at      INTEGER NOT NULL,
+      updated_at      INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS books (
+      id          TEXT PRIMARY KEY,
+      order_num   INTEGER NOT NULL,
+      title       TEXT NOT NULL,
+      author      TEXT NOT NULL,
+      cover       TEXT NOT NULL,
+      category    TEXT NOT NULL,
+      description TEXT NOT NULL,
+      pages       INTEGER NOT NULL,
+      docx_file   TEXT,
+      content     TEXT,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS resource_sections (
+      id         TEXT PRIMARY KEY,
+      title      TEXT NOT NULL,
+      icon       TEXT NOT NULL,
+      color      TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS resource_items (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      section_id  TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      description TEXT NOT NULL,
+      url         TEXT,
+      badge       TEXT,
+      stars       INTEGER,
+      tags        TEXT NOT NULL DEFAULT '[]',
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS curriculum_levels (
+      id          INTEGER PRIMARY KEY,
+      title       TEXT NOT NULL,
+      subtitle    TEXT NOT NULL,
+      difficulty  TEXT NOT NULL,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS curriculum_lessons (
+      id         TEXT PRIMARY KEY,
+      level_id   INTEGER NOT NULL,
+      title      TEXT NOT NULL,
+      summary    TEXT NOT NULL,
+      xp         INTEGER NOT NULL DEFAULT 0,
+      content    TEXT NOT NULL DEFAULT '[]',
+      questions  TEXT NOT NULL DEFAULT '[]',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {

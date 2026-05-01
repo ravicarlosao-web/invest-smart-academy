@@ -21,21 +21,25 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language.
 - **api-server** (`artifacts/api-server/`) — Express 5 backend with full API: auth, progress, trades, notifications, duelos, subscriptions, admin.
 
-## Content Management (DB-driven)
+## Content Management (Dedicated DB Tables)
 
-All platform content is stored in the `admin_settings` table (Turso DB) under these keys:
-- `content.glossary` — trading glossary terms
-- `content.strategies` — trading strategies catalog
-- `content.books` — book library catalog
-- `content.resources` — recommended resources (brokers, tools, YouTube channels)
-- `content.curriculum` — full learning path (levels + lessons + quizzes)
-- `content.videos` — curated video lessons
+All platform content is stored in dedicated Turso DB tables (not as JSON blobs in admin_settings):
 
-**Auto-seed**: On API server startup, if a key is empty, it is populated from static TypeScript data files in `artifacts/api-server/src/content/`. Once an admin edits via the admin panel, the DB version takes over.
+| Table | Rows (seed) | Description |
+|---|---|---|
+| `glossary_terms` | 121 | Term, definition, category, sort_order |
+| `strategies` | 10 | Full strategy data; arrays stored as JSON strings |
+| `books` | 3 | Book metadata + HTML content column |
+| `resource_sections` | 4 | Section title, icon, color |
+| `resource_items` | 24 | Individual resource, linked to section_id |
+| `curriculum_levels` | 12 | Level id, title, subtitle, difficulty |
+| `curriculum_lessons` | 40 | Lesson id, level_id, title, summary, xp, content (JSON), questions (JSON) |
 
-**Public routes**: `GET /api/glossary`, `/api/strategies`, `/api/books`, `/api/resources`, `/api/curriculum`, `/api/videos` — no auth required.
+**Schema files**: `lib/db/src/schema/glossaryTerms.ts`, `strategies.ts`, `books.ts`, `resources.ts`, `curriculum.ts` — all exported from `lib/db/src/schema/index.ts`.
 
-**Admin routes**: `GET/PUT /api/admin/glossary`, `/api/admin/strategies`, `/api/admin/books`, `/api/admin/resources`, `/api/admin/curriculum`, `/api/admin/videos` — require admin auth.
+**Auto-seed**: `artifacts/api-server/src/seed.ts` — on startup, checks if each table is empty via `COUNT(*)`, inserts all demo data from `artifacts/api-server/src/content/*.ts` if empty. Idempotent and non-fatal.
+
+**Public routes**: `GET /api/glossary`, `/api/strategies`, `/api/books`, `/api/resources`, `/api/curriculum` — no auth required. Each route queries the proper table and transforms to the expected frontend format (arrays stored as JSON are parsed back).
 
 **Frontend**: Each content page fetches from API on mount with TS static data as immediate fallback. Pages: `Glossario.tsx`, `Estrategias.tsx`, `Biblioteca.tsx`, `Recursos.tsx`, `Aprender.tsx`, `Licao.tsx`.
 
