@@ -128,6 +128,7 @@ export interface ProgressState {
   perfectQuizCount: number;
   dailyMissions: DailyMissionState[];
   missionDate: string | null;
+  _achXpVer: number; // migration flag — tracks achievement XP retroactive version
 }
 
 export interface SimState {
@@ -248,6 +249,7 @@ const initialProgress: ProgressState = {
   perfectQuizCount: 0,
   dailyMissions: [],
   missionDate: null,
+  _achXpVer: 1,
 };
 
 /* Helper: build DailyMissionState[] for a date */
@@ -488,6 +490,13 @@ export const useAppStore = create<AppState>()(
           };
           const newAchievements = computeAchievements(s.progress.achievements, provisional, s.sim.history);
 
+          // XP bonus for newly unlocked achievements (lesson path)
+          const prevAchSetL = new Set(s.progress.achievements);
+          const lessonAchXp = newAchievements
+            .filter((id) => !prevAchSetL.has(id))
+            .reduce((sum, id) => sum + (ACHIEVEMENT_MAP[id]?.xpBonus ?? 0), 0);
+          const finalXp = newXp + lessonAchXp;
+
           // Tick daily missions
           const t2 = today();
           let missions = (s.progress.missionDate === t2 ? s.progress.dailyMissions : buildMissionsForDate(t2));
@@ -498,7 +507,7 @@ export const useAppStore = create<AppState>()(
           return {
             progress: {
               ...s.progress,
-              xp: newXp,
+              xp: finalXp,
               completedLessons: newCompleted,
               quizScores: { ...s.progress.quizScores, [lessonId]: scorePct },
               streakDays: streak,
@@ -626,6 +635,12 @@ export const useAppStore = create<AppState>()(
             newHistory,
           );
 
+          // XP bonus for newly unlocked achievements
+          const prevAchSet = new Set(provisionalProgress.achievements);
+          const achievementXp = newAchievements
+            .filter((id) => !prevAchSet.has(id))
+            .reduce((sum, id) => sum + (ACHIEVEMENT_MAP[id]?.xpBonus ?? 0), 0);
+
           // Tick daily trade missions
           const t = today();
           let missions = s.progress.missionDate === t
@@ -648,6 +663,7 @@ export const useAppStore = create<AppState>()(
             },
             progress: {
               ...s.progress,
+              xp: s.progress.xp + achievementXp,
               achievements: newAchievements,
               dailyMissions: missions,
               missionDate: t,
@@ -916,10 +932,22 @@ export const useAppStore = create<AppState>()(
        */
       merge: (persisted: unknown, current: AppState): AppState => {
         const p = (persisted ?? {}) as Partial<AppState>;
+        const mergedProgress: ProgressState = { ...current.progress, ...(p.progress ?? {}) };
+
+        // v1 migration: retroactively apply xpBonus for already-unlocked achievements
+        if ((mergedProgress._achXpVer ?? 0) < 1) {
+          const retroXp = (mergedProgress.achievements ?? []).reduce(
+            (sum, id) => sum + (ACHIEVEMENT_MAP[id]?.xpBonus ?? 0),
+            0,
+          );
+          mergedProgress.xp = (mergedProgress.xp ?? 0) + retroXp;
+          mergedProgress._achXpVer = 1;
+        }
+
         return {
           ...current,
           ...p,
-          progress:      { ...current.progress,      ...(p.progress      ?? {}) },
+          progress:      mergedProgress,
           sim:           { ...current.sim,            ...(p.sim           ?? {}) },
           settings:      { ...current.settings,       ...(p.settings      ?? {}) },
           booksProgress: { ...current.booksProgress,  ...(p.booksProgress ?? {}) },

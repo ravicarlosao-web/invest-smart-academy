@@ -65,6 +65,7 @@ export default function Perfil() {
   const completedLessons = progress.completedLessons.length;
   const completedPct = (completedLessons / TOTAL_LESSONS) * 100;
 
+  const SIM_START_BALANCE = 10_000;
   const trades = sim.history;
   const wins = trades.filter((t) => t.pnl > 0).length;
   const losses = trades.filter((t) => t.pnl <= 0).length;
@@ -72,6 +73,7 @@ export default function Perfil() {
   const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
   const avgWin = wins ? trades.filter((t) => t.pnl > 0).reduce((s, t) => s + t.pnl, 0) / wins : 0;
   const avgLoss = losses ? trades.filter((t) => t.pnl <= 0).reduce((s, t) => s + t.pnl, 0) / losses : 0;
+  const openPositionsCount = sim.positions.length;
 
   const avgQuiz = (() => {
     const scores = Object.values(progress.quizScores);
@@ -256,9 +258,19 @@ export default function Perfil() {
               <Row label="P&L total" value={fmtUSD(totalPnl)} accent={totalPnl >= 0 ? "bull" : "bear"} />
               <Row label="Ganho médio" value={fmtUSD(avgWin)} accent="bull" />
               <Row label="Perda média" value={fmtUSD(avgLoss)} accent="bear" />
-              <Row label="Saldo atual" value={fmtUSD(sim.cashBalance)} />
+              <Row label="Saldo de início" value={fmtUSD(SIM_START_BALANCE)} />
+              <Row
+                label={openPositionsCount > 0 ? "Saldo livre" : "Saldo atual"}
+                value={fmtUSD(sim.cashBalance)}
+                accent={sim.cashBalance >= SIM_START_BALANCE ? "bull" : "bear"}
+              />
             </div>
-            <p className="mt-3 text-[10px] text-muted-foreground text-center">
+            {openPositionsCount > 0 && (
+              <p className="mt-2 text-[10px] text-warning text-center">
+                {openPositionsCount} posição(ões) aberta(s) — saldo livre não inclui margem bloqueada
+              </p>
+            )}
+            <p className="mt-2 text-[10px] text-muted-foreground text-center">
               Dados do simulador — sem dinheiro real envolvido
             </p>
           </Card>
