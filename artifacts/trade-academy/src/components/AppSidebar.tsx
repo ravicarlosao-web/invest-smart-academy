@@ -12,6 +12,7 @@ import {
   Swords,
   Compass,
   PlayCircle,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ const mainItems = [
   { title: "Duelos",       url: "/duelo",         icon: Swords },
   { title: "Biblioteca",   url: "/biblioteca",    icon: BookMarked },
   { title: "Perfil",       url: "/perfil",        icon: User2 },
+  { title: "Financeiro",   url: "/financeiro",    icon: CreditCard },
 ];
 
 const extraItems = [

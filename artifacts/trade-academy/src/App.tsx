@@ -24,6 +24,7 @@ import Biblioteca   from "./pages/Biblioteca";
 import BookReader   from "./pages/BookReader";
 import Estrategias  from "./pages/Estrategias";
 import VideoAulas   from "./pages/VideoAulas";
+import Financeiro   from "./pages/Financeiro";
 import Admin        from "./pages/Admin";
 import NotFound     from "./pages/NotFound.tsx";
 import UserStateSync from "./components/UserStateSync";
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/estrategias"           element={<Estrategias />} />
               <Route path="/video-aulas"           element={<VideoAulas />} />
               <Route path="/video-aulas/:videoId"  element={<VideoAulas />} />
+              <Route path="/financeiro"            element={<Financeiro />} />
             </Route>
           </Route>
 
