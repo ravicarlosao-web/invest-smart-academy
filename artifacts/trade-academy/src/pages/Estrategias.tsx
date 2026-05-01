@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -18,8 +18,9 @@ import {
   Zap,
   AlertTriangle,
 } from "lucide-react";
-import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
+import { STRATEGIES as STRATEGIES_STATIC, type Strategy, type RiskLevel } from "@/data/strategies";
 import { IconByName } from "@/components/IconByName";
+import { api } from "@/lib/apiClient";
 
 /* ── helpers ─────────────────────────────────────────── */
 const RISK_COLOR: Record<RiskLevel, string> = {
@@ -238,13 +239,20 @@ function StrategyCard({ strategy, defaultOpen }: { strategy: Strategy; defaultOp
 
 /* ── Main Page ─────────────────────────────────────────── */
 export default function Estrategias() {
+  const [strategies, setStrategies] = useState<Strategy[]>(STRATEGIES_STATIC);
   const [marketFilter, setMarketFilter] = useState("Todos");
   const [riskFilter,   setRiskFilter]   = useState<RiskLevel | "Todos">("Todos");
   const [diffFilter,   setDiffFilter]   = useState("Todos");
   const [search,       setSearch]       = useState("");
 
+  useEffect(() => {
+    api.content.strategies()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setStrategies(data as Strategy[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
+
   const filtered = useMemo(() => {
-    return STRATEGIES.filter((s) => {
+    return strategies.filter((s) => {
       if (marketFilter !== "Todos" && !s.markets.includes(marketFilter) && !s.markets.includes("Todos")) return false;
       if (riskFilter !== "Todos" && s.riskLevel !== riskFilter) return false;
       if (diffFilter !== "Todos" && s.difficulty !== diffFilter) return false;
@@ -265,16 +273,16 @@ export default function Estrategias() {
           <h2 className="text-lg font-semibold">Estratégias de Trading</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          {STRATEGIES.length} estratégias reais, testadas e explicadas passo a passo. Filtra por mercado, risco ou nível e expande para ver todos os detalhes.
+          {strategies.length} estratégias reais, testadas e explicadas passo a passo. Filtra por mercado, risco ou nível e expande para ver todos os detalhes.
         </p>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: "Estratégias",  value: STRATEGIES.length,                              color: "text-primary" },
-          { label: "Baixo Risco",  value: STRATEGIES.filter((s) => s.riskLevel === "Baixo").length,  color: "text-bull" },
-          { label: "Para Iniciantes", value: STRATEGIES.filter((s) => s.difficulty === "Iniciante").length, color: "text-warning" },
+          { label: "Estratégias",  value: strategies.length,                              color: "text-primary" },
+          { label: "Baixo Risco",  value: strategies.filter((s) => s.riskLevel === "Baixo").length,  color: "text-bull" },
+          { label: "Para Iniciantes", value: strategies.filter((s) => s.difficulty === "Iniciante").length, color: "text-warning" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 text-center">
             <div className={`font-mono text-2xl font-bold ${color}`}>{value}</div>

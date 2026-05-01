@@ -1,19 +1,28 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen, Lock, CheckCircle2, Clock, ChevronRight, Library } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/store/useAppStore";
-import { BOOKS_CATALOG, isBookUnlocked } from "@/data/books";
+import { BOOKS_CATALOG as BOOKS_CATALOG_STATIC, isBookUnlocked, type BookMeta } from "@/data/books";
+import { api } from "@/lib/apiClient";
 
 export default function Biblioteca() {
   const navigate = useNavigate();
+  const [catalog, setCatalog] = useState<BookMeta[]>(BOOKS_CATALOG_STATIC);
   const booksProgress = useAppStore((s) => s.booksProgress);
   const completedBookIds = Object.entries(booksProgress)
     .filter(([, p]) => p.completed)
     .map(([id]) => id);
 
-  const totalBooks     = BOOKS_CATALOG.length;
+  useEffect(() => {
+    api.content.books()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setCatalog(data as BookMeta[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
+
+  const totalBooks     = catalog.length;
   const completedCount = completedBookIds.length;
 
   return (
@@ -49,7 +58,7 @@ export default function Biblioteca() {
 
       {/* Book cards */}
       <div className="space-y-4">
-        {BOOKS_CATALOG.sort((a, b) => a.order - b.order).map((book) => {
+        {catalog.sort((a, b) => a.order - b.order).map((book) => {
           const prog    = booksProgress[book.id];
           const unlocked = isBookUnlocked(book.id, completedBookIds);
           const completed = prog?.completed ?? false;
@@ -164,9 +173,7 @@ export default function Biblioteca() {
       {/* Add books hint */}
       <div className="mt-6 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center">
         <p className="text-xs text-muted-foreground">
-          Para adicionar novos livros, coloque ficheiros <span className="font-mono">.docx</span> na
-          pasta <span className="font-mono">public/books/</span> e registe-os em{" "}
-          <span className="font-mono">src/data/books.ts</span>.
+          Para adicionar ou editar livros, acede ao <span className="font-medium text-foreground">Painel de Admin</span> → aba Biblioteca.
         </p>
       </div>
     </div>

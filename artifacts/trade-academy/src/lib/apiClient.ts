@@ -152,9 +152,16 @@ export const api = {
     saveVideos: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/videos", items),
   },
 
-  /* ---------- Public Videos (students) ---------- */
+  /* ---------- Public content (students) ---------- */
   videos: {
     list: () => request<unknown[]>("GET", "/videos"),
+  },
+  content: {
+    glossary:   () => request<unknown[]>("GET", "/glossary"),
+    strategies: () => request<unknown[]>("GET", "/strategies"),
+    books:      () => request<unknown[]>("GET", "/books"),
+    resources:  () => request<unknown[]>("GET", "/resources"),
+    curriculum: () => request<unknown[]>("GET", "/curriculum"),
   },
 
   /* ---------- Subscrições (aluno) ---------- */

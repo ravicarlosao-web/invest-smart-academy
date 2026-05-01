@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { LEVELS, TOTAL_LESSONS } from "@/data/curriculum";
 import { fmtUSD } from "@/lib/market";
 import {
@@ -28,6 +30,8 @@ import {
   Clock,
   Crown,
   PartyPopper,
+  CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 
@@ -45,6 +49,11 @@ export default function Perfil() {
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
   const user = useAuthStore((s) => s.user);
+  const { subscription, fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
+
+  useEffect(() => {
+    if (user?.id) fetchSub(user.id);
+  }, [user?.id, fetchSub]);
 
   const completedPct = (progress.completedLessons.length / TOTAL_LESSONS) * 100;
   const trades = sim.history;
@@ -172,6 +181,75 @@ export default function Perfil() {
           <Row label="Saldo demo atual" value={fmtUSD(sim.cashBalance)} />
         </Card>
       </div>
+
+      {/* ── Subscription Status ── */}
+      {(() => {
+        const isActive = hasActiveSubscription();
+        const isPending = subscription?.status === "pending";
+        const isExpired = subscription?.status === "expired" || subscription?.status === "rejected";
+        const daysLeft = subscription?.expiresAt
+          ? Math.max(0, Math.ceil((subscription.expiresAt - Date.now()) / 86_400_000))
+          : null;
+        const expiringSoon = isActive && daysLeft !== null && daysLeft <= 7;
+
+        return (
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <CreditCard className="h-4 w-4 text-primary" />Subscrição
+              </h3>
+              <Link to="/financeiro" className="text-xs text-primary hover:underline">Gerir →</Link>
+            </div>
+
+            {expiringSoon && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>A tua subscrição expira em <strong>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</strong>. Renova para manter o acesso.</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                isActive ? "bg-bull/15" : isPending ? "bg-warning/15" : "bg-surface-2"
+              }`}>
+                <Crown className={`h-5 w-5 ${isActive ? "text-bull" : isPending ? "text-warning" : "text-muted-foreground"}`} />
+              </div>
+              <div className="flex-1">
+                {isActive ? (
+                  <>
+                    <p className="text-sm font-semibold text-bull">Subscrição Ativa</p>
+                    <p className="text-xs text-muted-foreground">
+                      {daysLeft !== null ? `Expira em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""}` : "Acesso Premium"}
+                    </p>
+                  </>
+                ) : isPending ? (
+                  <>
+                    <p className="text-sm font-semibold text-warning">Aguardando Confirmação</p>
+                    <p className="text-xs text-muted-foreground">O admin irá confirmar em breve</p>
+                  </>
+                ) : isExpired ? (
+                  <>
+                    <p className="text-sm font-semibold text-bear">Subscrição Expirada</p>
+                    <p className="text-xs text-muted-foreground">Renova para aceder ao conteúdo premium</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold">Sem Subscrição</p>
+                    <p className="text-xs text-muted-foreground">Nível Iniciante disponível gratuitamente</p>
+                  </>
+                )}
+              </div>
+              {!isActive && !isPending && (
+                <Link to="/financeiro">
+                  <Badge className="bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer text-[10px]">
+                    Subscrever
+                  </Badge>
+                </Link>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* ── Tabs ── */}
       <Card className="overflow-hidden">

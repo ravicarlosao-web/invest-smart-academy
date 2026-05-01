@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initDb } from "@workspace/db";
+import { seedContent } from "./seed";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,13 @@ try {
 } catch (err) {
   logger.error({ err }, "Failed to initialise database tables");
   process.exit(1);
+}
+
+/* Seed static content into DB if not already present */
+try {
+  await seedContent();
+} catch (err) {
+  logger.warn({ err }, "Content seeding encountered an error (non-fatal)");
 }
 
 app.listen(port, (err) => {

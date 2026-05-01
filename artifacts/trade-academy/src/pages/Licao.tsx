@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { LEVELS } from "@/data/curriculum";
+import { LEVELS as LEVELS_STATIC, type LevelDef } from "@/data/curriculum";
 import type { Question } from "@/data/curriculum";
+import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
@@ -24,18 +25,25 @@ export default function Licao() {
   const completeLesson = useAppStore((s) => s.completeLesson);
   const user = useAuthStore((s) => s.user);
   const { fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
+  const [levels, setLevels] = useState<LevelDef[]>(LEVELS_STATIC);
 
   useEffect(() => {
     if (user) fetchSub(user.id);
   }, [user, fetchSub]);
 
+  useEffect(() => {
+    api.content.curriculum()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setLevels(data as LevelDef[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
+
   const found = useMemo(() => {
-    for (const lvl of LEVELS) {
+    for (const lvl of levels) {
       const ls = lvl.lessons.find((l) => l.id === lessonId);
       if (ls) return { level: lvl, lesson: ls };
     }
     return null;
-  }, [lessonId]);
+  }, [levels, lessonId]);
 
   const [phase, setPhase] = useState<Phase>("content");
   const [contentIdx, setContentIdx] = useState(0);

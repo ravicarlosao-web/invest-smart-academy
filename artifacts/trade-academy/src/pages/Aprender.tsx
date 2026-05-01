@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LEVELS } from "@/data/curriculum";
+import { LEVELS as LEVELS_STATIC, type LevelDef } from "@/data/curriculum";
+import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
@@ -28,11 +29,18 @@ export default function Aprender() {
   const user = useAuthStore((s) => s.user);
   const { subscription, fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
 
+  const [levels, setLevels] = useState<LevelDef[]>(LEVELS_STATIC);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     if (user) fetchSub(user.id);
   }, [user, fetchSub]);
+
+  useEffect(() => {
+    api.content.curriculum()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setLevels(data as LevelDef[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
 
   const isSubscribed = hasActiveSubscription();
 
@@ -42,14 +50,14 @@ export default function Aprender() {
   // Bloqueio sequencial (só se aplica a níveis gratuitos)
   const levelUnlocked = (idx: number): boolean => {
     if (idx === 0) return true;
-    const prev = LEVELS[idx - 1];
+    const prev = levels[idx - 1];
     return prev.lessons.every((l) => completed.includes(l.id));
   };
 
   // Nível premium: sempre mostra paywall se sem subscrição (independente do progresso sequencial)
   // Nível gratuito: aplica bloqueio sequencial
   const levelAccessible = (idx: number): boolean => {
-    if (isPremiumLevel(LEVELS[idx].difficulty)) {
+    if (isPremiumLevel(levels[idx].difficulty)) {
       return isSubscribed && levelUnlocked(idx);
     }
     return levelUnlocked(idx);
@@ -58,13 +66,13 @@ export default function Aprender() {
   // Review lessons
   const reviewLessons = reviewQueue
     .map((id) => {
-      for (const lvl of LEVELS) {
+      for (const lvl of levels) {
         const ls = lvl.lessons.find((l) => l.id === id);
         if (ls) return { lesson: ls, level: lvl };
       }
       return null;
     })
-    .filter(Boolean) as { lesson: (typeof LEVELS)[0]["lessons"][0]; level: (typeof LEVELS)[0] }[];
+    .filter(Boolean) as { lesson: LevelDef["lessons"][0]; level: LevelDef }[];
 
   // Estado da subscrição para banner
   const subBanner = (() => {
@@ -164,7 +172,7 @@ export default function Aprender() {
       )}
 
       <div className="space-y-4">
-        {LEVELS.map((level, idx) => {
+        {levels.map((level, idx) => {
           const sequentialUnlocked = levelUnlocked(idx);
           const accessible = levelAccessible(idx);
           // Premium levels always show paywall (even if sequentially locked)
