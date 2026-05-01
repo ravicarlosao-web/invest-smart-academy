@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef, type ChangeEvent } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,7 +9,7 @@ import {
   Coins, PlayCircle, Lock, CreditCard, CheckCircle2, Clock, XCircle,
   FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
-  Brain, Eye, EyeOff, Loader2, Wifi, WifiOff,
+  Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
 } from "lucide-react";
 import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -845,13 +845,15 @@ function UsersTab() {
 /* =========================================================================
  * Curriculum tab
  * ========================================================================= */
-type LessonOverride = { title?: string; summary?: string; xp?: number; hidden?: boolean };
+type LessonOverride = { title?: string; summary?: string; xp?: number; hidden?: boolean; audioUrl?: string; audioEnabled?: boolean };
 
 function CurriculumTab() {
   const [overrides, setOverrides] = useState<Record<string, LessonOverride>>({});
   const [loaded, setLoaded]       = useState(false);
   const [saving, setSaving]       = useState(false);
   const [filter, setFilter]       = useState("");
+  const [audioDurations, setAudioDurations] = useState<Record<string, { durationSec: number; estimatedSec: number }>>({});
+  const [audioUploading, setAudioUploading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     api.admin.getCurriculumOverride()
@@ -877,6 +879,38 @@ function CurriculumTab() {
     finally { setSaving(false); }
   }
 
+  function handleAudioUpload(lessonId: string, estimatedSec: number, e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ficheiro demasiado grande. Máximo 5 MB.");
+      e.target.value = "";
+      return;
+    }
+    setAudioUploading((prev) => ({ ...prev, [lessonId]: true }));
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const audio = new Audio(dataUrl);
+      audio.addEventListener("loadedmetadata", () => {
+        const durationSec = Math.round(audio.duration);
+        setAudioDurations((prev) => ({ ...prev, [lessonId]: { durationSec, estimatedSec } }));
+        setAudioUploading((prev) => ({ ...prev, [lessonId]: false }));
+      });
+      audio.addEventListener("error", () => {
+        setAudioUploading((prev) => ({ ...prev, [lessonId]: false }));
+      });
+      update(lessonId, { audioUrl: dataUrl, audioEnabled: true });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function removeAudio(lessonId: string) {
+    update(lessonId, { audioUrl: undefined, audioEnabled: undefined });
+    setAudioDurations((prev) => { const n = { ...prev }; delete n[lessonId]; return n; });
+  }
+
   const allLessons = LEVELS.flatMap((lvl) =>
     lvl.lessons.map((l) => ({ ...l, levelTitle: lvl.title, levelId: lvl.id })),
   );
@@ -890,7 +924,7 @@ function CurriculumTab() {
         <div>
           <h2 className="text-lg font-semibold">Trilha de Aprendizado</h2>
           <p className="text-sm text-muted-foreground">
-            Sobrescreve título, XP ou resumo de qualquer lição. Esconde lições sem apagar o código.
+            Sobrescreve título, XP ou resumo de qualquer lição. Esconde lições sem apagar o código. Adiciona áudio por lição.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -908,6 +942,11 @@ function CurriculumTab() {
         {loaded && filtered.map((l) => {
           const o = overrides[l.id] ?? {};
           const dirty = Object.keys(o).length > 0;
+          const estimatedSec = Math.max(60, Math.round(
+            (l.content ?? []).reduce((acc: number, c: any) => acc + (c.body?.split(/\s+/).length ?? 0), 0) / 3
+          ));
+          const dur = audioDurations[l.id];
+          const audioWarning = dur && dur.durationSec > dur.estimatedSec + 30;
           return (
             <Card key={l.id} className={cn("border-border/60", dirty && "border-primary/40 bg-primary/5")}>
               <CardContent className="p-4">
@@ -916,10 +955,17 @@ function CurriculumTab() {
                     <Badge variant="outline" className="font-mono text-[10px]">{l.id}</Badge>
                     <span className="text-xs text-muted-foreground">Nível {l.levelId} · {l.levelTitle}</span>
                     {o.hidden && <Badge variant="destructive" className="text-[10px]">Oculta</Badge>}
+                    {o.audioUrl && (
+                      <Badge className={cn("text-[10px]", o.audioEnabled ? "bg-emerald-500/20 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                        <Headphones className="mr-1 h-2.5 w-2.5" />
+                        {o.audioEnabled ? "Áudio ativo" : "Áudio desativado"}
+                      </Badge>
+                    )}
                     {dirty && <Badge className="text-[10px] bg-primary/20 text-primary">Modificada</Badge>}
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => {
                     setOverrides((prev) => { const n = { ...prev }; delete n[l.id]; return n; });
+                    setAudioDurations((prev) => { const n = { ...prev }; delete n[l.id]; return n; });
                   }} disabled={!dirty}>Resetar</Button>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
@@ -938,6 +984,58 @@ function CurriculumTab() {
                     <Textarea rows={2} value={o.summary ?? ""} placeholder={l.summary}
                       onChange={(e) => update(l.id, { summary: e.target.value || undefined })} />
                   </div>
+
+                  {/* ── Áudio ─────────────────────────────────────────────── */}
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Headphones className="h-3 w-3" /> Áudio da lição (mp3 / wav · máx. 5 MB)
+                    </Label>
+                    {o.audioUrl ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-1 p-2">
+                        <Volume2 className="h-4 w-4 text-primary shrink-0" />
+                        <audio src={o.audioUrl} controls className="h-8 flex-1 min-w-0" style={{ maxWidth: "100%" }} />
+                        <Button size="sm" variant="ghost" className="shrink-0 h-7 w-7 p-0" onClick={() => removeAudio(l.id)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/60 p-3 transition-colors",
+                        audioUploading[l.id] ? "opacity-50 pointer-events-none" : "hover:border-primary/40 hover:bg-surface-2"
+                      )}>
+                        {audioUploading[l.id]
+                          ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          : <Upload className="h-4 w-4 text-muted-foreground" />}
+                        <span className="text-xs text-muted-foreground">
+                          {audioUploading[l.id] ? "A processar..." : "Clica para fazer upload"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="audio/mp3,audio/wav,audio/mpeg,audio/*"
+                          className="hidden"
+                          onChange={(e) => handleAudioUpload(l.id, estimatedSec, e)}
+                        />
+                      </label>
+                    )}
+                    {audioWarning && (
+                      <p className="flex items-start gap-1.5 text-xs text-amber-500">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        O áudio ({Math.round((dur?.durationSec ?? 0) / 60)}m{((dur?.durationSec ?? 0) % 60).toString().padStart(2, "0")}s) é mais longo que o conteúdo escrito estimado (~{Math.round(estimatedSec / 60)}m). O áudio tem conteúdo adicional?
+                      </p>
+                    )}
+                    {o.audioUrl && (
+                      <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(o.audioEnabled)}
+                          onChange={(e) => update(l.id, { audioEnabled: e.target.checked || undefined })}
+                        />
+                        Mostrar player de áudio aos alunos
+                      </label>
+                    )}
+                  </div>
+                  {/* ───────────────────────────────────────────────────────── */}
+
                   <label className="flex items-center gap-2 text-xs cursor-pointer">
                     <input type="checkbox" checked={Boolean(o.hidden)}
                       onChange={(e) => update(l.id, { hidden: e.target.checked || undefined })} />

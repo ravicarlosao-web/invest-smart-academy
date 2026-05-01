@@ -173,7 +173,7 @@ router.get("/curriculum", async (_req: any, res: any) => {
     /* Load admin overrides (title / xp / summary / hidden per lesson ID) */
     const overrideRow = await db.select().from(adminSettingsTable)
       .where(eq(adminSettingsTable.key, "curriculum.override")).get();
-    const overrides: Record<string, { title?: string; xp?: number; summary?: string; hidden?: boolean }> =
+    const overrides: Record<string, { title?: string; xp?: number; summary?: string; hidden?: boolean; audioUrl?: string; audioEnabled?: boolean }> =
       overrideRow ? (() => { try { return (JSON.parse(overrideRow.value) as any).lessons ?? {}; } catch { return {}; } })() : {};
 
     const result = levels.map((lv: any) => ({
@@ -187,12 +187,14 @@ router.get("/curriculum", async (_req: any, res: any) => {
         .map((ls: any) => {
           const ov = overrides[ls.id] ?? {};
           return {
-            id:        ls.id,
-            title:     ov.title   ?? ls.title,
-            summary:   ov.summary ?? ls.summary,
-            xp:        ov.xp      ?? ls.xp,
-            content:   jsonParse(ls.content, []),
-            questions: jsonParse(ls.questions, []),
+            id:           ls.id,
+            title:        ov.title        ?? ls.title,
+            summary:      ov.summary      ?? ls.summary,
+            xp:           ov.xp           ?? ls.xp,
+            content:      jsonParse(ls.content, []),
+            questions:    jsonParse(ls.questions, []),
+            audioUrl:     ov.audioUrl     ?? null,
+            audioEnabled: ov.audioEnabled ?? false,
           };
         }),
     }));

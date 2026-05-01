@@ -43,6 +43,8 @@ export interface Lesson {
   xp: number;
   content: LessonContent[];
   questions: Question[];
+  audioUrl?: string | null;
+  audioEnabled?: boolean;
 }
 
 export interface LevelDef {
