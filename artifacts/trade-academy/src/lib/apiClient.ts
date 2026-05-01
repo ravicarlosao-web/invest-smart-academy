@@ -170,6 +170,18 @@ export const api = {
 
     getVideos:  () => adminRequest<unknown[]>("GET", "/admin/videos"),
     saveVideos: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/videos", items),
+
+    getPlanConfig: () =>
+      adminRequest<{ priceAoa: number; planName: string }>("GET", "/admin/plan-config"),
+    savePlanConfig: (cfg: { priceAoa: number; planName: string }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
+
+    finance: () =>
+      adminRequest<{
+        plan:    { priceAoa: number; planName: string };
+        counts:  { total: number; active: number; pending: number; expired: number; rejected: number };
+        revenue: { mrr: number; totalReceived: number; pendingRevenue: number; newLast30: number; newActiveLast30: number };
+      }>("GET", "/admin/finance"),
   },
 
   /* ---------- Public content (students) ---------- */

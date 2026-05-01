@@ -780,4 +780,101 @@ router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req:
   }
 });
 
+/* ---------------------------------------------------------------------------
+ * Plan Config — GET/PUT /admin/plan-config
+ * Stores { priceAoa, planName } in admin_settings under key "plan.config"
+ * ------------------------------------------------------------------------- */
+router.get("/plan-config", async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting<{ priceAoa: number; planName: string }>(
+      "plan.config",
+      { priceAoa: 5000, planName: "Plano Mensal" },
+    );
+    res.json(cfg);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/plan-config", async (req: any, res: any) => {
+  try {
+    const { priceAoa, planName } = req.body as { priceAoa?: number; planName?: string };
+    if (priceAoa !== undefined && (typeof priceAoa !== "number" || priceAoa <= 0)) {
+      return res.status(400).json({ error: "invalid_price" });
+    }
+    const current = await getSetting<{ priceAoa: number; planName: string }>(
+      "plan.config",
+      { priceAoa: 5000, planName: "Plano Mensal" },
+    );
+    await setSetting("plan.config", {
+      priceAoa: priceAoa ?? current.priceAoa,
+      planName: planName ?? current.planName,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
+ * Finance Overview — GET /admin/finance
+ * Revenue summary combining subscription stats with plan pricing
+ * ------------------------------------------------------------------------- */
+router.get("/finance", async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting<{ priceAoa: number; planName: string }>(
+      "plan.config",
+      { priceAoa: 5000, planName: "Plano Mensal" },
+    );
+
+    const subs = await db.select({
+      id:        subscriptionsTable.id,
+      status:    subscriptionsTable.status,
+      amount:    subscriptionsTable.amount,
+      createdAt: subscriptionsTable.createdAt,
+      expiresAt: subscriptionsTable.expiresAt,
+    }).from(subscriptionsTable).all();
+
+    const now = Date.now();
+    const active   = subs.filter((s: any) => s.status === "active" && (s.expiresAt == null || s.expiresAt > now));
+    const pending  = subs.filter((s: any) => s.status === "pending");
+    const expired  = subs.filter((s: any) => s.status === "expired" || (s.status === "active" && s.expiresAt != null && s.expiresAt <= now));
+    const rejected = subs.filter((s: any) => s.status === "rejected");
+
+    const totalReceived = [...active, ...expired]
+      .reduce((sum: number, s: any) => sum + (Number(s.amount) || cfg.priceAoa), 0);
+    const pendingRevenue = pending
+      .reduce((sum: number, s: any) => sum + (Number(s.amount) || cfg.priceAoa), 0);
+    const mrr = active.length * cfg.priceAoa;
+
+    // 30-day new subscribers trend
+    const cutoff30 = now - 30 * 24 * 60 * 60 * 1000;
+    const newLast30 = subs.filter((s: any) => Number(s.createdAt) >= cutoff30).length;
+    const newActiveLast30 = active.filter((s: any) => Number(s.createdAt) >= cutoff30).length;
+
+    res.json({
+      plan: cfg,
+      counts: {
+        total:   subs.length,
+        active:  active.length,
+        pending: pending.length,
+        expired: expired.length,
+        rejected: rejected.length,
+      },
+      revenue: {
+        mrr,
+        totalReceived,
+        pendingRevenue,
+        newLast30,
+        newActiveLast30,
+      },
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Shield, LogOut, Users, LineChart as LineChartIcon, BookOpen, Activity,
@@ -6,7 +6,8 @@ import {
   Compass, Library, BookMarked, BookText, Plus, Pencil, X, ChevronRight,
   BarChart3, GraduationCap, Star, ExternalLink, Tag, ChevronDown, ChevronUp,
   Coins, PlayCircle, Lock, CreditCard, CheckCircle2, Clock, XCircle,
-  FileText, Image, Download,
+  FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
+  Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
 } from "lucide-react";
 import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -104,52 +105,381 @@ function fmtDate(ms: number) { if (!ms) return "—"; return new Date(ms).toLoca
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
 /* =========================================================================
- * Overview tab
+ * Overview tab — SaaS Business Dashboard
  * ========================================================================= */
+type FinanceData = Awaited<ReturnType<typeof api.admin.finance>>;
+
+function StatCard({
+  label, value, sub, Icon, colorClass, trend,
+}: {
+  label: string; value: string; sub?: string;
+  Icon: React.ElementType; colorClass: string; trend?: "up" | "down" | "neutral";
+}) {
+  return (
+    <Card className="border-border/60 hover:border-border transition-colors">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+            <p className={cn("mt-1.5 font-mono text-2xl font-bold tracking-tight", colorClass)}>{value}</p>
+            {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+          </div>
+          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", colorClass === "text-bull" ? "bg-bull/10" : colorClass === "text-bear" ? "bg-bear/10" : colorClass === "text-warning" ? "bg-warning/10" : colorClass === "text-primary" ? "bg-primary/10" : "bg-muted")}>
+            <Icon className={cn("h-5 w-5", colorClass)} />
+          </div>
+        </div>
+        {trend && (
+          <div className={cn("mt-3 flex items-center gap-1 text-xs font-medium", trend === "up" ? "text-bull" : trend === "down" ? "text-bear" : "text-muted-foreground")}>
+            {trend === "up" ? <TrendingUp className="h-3 w-3" /> : trend === "down" ? <TrendingDown className="h-3 w-3" /> : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OverviewTab() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof api.admin.overview>> | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [fin, setFin]       = useState<FinanceData | null>(null);
+  const [users, setUsers]   = useState<Awaited<ReturnType<typeof api.admin.users>> | null>(null);
+  const [pendSubs, setPendSubs] = useState<SubscriptionWithUser[] | null>(null);
+  const [busy, setBusy]     = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { api.admin.overview().then(setData).catch((e) => setErr(String(e))); }, []);
+  async function load() {
+    setLoading(true);
+    try {
+      const [f, u, subs] = await Promise.all([
+        api.admin.finance(),
+        api.admin.users(),
+        api.adminSubscriptions.list("pending"),
+      ]);
+      setFin(f); setUsers(u); setPendSubs(subs);
+    } catch (e) { toast.error("Erro ao carregar dados: " + String(e)); }
+    finally { setLoading(false); }
+  }
 
-  if (err) return <p className="text-sm text-destructive p-4">{err}</p>;
-  if (!data) return <p className="text-sm text-muted-foreground p-4">A carregar...</p>;
+  useEffect(() => { load(); }, []);
 
-  const cards = [
-    { label: "Alunos registados",    value: String(data.totals.users),         icon: Users,          color: "text-primary" },
-    { label: "Trades fechados",      value: String(data.totals.trades),         icon: LineChartIcon,  color: "text-bull" },
-    { label: "Duelos realizados",    value: String(data.totals.duelos),         icon: Trophy,         color: "text-warning" },
-    { label: "XP médio / aluno",     value: data.learning.avgXp.toFixed(0),    icon: Star,           color: "text-yellow-400" },
-    { label: "Lições concluídas",    value: String(data.learning.totalLessonsCompleted), icon: GraduationCap, color: "text-info" },
-    { label: "Streak médio",         value: data.learning.avgStreak.toFixed(1) + " d", icon: BarChart3, color: "text-purple-400" },
-    { label: "Win rate simulador",   value: fmtPct(data.simulator.winRate),    icon: Activity,       color: "text-bull",
-      hint: `${data.simulator.wins}W · ${data.simulator.losses}L · ${data.simulator.liquidations} liq.` },
-    { label: "P&L total agregado",   value: fmtUsd(data.simulator.totalPnl),   icon: Coins,
-      color: data.simulator.totalPnl >= 0 ? "text-bull" : "text-bear" },
-  ];
+  async function handleApprove(id: string) {
+    setBusy(id);
+    try { await api.adminSubscriptions.approve(id); toast.success("Subscrição aprovada"); await load(); }
+    catch { toast.error("Erro ao aprovar"); }
+    finally { setBusy(null); }
+  }
+
+  async function handleReject(id: string) {
+    if (!window.confirm("Rejeitar este pedido?")) return;
+    setBusy("r" + id);
+    try { await api.adminSubscriptions.reject(id); toast.success("Pedido rejeitado"); await load(); }
+    catch { toast.error("Erro ao rejeitar"); }
+    finally { setBusy(null); }
+  }
+
+  const fmtAoa = (n: number) => n.toLocaleString("pt-AO") + " AOA";
+  const fmt = (ts: number) => new Date(ts).toLocaleDateString("pt-PT");
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20 text-muted-foreground text-sm gap-2">
+      <RefreshCw className="h-4 w-4 animate-spin" /> A carregar dashboard…
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold mb-1">Visão Geral</h2>
-        <p className="text-sm text-muted-foreground">Métricas consolidadas da plataforma em tempo real.</p>
+    <div className="space-y-7">
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Dashboard do Negócio</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Visão financeira e de crescimento do TradeAcademy · {fin?.plan.planName} · {fin ? fmtAoa(fin.plan.priceAoa) : "…"}/mês
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Atualizar
+        </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {cards.map((c) => (
-          <Card key={c.label} className="border-border/60">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className={cn("mt-0.5 rounded-md bg-muted p-2", c.color)}>
-                <c.icon className="h-4 w-4" />
+
+      {/* ── Receita ──────────────────────────────────────────── */}
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Receita</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Receita Recorrente (MRR)"
+            value={fin ? fmtAoa(fin.revenue.mrr) : "—"}
+            sub={fin ? `${fin.counts.active} assinante${fin.counts.active !== 1 ? "s" : ""} ativos` : undefined}
+            Icon={Banknote}
+            colorClass="text-bull"
+            trend="up"
+          />
+          <StatCard
+            label="Receita Total Recebida"
+            value={fin ? fmtAoa(fin.revenue.totalReceived) : "—"}
+            sub="Todos os pagamentos aprovados"
+            Icon={DollarSign}
+            colorClass="text-primary"
+          />
+          <StatCard
+            label="A Receber (pendente)"
+            value={fin ? fmtAoa(fin.revenue.pendingRevenue) : "—"}
+            sub={fin ? `${fin.counts.pending} pedido${fin.counts.pending !== 1 ? "s" : ""} aguardando aprovação` : undefined}
+            Icon={Hourglass}
+            colorClass={fin && fin.counts.pending > 0 ? "text-warning" : "text-muted-foreground"}
+          />
+        </div>
+      </section>
+
+      {/* ── Alunos ───────────────────────────────────────────── */}
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Alunos</h3>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard
+            label="Total Registados"
+            value={users ? String(users.length) : "—"}
+            sub="Contas criadas"
+            Icon={Users}
+            colorClass="text-primary"
+          />
+          <StatCard
+            label="Assinantes Ativos"
+            value={fin ? String(fin.counts.active) : "—"}
+            sub="Acesso ativo pago"
+            Icon={UserCheck}
+            colorClass="text-bull"
+          />
+          <StatCard
+            label="Pendentes"
+            value={fin ? String(fin.counts.pending) : "—"}
+            sub="Aguardando aprovação"
+            Icon={Clock}
+            colorClass={fin && fin.counts.pending > 0 ? "text-warning" : "text-muted-foreground"}
+          />
+          <StatCard
+            label="Expirados / Rejeitados"
+            value={fin ? String(fin.counts.expired + fin.counts.rejected) : "—"}
+            sub="Sem acesso atual"
+            Icon={UserX}
+            colorClass="text-muted-foreground"
+          />
+        </div>
+      </section>
+
+      {/* ── Novos nos últimos 30 dias ─────────────────────────── */}
+      {fin && (fin.revenue.newLast30 > 0 || fin.revenue.newActiveLast30 > 0) && (
+        <section>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
+                <ArrowUpRight className="h-4 w-4 text-primary" />
               </div>
-              <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground truncate">{c.label}</p>
-                <p className="font-mono text-xl font-bold tracking-tight">{c.value}</p>
-                {c.hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{c.hint}</p>}
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Últimos 30 dias</p>
+                <p className="font-bold text-sm">{fin.revenue.newLast30} pedido{fin.revenue.newLast30 !== 1 ? "s" : ""} novos · {fin.revenue.newActiveLast30} aprovado{fin.revenue.newActiveLast30 !== 1 ? "s" : ""}</p>
               </div>
+            </div>
+            {fin.revenue.newLast30 > 0 && (
+              <div className="ml-auto text-sm text-muted-foreground">
+                Taxa de conversão: <span className="font-bold text-foreground">{fin.revenue.newLast30 > 0 ? Math.round((fin.revenue.newActiveLast30 / fin.revenue.newLast30) * 100) : 0}%</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Pedidos pendentes ─────────────────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Pedidos Pendentes de Aprovação
+            {pendSubs && pendSubs.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-warning/20 text-warning text-[10px] font-bold px-1.5 py-0.5">
+                {pendSubs.length}
+              </span>
+            )}
+          </h3>
+        </div>
+        {(!pendSubs || pendSubs.length === 0) ? (
+          <Card className="border-dashed border-border/50">
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <CheckCircle2 className="h-8 w-8 text-bull/50 mb-2" />
+              <p className="text-sm font-medium text-muted-foreground">Sem pedidos pendentes</p>
+              <p className="text-xs text-muted-foreground/60 mt-0.5">Todos os pagamentos estão tratados.</p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead>Ref. Pagamento</TableHead>
+                  <TableHead>Comprovativo</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Pedido em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendSubs.map((sub) => (
+                  <TableRow key={sub.id}>
+                    <TableCell>
+                      <p className="font-medium text-sm">{sub.user.name}</p>
+                      <p className="text-xs text-muted-foreground">{sub.user.email}</p>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs">{sub.paymentReference ?? <span className="italic text-muted-foreground">Não fornecida</span>}</span>
+                    </TableCell>
+                    <TableCell>
+                      {(sub as SubscriptionWithUser & { hasReceipt?: boolean }).hasReceipt
+                        ? <span className="text-xs text-bull flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Anexado</span>
+                        : <span className="text-xs text-muted-foreground italic">Sem ficheiro</span>
+                      }
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{sub.amount.toLocaleString("pt-AO")} AOA</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{fmt(sub.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button size="sm" className="h-7 text-xs bg-bull hover:bg-bull/90"
+                          disabled={!!busy} onClick={() => handleApprove(sub.id)}>
+                          {busy === sub.id ? "…" : "Aprovar"}
+                        </Button>
+                        <Button size="sm" variant="outline"
+                          className="h-7 text-xs text-bear border-bear/40 hover:bg-bear/10"
+                          disabled={!!busy} onClick={() => handleReject(sub.id)}>
+                          {busy === "r" + sub.id ? "…" : "Rejeitar"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* =========================================================================
+ * Settings tab — Plan Configuration
+ * ========================================================================= */
+function SettingsTab() {
+  const [cfg, setCfg]       = useState<{ priceAoa: number; planName: string } | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editName, setEditName]   = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.admin.getPlanConfig()
+      .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
+      .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
+  }, []);
+
+  async function save() {
+    const price = Number(editPrice);
+    if (isNaN(price) || price <= 0) { toast.error("Preço inválido"); return; }
+    setSaving(true);
+    try {
+      await api.admin.savePlanConfig({ priceAoa: price, planName: editName.trim() || "Plano Mensal" });
+      setCfg({ priceAoa: price, planName: editName.trim() || "Plano Mensal" });
+      toast.success("Configurações do plano guardadas");
+    } catch { toast.error("Falha ao guardar"); }
+    finally { setSaving(false); }
+  }
+
+  const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-xl font-bold">Configurações do Plano</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Define o preço e o nome do plano de subscrição. Reflecte-se em todo o sistema.
+        </p>
       </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">A carregar…</p>
+      ) : (
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Banknote className="h-4 w-4 text-primary" /> Plano de Subscrição Mensal
+            </CardTitle>
+            <CardDescription>
+              O preço é apresentado nas páginas de pagamento e nas notificações enviadas aos alunos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-name">Nome do Plano</Label>
+              <Input
+                id="plan-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Plano Mensal"
+                className="max-w-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">Aparece nos e-mails e notificações para os alunos.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-price">Preço Mensal (AOA)</Label>
+              <div className="flex items-center gap-2 max-w-sm">
+                <Input
+                  id="plan-price"
+                  type="number"
+                  min={1}
+                  step={100}
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  placeholder="5000"
+                  className="flex-1"
+                />
+                <span className="text-sm font-medium text-muted-foreground">AOA / mês</span>
+              </div>
+              {Number(editPrice) > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Equivalente a <span className="font-semibold text-foreground">{Number(editPrice).toLocaleString("pt-AO")} AOA</span> por mês.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2 flex items-center gap-3">
+              <Button onClick={save} disabled={saving || !dirty}>
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                {saving ? "A guardar…" : "Guardar alterações"}
+              </Button>
+              {!dirty && cfg && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-bull" /> Guardado
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Info about impact */}
+      <Card className="border-border/40 bg-muted/30">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Onde este preço aparece</p>
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            {[
+              "Página de pagamento — valor que os alunos vêem ao subscrever",
+              "Notificação de aprovação enviada ao aluno",
+              "Dashboard financeiro do administrador (cálculo de MRR e receita)",
+              "Registo de cada pedido de subscrição aprovado",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-bull shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1781,16 +2111,16 @@ function SubscriptionsTab() {
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
-  { id: "overview",       label: "Visão Geral",          icon: BarChart3 },
-  { id: "subscriptions",  label: "Subscrições",          icon: CreditCard },
-  { id: "users",          label: "Alunos",               icon: Users },
-  { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap },
-  { id: "videos",         label: "Vídeo Aulas",          icon: PlayCircle },
-  { id: "strategies",     label: "Estratégias",          icon: Compass },
-  { id: "books",          label: "Biblioteca",           icon: BookMarked },
-  { id: "glossary",       label: "Glossário",            icon: BookText },
-  { id: "resources",      label: "Recursos",             icon: Library },
-  { id: "simulator",      label: "Simulador",            icon: LineChartIcon },
+  { id: "overview",       label: "Dashboard",             icon: BarChart3,      group: "negocio" },
+  { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
+  { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
+  { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
+  { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
+  { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
+  { id: "strategies",     label: "Estratégias",           icon: Compass,        group: "conteudo" },
+  { id: "books",          label: "Biblioteca",            icon: BookMarked,     group: "conteudo" },
+  { id: "glossary",       label: "Glossário",             icon: BookText,       group: "conteudo" },
+  { id: "resources",      label: "Recursos",              icon: Library,        group: "conteudo" },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]["id"];
@@ -1812,13 +2142,13 @@ export default function Admin() {
     overview:      <OverviewTab />,
     subscriptions: <SubscriptionsTab />,
     users:         <UsersTab />,
+    settings:      <SettingsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,
     strategies:    <StrategiesTab />,
     books:         <BooksTab />,
     glossary:      <GlossaryTab />,
     resources:     <ResourcesTab />,
-    simulator:     <SimulatorTab />,
   };
 
   return (
@@ -1848,23 +2178,52 @@ export default function Admin() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActive(item.id)}
-              title={!sidebarOpen ? item.label : undefined}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
-                active === item.id
-                  ? "bg-sidebar-accent text-primary font-medium"
-                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
-              )}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {sidebarOpen && <span className="truncate">{item.label}</span>}
-            </button>
-          ))}
+        <nav className="flex-1 overflow-y-auto py-2 px-1.5">
+          {/* Negócio */}
+          {sidebarOpen && (
+            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Negócio</p>
+          )}
+          <div className="space-y-0.5 mb-2">
+            {NAV_ITEMS.filter((n) => n.group === "negocio").map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActive(item.id)}
+                title={!sidebarOpen ? item.label : undefined}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
+                  active === item.id
+                    ? "bg-sidebar-accent text-primary font-medium"
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </button>
+            ))}
+          </div>
+          {/* Conteúdo */}
+          {sidebarOpen && (
+            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Conteúdo</p>
+          )}
+          {!sidebarOpen && <div className="my-1.5 border-t border-border/40 mx-1" />}
+          <div className="space-y-0.5">
+            {NAV_ITEMS.filter((n) => n.group === "conteudo").map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActive(item.id)}
+                title={!sidebarOpen ? item.label : undefined}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
+                  active === item.id
+                    ? "bg-sidebar-accent text-primary font-medium"
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </button>
+            ))}
+          </div>
         </nav>
 
         {/* Footer */}
