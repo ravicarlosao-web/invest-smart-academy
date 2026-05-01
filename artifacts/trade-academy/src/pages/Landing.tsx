@@ -4,7 +4,8 @@ import {
   TrendingUp, BookOpen, Trophy, BarChart2, Shield,
   Zap, GraduationCap, Brain, ChevronRight, Twitter,
   MessageSquare, Send, Play, Video, Clock, LineChart,
-  CheckCircle, Lock, ArrowRight,
+  CheckCircle, Lock, ArrowRight, Star, Crown, Users,
+  Flame,
 } from "lucide-react";
 import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png";
 
@@ -12,8 +13,8 @@ import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.
 const FEATURES = [
   {
     icon: BookOpen,
-    title: "Totalmente gratuito",
-    desc: "Sem subscrições, sem cartão de crédito. Todo o conteúdo acessível para sempre.",
+    title: "Nível Iniciante grátis",
+    desc: "Regista-te e começa já: as aulas do nível Iniciante são 100% gratuitas, sem cartão de crédito.",
   },
   {
     icon: BarChart2,
@@ -39,6 +40,40 @@ const STATS = [
   { value: "PT",  label: "Em Português" },
 ];
 
+const PLANS = [
+  {
+    name: "Iniciante",
+    price: "Grátis",
+    sub: "para sempre",
+    highlight: false,
+    features: [
+      "Nível 1 completo (Conceitos Básicos)",
+      "Simulador de trading ilimitado",
+      "Glossário e Recursos",
+      "Perfil com ranking real",
+      "Missões diárias e conquistas",
+    ],
+    cta: "Começar grátis",
+    to: "/cadastrar",
+  },
+  {
+    name: "Premium",
+    price: "5.000 AOA",
+    sub: "/ mês",
+    highlight: true,
+    features: [
+      "Tudo do plano Iniciante",
+      "Níveis Intermediário e Avançado",
+      "Vídeo Aulas curadas (desbloqueio sequencial)",
+      "Duelos contra outros traders",
+      "Biblioteca de livros e estratégias",
+      "Suporte prioritário",
+    ],
+    cta: "Subscrever agora",
+    to: "/cadastrar",
+  },
+];
+
 const VIDEO_FEATURES = [
   { icon: Video,        text: "Vídeos curados dos melhores criadores portugueses de trading" },
   { icon: Lock,         text: "Desbloqueio sequencial — cada vídeo abre ao concluíres o anterior" },
@@ -61,6 +96,7 @@ function Nav() {
 
       <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
         <a href="#funcionalidades" className="hover:text-white transition-colors">Funcionalidades</a>
+        <a href="#planos"          className="hover:text-white transition-colors">Planos</a>
         <a href="#video-aulas"     className="hover:text-white transition-colors">Vídeo Aulas</a>
         <a href="#simulador"       className="hover:text-white transition-colors">Simulador</a>
       </nav>
@@ -118,7 +154,7 @@ export default function Landing() {
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
             40 aulas estruturadas, vídeo aulas curadas dos melhores criadores
-            e um simulador com gráficos em tempo real. Tudo gratuito, tudo em português.
+            e um simulador com gráficos em tempo real. Nível Iniciante grátis — tudo em português.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
@@ -268,6 +304,75 @@ export default function Landing() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── PLANOS / PRICING ──────────────────────────────── */}
+      <section id="planos" className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-4xl mx-auto text-center mb-12">
+          <span className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-gray-400 mb-5">
+            <Crown className="w-3.5 h-3.5 text-cyan-400" />
+            Planos simples e transparentes
+          </span>
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+            Começa grátis.<br />
+            <span className="text-cyan-400">Cresce quando estiveres pronto.</span>
+          </h2>
+          <p className="text-gray-400 max-w-xl mx-auto">
+            Nível Iniciante sem custos. Quando quiseres avançar para Intermediário ou Avançado,
+            subscreveres por 5.000 AOA/mês — pagamento manual via transferência bancária.
+          </p>
+        </div>
+
+        <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-6">
+          {PLANS.map((plan) => (
+            <div
+              key={plan.name}
+              className={`rounded-2xl border p-7 flex flex-col gap-5 relative overflow-hidden ${
+                plan.highlight
+                  ? "border-cyan-500/40 bg-gradient-to-b from-cyan-500/10 to-[#0d0f18]"
+                  : "border-white/10 bg-[#0d0f18]"
+              }`}
+            >
+              {plan.highlight && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-16 bg-cyan-500/15 blur-2xl rounded-full pointer-events-none" />
+              )}
+              {plan.highlight && (
+                <span className="absolute top-4 right-4 text-[10px] font-bold bg-cyan-400 text-[#060709] px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  Mais popular
+                </span>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-gray-400 mb-1">{plan.name}</p>
+                <div className="flex items-end gap-1.5">
+                  <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                  <span className="text-sm text-gray-500 mb-1">{plan.sub}</span>
+                </div>
+              </div>
+              <ul className="space-y-2.5 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-400">
+                    <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${plan.highlight ? "text-cyan-400" : "text-gray-600"}`} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to={plan.to}
+                className={`flex items-center justify-center gap-2 font-bold px-6 py-3 rounded-full text-sm transition-colors ${
+                  plan.highlight
+                    ? "bg-cyan-400 hover:bg-cyan-300 text-[#060709]"
+                    : "border border-white/20 hover:border-white/40 text-white"
+                }`}
+              >
+                {plan.cta} <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-xs text-gray-600 mt-6">
+          Pagamento via transferência bancária · Confirmação manual pelo admin · Acesso imediato após aprovação
+        </p>
       </section>
 
       {/* ── VIDEO AULAS SECTION ───────────────────────────── */}
@@ -484,7 +589,7 @@ export default function Landing() {
             </h2>
             <p className="relative text-gray-400 mb-8 max-w-xl mx-auto">
               Começa do zero hoje: aulas escritas, vídeo aulas curadas e um simulador
-              profissional — sem gastar um cêntimo.
+              profissional. Nível Iniciante totalmente grátis — sem cartão de crédito.
             </p>
             <div className="relative flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
