@@ -2,21 +2,23 @@ import { create } from "zustand";
 import { api, type SubscriptionData } from "@/lib/apiClient";
 
 interface SubscriptionState {
-  subscription: SubscriptionData | null;
-  loading: boolean;
-  error: string | null;
+  subscription:  SubscriptionData | null;
+  history:       SubscriptionData[];
+  loading:       boolean;
+  error:         string | null;
 
   fetch:           (userId: string) => Promise<void>;
-  requestPayment:  (userId: string, reference?: string) => Promise<{ ok: boolean; error?: string }>;
-  updateReference: (userId: string, reference: string) => Promise<{ ok: boolean; error?: string }>;
+  fetchHistory:    (userId: string) => Promise<void>;
+  requestPayment:  (userId: string, opts?: { reference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) => Promise<{ ok: boolean; error?: string }>;
+  updateReference: (userId: string, opts: { reference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) => Promise<{ ok: boolean; error?: string }>;
   clear:           () => void;
 
-  /** Verifica se o utilizador tem acesso ao conteúdo premium (intermediário/avançado) */
   hasActiveSubscription: () => boolean;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
   subscription: null,
+  history:      [],
   loading:      false,
   error:        null,
 
@@ -30,14 +32,27 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
     }
   },
 
-  requestPayment: async (userId: string, reference?: string) => {
+  fetchHistory: async (userId: string) => {
     try {
-      const result = await api.subscription.request(userId, reference);
+      const { subscriptions } = await api.subscription.history(userId);
+      set({ history: subscriptions });
+    } catch {
+      // silent
+    }
+  },
+
+  requestPayment: async (userId, opts = {}) => {
+    try {
+      const result = await api.subscription.request(userId, {
+        paymentReference: opts.reference,
+        receiptData:      opts.receiptData,
+        receiptMimeType:  opts.receiptMimeType,
+        receiptFilename:  opts.receiptFilename,
+      });
       await get().fetch(userId);
       return { ok: result.ok };
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("409")) {
-        // Atualiza estado mesmo assim
         await get().fetch(userId);
         if (err.message.includes("already_active"))
           return { ok: false, error: "A tua subscrição já está ativa." };
@@ -47,17 +62,22 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
     }
   },
 
-  updateReference: async (userId: string, reference: string) => {
+  updateReference: async (userId, opts) => {
     try {
-      await api.subscription.updateReference(userId, reference);
+      await api.subscription.updateReference(userId, {
+        paymentReference: opts.reference,
+        receiptData:      opts.receiptData,
+        receiptMimeType:  opts.receiptMimeType,
+        receiptFilename:  opts.receiptFilename,
+      });
       await get().fetch(userId);
       return { ok: true };
     } catch {
-      return { ok: false, error: "Erro ao atualizar referência." };
+      return { ok: false, error: "Erro ao atualizar." };
     }
   },
 
-  clear: () => set({ subscription: null, loading: false, error: null }),
+  clear: () => set({ subscription: null, history: [], loading: false, error: null }),
 
   hasActiveSubscription: () => {
     const sub = get().subscription;

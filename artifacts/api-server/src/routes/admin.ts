@@ -393,12 +393,40 @@ router.get("/subscriptions", async (req, res) => {
 
     const result = subs
       .filter((s) => !status || s.status === status)
-      .map((s) => ({
-        ...s,
-        user: userMap[s.userId] ?? { id: s.userId, name: "—", email: "—" },
-      }));
+      .map((s) => {
+        const { receiptData: _rd, ...rest } = s;
+        return {
+          ...rest,
+          hasReceipt: !!s.receiptData,
+          user: userMap[s.userId] ?? { id: s.userId, name: "—", email: "—" },
+        };
+      });
 
     res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** GET /api/admin/subscriptions/:id/receipt — devolve comprovativo */
+router.get("/subscriptions/:id/receipt", async (req, res) => {
+  try {
+    const sub = await db
+      .select()
+      .from(subscriptionsTable)
+      .where(eq(subscriptionsTable.id, req.params.id))
+      .get();
+
+    if (!sub || !sub.receiptData) {
+      return res.status(404).json({ error: "receipt_not_found" });
+    }
+
+    res.json({
+      receiptData:     sub.receiptData,
+      receiptMimeType: sub.receiptMimeType,
+      receiptFilename: sub.receiptFilename,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

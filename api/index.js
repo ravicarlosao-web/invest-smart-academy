@@ -56470,6 +56470,12 @@ var subscriptionsTable = sqliteTable("subscriptions", {
   // AOA
   paymentReference: text("payment_reference"),
   // referência bancária fornecida pelo aluno
+  receiptData: text("receipt_data"),
+  // base64 do comprovativo (PDF/imagem)
+  receiptMimeType: text("receipt_mime_type"),
+  // ex: "image/jpeg", "application/pdf"
+  receiptFilename: text("receipt_filename"),
+  // nome original do ficheiro
   notes: text("notes"),
   // notas do admin (motivo de rejeição, etc.)
   createdAt: integer("created_at").notNull(),
@@ -57073,11 +57079,31 @@ router7.get("/subscriptions", async (req, res) => {
     }
     const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).all();
     const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
-    const result = subs.filter((s) => !status || s.status === status).map((s) => ({
-      ...s,
-      user: userMap[s.userId] ?? { id: s.userId, name: "\u2014", email: "\u2014" }
-    }));
+    const result = subs.filter((s) => !status || s.status === status).map((s) => {
+      const { receiptData: _rd, ...rest } = s;
+      return {
+        ...rest,
+        hasReceipt: !!s.receiptData,
+        user: userMap[s.userId] ?? { id: s.userId, name: "\u2014", email: "\u2014" }
+      };
+    });
     res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router7.get("/subscriptions/:id/receipt", async (req, res) => {
+  try {
+    const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, req.params.id)).get();
+    if (!sub || !sub.receiptData) {
+      return res.status(404).json({ error: "receipt_not_found" });
+    }
+    res.json({
+      receiptData: sub.receiptData,
+      receiptMimeType: sub.receiptMimeType,
+      receiptFilename: sub.receiptFilename
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -57158,7 +57184,46 @@ router8.get("/:userId", async (req, res) => {
       await db.update(subscriptionsTable).set({ status: "expired", updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
       sub.status = "expired";
     }
-    res.json({ subscription: sub });
+    const { receiptData: _rd, ...rest } = sub;
+    res.json({ subscription: { ...rest, hasReceipt: !!sub.receiptData } });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router8.get("/:userId/history", async (req, res) => {
+  try {
+    const now = Date.now();
+    const subs = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.userId, req.params.userId)).orderBy(desc(subscriptionsTable.createdAt)).all();
+    const result = subs.map((sub) => {
+      if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        sub.status = "expired";
+      }
+      const { receiptData: _rd, ...rest } = sub;
+      return { ...rest, hasReceipt: !!sub.receiptData };
+    });
+    res.json({ subscriptions: result });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+router8.get("/:userId/receipt/:id", async (req, res) => {
+  try {
+    const sub = await db.select().from(subscriptionsTable).where(
+      and(
+        eq(subscriptionsTable.id, req.params.id),
+        eq(subscriptionsTable.userId, req.params.userId)
+      )
+    ).get();
+    if (!sub || !sub.receiptData) {
+      return res.status(404).json({ error: "receipt_not_found" });
+    }
+    res.json({
+      receiptData: sub.receiptData,
+      receiptMimeType: sub.receiptMimeType,
+      receiptFilename: sub.receiptFilename
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -57166,7 +57231,7 @@ router8.get("/:userId", async (req, res) => {
 });
 router8.post("/:userId/request", async (req, res) => {
   try {
-    const { paymentReference } = req.body ?? {};
+    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body ?? {};
     const now = Date.now();
     const existing = await db.select().from(subscriptionsTable).where(
       and(
@@ -57175,10 +57240,7 @@ router8.post("/:userId/request", async (req, res) => {
       )
     ).get();
     if (existing) {
-      return res.status(409).json({
-        error: "already_pending",
-        message: "J\xE1 tens um pedido de subscri\xE7\xE3o pendente."
-      });
+      return res.status(409).json({ error: "already_pending", message: "J\xE1 tens um pedido pendente." });
     }
     const activeExisting = await db.select().from(subscriptionsTable).where(
       and(
@@ -57187,10 +57249,7 @@ router8.post("/:userId/request", async (req, res) => {
       )
     ).get();
     if (activeExisting && activeExisting.expiresAt && activeExisting.expiresAt > now) {
-      return res.status(409).json({
-        error: "already_active",
-        message: "A tua subscri\xE7\xE3o j\xE1 est\xE1 ativa."
-      });
+      return res.status(409).json({ error: "already_active", message: "A tua subscri\xE7\xE3o j\xE1 est\xE1 ativa." });
     }
     const id = genId();
     await db.insert(subscriptionsTable).values({
@@ -57199,6 +57258,9 @@ router8.post("/:userId/request", async (req, res) => {
       status: "pending",
       amount: 5e3,
       paymentReference: paymentReference ?? null,
+      receiptData: receiptData ?? null,
+      receiptMimeType: receiptMimeType ?? null,
+      receiptFilename: receiptFilename ?? null,
       createdAt: now,
       updatedAt: now
     });
@@ -57210,9 +57272,9 @@ router8.post("/:userId/request", async (req, res) => {
 });
 router8.patch("/:userId/reference", async (req, res) => {
   try {
-    const { paymentReference } = req.body ?? {};
-    if (!paymentReference) {
-      return res.status(400).json({ error: "paymentReference required" });
+    const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body ?? {};
+    if (!paymentReference && !receiptData) {
+      return res.status(400).json({ error: "paymentReference or receiptData required" });
     }
     const now = Date.now();
     const sub = await db.select().from(subscriptionsTable).where(
@@ -57222,7 +57284,14 @@ router8.patch("/:userId/reference", async (req, res) => {
       )
     ).orderBy(desc(subscriptionsTable.createdAt)).limit(1).get();
     if (!sub) return res.status(404).json({ error: "no_pending" });
-    await db.update(subscriptionsTable).set({ paymentReference, updatedAt: now }).where(eq(subscriptionsTable.id, sub.id));
+    const update = { updatedAt: now };
+    if (paymentReference) update.paymentReference = paymentReference;
+    if (receiptData) {
+      update.receiptData = receiptData;
+      update.receiptMimeType = receiptMimeType ?? null;
+      update.receiptFilename = receiptFilename ?? null;
+    }
+    await db.update(subscriptionsTable).set(update).where(eq(subscriptionsTable.id, sub.id));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);

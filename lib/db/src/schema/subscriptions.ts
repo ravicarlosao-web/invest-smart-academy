@@ -13,6 +13,9 @@ export const subscriptionsTable = sqliteTable("subscriptions", {
   status:           text("status").notNull().default("pending"), // "pending" | "active" | "expired" | "rejected"
   amount:           integer("amount").notNull().default(5000),   // AOA
   paymentReference: text("payment_reference"),            // referência bancária fornecida pelo aluno
+  receiptData:      text("receipt_data"),                 // base64 do comprovativo (PDF/imagem)
+  receiptMimeType:  text("receipt_mime_type"),            // ex: "image/jpeg", "application/pdf"
+  receiptFilename:  text("receipt_filename"),             // nome original do ficheiro
   notes:            text("notes"),                        // notas do admin (motivo de rejeição, etc.)
   createdAt:        integer("created_at").notNull(),      // Unix ms — quando o aluno pediu
   expiresAt:        integer("expires_at"),                // Unix ms — data de expiração (30 dias após aprovação)

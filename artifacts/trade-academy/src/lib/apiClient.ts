@@ -161,10 +161,14 @@ export const api = {
   subscription: {
     get: (userId: string) =>
       request<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
-    request: (userId: string, paymentReference?: string) =>
-      request<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, { paymentReference }),
-    updateReference: (userId: string, paymentReference: string) =>
-      request<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, { paymentReference }),
+    history: (userId: string) =>
+      request<{ subscriptions: SubscriptionData[] }>("GET", `/subscription/${userId}/history`),
+    request: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
+      request<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, body),
+    updateReference: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
+      request<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
+    getReceipt: (userId: string, subId: string) =>
+      request<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
   },
 
   /* ---------- Subscrições (admin) ---------- */
@@ -182,6 +186,8 @@ export const api = {
       adminRequest<{ ok: boolean; expiresAt: number }>("PATCH", `/admin/subscriptions/${id}/approve`),
     reject: (id: string, notes?: string) =>
       adminRequest<{ ok: boolean }>("PATCH", `/admin/subscriptions/${id}/reject`, { notes }),
+    getReceipt: (id: string) =>
+      adminRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/admin/subscriptions/${id}/receipt`),
   },
 } as const;
 
@@ -191,6 +197,9 @@ export type SubscriptionData = {
   status: "pending" | "active" | "expired" | "rejected";
   amount: number;
   paymentReference: string | null;
+  hasReceipt?: boolean;
+  receiptMimeType?: string | null;
+  receiptFilename?: string | null;
   notes: string | null;
   createdAt: number;
   expiresAt: number | null;

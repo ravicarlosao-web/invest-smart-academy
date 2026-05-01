@@ -94,6 +94,20 @@ export async function initDb(): Promise<void> {
   for (const stmt of statements) {
     await db.run(stmt);
   }
+
+  // Add new columns to existing tables (idempotent — errors ignored if column already exists)
+  const alterStatements = [
+    `ALTER TABLE subscriptions ADD COLUMN receipt_data TEXT`,
+    `ALTER TABLE subscriptions ADD COLUMN receipt_mime_type TEXT`,
+    `ALTER TABLE subscriptions ADD COLUMN receipt_filename TEXT`,
+  ];
+  for (const stmt of alterStatements) {
+    try {
+      await db.run(sql.raw(stmt));
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }
 
 export * from "./schema";

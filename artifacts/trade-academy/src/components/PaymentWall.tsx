@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { CreditCard, Clock, CheckCircle2, XCircle, AlertTriangle, Copy, Check } from "lucide-react";
+import { useState, useRef } from "react";
+import {
+  CreditCard, Clock, CheckCircle2, XCircle, AlertTriangle,
+  Copy, Check, Upload, FileText, Image, X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -13,6 +16,15 @@ const BANK_DETAILS = {
   valor:       "5.000,00 AOA",
 };
 
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const MAX_SIZE_MB = 5;
+
+interface ReceiptFile {
+  data:     string;  // base64
+  mimeType: string;
+  filename: string;
+}
+
 interface Props {
   onClose?: () => void;
 }
@@ -23,8 +35,11 @@ export function PaymentWall({ onClose }: Props) {
 
   const [step, setStep]       = useState<"info" | "form" | "done">("info");
   const [reference, setReference] = useState("");
+  const [receipt, setReceipt] = useState<ReceiptFile | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
   const [copied, setCopied]   = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -33,17 +48,51 @@ export function PaymentWall({ onClose }: Props) {
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setFileError("Formato não suportado. Use JPG, PNG, WebP ou PDF.");
+      return;
+    }
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setFileError(`Ficheiro muito grande. Máximo ${MAX_SIZE_MB} MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      setReceipt({ data: base64, mimeType: file.type, filename: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeReceipt = () => {
+    setReceipt(null);
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     setError(null);
 
     const hasPending = subscription?.status === "pending";
-    let result;
+    const opts = {
+      reference:       reference || undefined,
+      receiptData:     receipt?.data,
+      receiptMimeType: receipt?.mimeType,
+      receiptFilename: receipt?.filename,
+    };
 
-    if (hasPending && reference) {
-      result = await updateReference(user.id, reference);
+    let result;
+    if (hasPending) {
+      result = await updateReference(user.id, opts);
     } else {
-      result = await requestPayment(user.id, reference || undefined);
+      result = await requestPayment(user.id, opts);
     }
 
     if (!result.ok) {
@@ -63,35 +112,67 @@ export function PaymentWall({ onClose }: Props) {
         <div>
           <h3 className="text-lg font-semibold">Aguardando confirmação</h3>
           <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-            O teu pedido de subscrição está a ser verificado pelo administrador.
+            O teu pedido está a ser verificado pelo administrador.
             Receberás acesso assim que o pagamento for confirmado.
           </p>
         </div>
-        {subscription.paymentReference ? (
+
+        {/* Referência submetida */}
+        {subscription.paymentReference && (
           <div className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-sm">
-            <span className="text-muted-foreground">Referência submetida: </span>
+            <span className="text-muted-foreground">Referência: </span>
             <span className="font-mono font-semibold">{subscription.paymentReference}</span>
           </div>
-        ) : (
-          <div className="w-full max-w-sm space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Ainda não submeteste a referência do pagamento. Podes adicioná-la abaixo:
+        )}
+
+        {/* Comprovativo submetido */}
+        {subscription.hasReceipt && (
+          <div className="flex items-center gap-2 rounded-lg border border-bull/30 bg-bull/5 px-4 py-2 text-sm text-bull">
+            <CheckCircle2 className="h-4 w-4" />
+            Comprovativo enviado
+          </div>
+        )}
+
+        {/* Pode adicionar referência ou comprovativo */}
+        {(!subscription.paymentReference || !subscription.hasReceipt) && (
+          <div className="w-full max-w-sm space-y-3">
+            <p className="text-xs text-muted-foreground text-center">
+              Podes ainda adicionar {!subscription.paymentReference ? "a referência" : ""}{!subscription.paymentReference && !subscription.hasReceipt ? " e " : ""}{!subscription.hasReceipt ? "o comprovativo" : ""}:
             </p>
-            <div className="flex gap-2">
+
+            {!subscription.paymentReference && (
               <input
                 type="text"
-                className="flex-1 rounded-md border border-border bg-surface-1 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm"
                 placeholder="Ex: TRF-20240501-12345"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
               />
-              <Button size="sm" disabled={!reference || loading} onClick={handleSubmit}>
-                Guardar
-              </Button>
-            </div>
+            )}
+
+            {!subscription.hasReceipt && (
+              <ReceiptUploader
+                receipt={receipt}
+                fileError={fileError}
+                fileInputRef={fileInputRef}
+                onChange={handleFileChange}
+                onRemove={removeReceipt}
+              />
+            )}
+
             {error && <p className="text-xs text-bear">{error}</p>}
+
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={(!reference && !receipt) || loading}
+              onClick={handleSubmit}
+            >
+              {loading ? "A guardar…" : "Guardar"}
+            </Button>
           </div>
         )}
+
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose}>
             Fechar
@@ -117,11 +198,7 @@ export function PaymentWall({ onClose }: Props) {
           </p>
         </div>
         <Button onClick={() => setStep("info")}>Fazer novo pedido</Button>
-        {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Fechar
-          </Button>
-        )}
+        {onClose && <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>}
       </div>
     );
   }
@@ -139,27 +216,28 @@ export function PaymentWall({ onClose }: Props) {
             O administrador irá verificar o teu pagamento e ativar o acesso em breve.
           </p>
         </div>
-        {onClose && (
-          <Button onClick={onClose}>Fechar</Button>
-        )}
+        {onClose && <Button onClick={onClose}>Fechar</Button>}
       </div>
     );
   }
 
-  // ─── Formulário de referência ─────────────────────────────────────────────
+  // ─── Formulário ─────────────────────────────────────────────────────────
   if (step === "form") {
     return (
       <div className="flex flex-col gap-4 py-2">
         <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
           <p className="text-xs text-muted-foreground">
-            Após efetuar o pagamento no banco, adiciona a referência da transferência abaixo
-            para que o administrador possa confirmar o teu pagamento mais rapidamente.
+            Após efetuar o pagamento, adiciona a referência da transferência e/ou envia o comprovativo
+            para agilizar a confirmação.
           </p>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Referência do pagamento <span className="text-muted-foreground">(opcional)</span></label>
+        {/* Referência */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Referência do pagamento <span className="text-muted-foreground text-xs">(opcional)</span>
+          </label>
           <input
             type="text"
             className="w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm"
@@ -167,9 +245,20 @@ export function PaymentWall({ onClose }: Props) {
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            Podes enviar o pedido agora e adicionar a referência depois no teu perfil.
-          </p>
+        </div>
+
+        {/* Upload comprovativo */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Comprovativo de pagamento <span className="text-muted-foreground text-xs">(opcional — JPG, PNG, PDF, máx. 5 MB)</span>
+          </label>
+          <ReceiptUploader
+            receipt={receipt}
+            fileError={fileError}
+            fileInputRef={fileInputRef}
+            onChange={handleFileChange}
+            onRemove={removeReceipt}
+          />
         </div>
 
         {error && <p className="text-sm text-bear">{error}</p>}
@@ -189,7 +278,6 @@ export function PaymentWall({ onClose }: Props) {
   // ─── Info: dados bancários ────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-4 py-2">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
           <CreditCard className="h-5 w-5 text-primary-foreground" />
@@ -257,6 +345,60 @@ export function PaymentWall({ onClose }: Props) {
           Agora não
         </Button>
       )}
+    </div>
+  );
+}
+
+/* ── Upload de comprovativo ────────────────────────────────────────────────── */
+function ReceiptUploader({
+  receipt,
+  fileError,
+  fileInputRef,
+  onChange,
+  onRemove,
+}: {
+  receipt: ReceiptFile | null;
+  fileError: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
+}) {
+  if (receipt) {
+    const isPdf = receipt.mimeType === "application/pdf";
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-bull/40 bg-bull/5 px-3 py-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {isPdf
+            ? <FileText className="h-4 w-4 shrink-0 text-bull" />
+            : <Image className="h-4 w-4 shrink-0 text-bull" />}
+          <span className="text-sm truncate">{receipt.filename}</span>
+        </div>
+        <button onClick={onRemove} className="ml-2 shrink-0 text-muted-foreground hover:text-bear transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label
+        className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-surface-1 px-4 py-5 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
+      >
+        <Upload className="h-6 w-6 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">
+          Clica para anexar o comprovativo
+        </span>
+        <span className="text-xs text-muted-foreground/70">JPG · PNG · PDF · máx. 5 MB</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.pdf"
+          className="hidden"
+          onChange={onChange}
+        />
+      </label>
+      {fileError && <p className="mt-1 text-xs text-bear">{fileError}</p>}
     </div>
   );
 }

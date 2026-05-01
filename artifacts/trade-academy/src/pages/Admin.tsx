@@ -6,6 +6,7 @@ import {
   Compass, Library, BookMarked, BookText, Plus, Pencil, X, ChevronRight,
   BarChart3, GraduationCap, Star, ExternalLink, Tag, ChevronDown, ChevronUp,
   Coins, PlayCircle, Lock, CreditCard, CheckCircle2, Clock, XCircle,
+  FileText, Image, Download,
 } from "lucide-react";
 import type { SubscriptionWithUser } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -1463,6 +1464,8 @@ function SubscriptionsTab() {
   const [busy, setBusy]         = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState("");
+  const [receiptModal, setReceiptModal] = useState<{ data: string; mimeType: string; filename: string } | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -1507,6 +1510,18 @@ function SubscriptionsTab() {
       toast.error("Erro ao rejeitar");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function handleViewReceipt(id: string) {
+    setReceiptLoading(id);
+    try {
+      const data = await api.adminSubscriptions.getReceipt(id);
+      setReceiptModal({ data: data.receiptData, mimeType: data.receiptMimeType, filename: data.receiptFilename });
+    } catch {
+      toast.error("Erro ao carregar comprovativo");
+    } finally {
+      setReceiptLoading(null);
     }
   }
 
@@ -1613,6 +1628,7 @@ function SubscriptionsTab() {
                 <TableHead>Aluno</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Ref. Pagamento</TableHead>
+                <TableHead>Comprovativo</TableHead>
                 <TableHead>Pedido em</TableHead>
                 <TableHead>Expira em</TableHead>
                 <TableHead>Valor</TableHead>
@@ -1633,6 +1649,24 @@ function SubscriptionsTab() {
                     <span className="font-mono text-xs">
                       {sub.paymentReference ?? <span className="text-muted-foreground italic">Não fornecida</span>}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {(sub as SubscriptionWithUser & { hasReceipt?: boolean }).hasReceipt ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 text-xs"
+                        disabled={receiptLoading === sub.id}
+                        onClick={() => handleViewReceipt(sub.id)}
+                      >
+                        {sub.receiptMimeType === "application/pdf"
+                          ? <FileText className="h-3 w-3" />
+                          : <Image className="h-3 w-3" />}
+                        {receiptLoading === sub.id ? "…" : "Ver"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Sem ficheiro</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">{fmt(sub.createdAt)}</TableCell>
                   <TableCell className="text-sm">
@@ -1679,6 +1713,47 @@ function SubscriptionsTab() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {/* Modal comprovativo */}
+      {receiptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setReceiptModal(null)}>
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-xl border border-border bg-background p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                {receiptModal.mimeType === "application/pdf"
+                  ? <FileText className="h-4 w-4" />
+                  : <Image className="h-4 w-4" />}
+                {receiptModal.filename || "Comprovativo"}
+              </h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`data:${receiptModal.mimeType};base64,${receiptModal.data}`}
+                  download={receiptModal.filename || "comprovativo"}
+                  className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-surface-2 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" /> Download
+                </a>
+                <button onClick={() => setReceiptModal(null)} className="rounded-md p-1.5 hover:bg-surface-2 transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {receiptModal.mimeType.startsWith("image/") ? (
+              <img
+                src={`data:${receiptModal.mimeType};base64,${receiptModal.data}`}
+                alt="Comprovativo"
+                className="w-full rounded-lg object-contain"
+              />
+            ) : (
+              <iframe
+                src={`data:${receiptModal.mimeType};base64,${receiptModal.data}`}
+                className="h-[70vh] w-full rounded-lg border border-border"
+                title="Comprovativo PDF"
+              />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
