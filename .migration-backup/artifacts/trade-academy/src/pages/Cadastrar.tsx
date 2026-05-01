@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link, useNavigate } from "react-router-dom";
 import {
   TrendingUp, Eye, EyeOff, Loader2, ChevronRight,
@@ -104,6 +105,11 @@ function StepBar({ current }: { current: number }) {
 
 /* ─── Página principal ──────────────────────────────────── */
 export default function Cadastrar() {
+  useSEO({
+    title: "Criar Conta Grátis — TradeAcademy Angola",
+    description: "Regista-te gratuitamente no TradeAcademy e começa a aprender trading em Angola. Nível Iniciante 100% gratuito, sem cartão de crédito.",
+    canonical: "/cadastrar",
+  });
   const navigate           = useNavigate();
   const { register }       = useAuthStore();
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
@@ -156,9 +162,7 @@ export default function Cadastrar() {
 
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 mb-6">
-        <div className="w-9 h-9 rounded-xl bg-cyan-500 flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-white" />
-        </div>
+        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-10 h-10 object-contain" />
         <span className="font-bold text-xl tracking-tight">TradeAcademy</span>
       </Link>
 

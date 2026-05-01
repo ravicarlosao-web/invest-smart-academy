@@ -1,12 +1,15 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { LEVELS } from "@/data/curriculum";
+import { LEVELS as LEVELS_STATIC, type LevelDef } from "@/data/curriculum";
 import type { Question } from "@/data/curriculum";
+import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
-import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
+import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { ChartMarkExercise, evaluateMarks, type MarkLine } from "@/components/ChartMarkExercise";
 
@@ -14,18 +17,33 @@ type Answer = number | boolean | MarkLine[];
 
 type Phase = "content" | "quiz" | "result";
 
+const PREMIUM_DIFFICULTIES = ["intermediario", "avancado"];
+
 export default function Licao() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
   const completeLesson = useAppStore((s) => s.completeLesson);
+  const user = useAuthStore((s) => s.user);
+  const { fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
+  const [levels, setLevels] = useState<LevelDef[]>(LEVELS_STATIC);
+
+  useEffect(() => {
+    if (user) fetchSub(user.id);
+  }, [user, fetchSub]);
+
+  useEffect(() => {
+    api.content.curriculum()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setLevels(data as LevelDef[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
 
   const found = useMemo(() => {
-    for (const lvl of LEVELS) {
+    for (const lvl of levels) {
       const ls = lvl.lessons.find((l) => l.id === lessonId);
       if (ls) return { level: lvl, lesson: ls };
     }
     return null;
-  }, [lessonId]);
+  }, [levels, lessonId]);
 
   const [phase, setPhase] = useState<Phase>("content");
   const [contentIdx, setContentIdx] = useState(0);
@@ -39,6 +57,32 @@ export default function Licao() {
       <div className="container py-12 text-center">
         <p className="text-muted-foreground">Aula não encontrada.</p>
         <Button asChild variant="link"><Link to="/aprender">Voltar para trilha</Link></Button>
+      </div>
+    );
+  }
+
+  // Bloquear acesso direto a lições premium sem subscrição
+  if (PREMIUM_DIFFICULTIES.includes(found.level.difficulty) && !hasActiveSubscription()) {
+    return (
+      <div className="container py-12">
+        <div className="mx-auto max-w-md text-center space-y-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 mx-auto">
+            <Crown className="h-8 w-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold">Conteúdo Premium</h2>
+          <p className="text-muted-foreground text-sm">
+            Esta aula faz parte do nível <strong>{found.level.title}</strong> que requer uma subscrição ativa.
+            Subscreve por 5.000 AOA/mês para ter acesso total.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button asChild variant="outline">
+              <Link to="/aprender">Voltar</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/perfil">Ver subscrição</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

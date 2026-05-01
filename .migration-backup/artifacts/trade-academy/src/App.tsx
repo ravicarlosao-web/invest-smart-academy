@@ -10,6 +10,8 @@ import AuthGuard    from "./components/AuthGuard";
 import Landing      from "./pages/Landing";
 import Login        from "./pages/Login";
 import Cadastrar    from "./pages/Cadastrar";
+import Termos       from "./pages/Termos";
+import Privacidade  from "./pages/Privacidade";
 
 import Dashboard    from "./pages/Dashboard";
 import Aprender     from "./pages/Aprender";
@@ -24,6 +26,7 @@ import Biblioteca   from "./pages/Biblioteca";
 import BookReader   from "./pages/BookReader";
 import Estrategias  from "./pages/Estrategias";
 import VideoAulas   from "./pages/VideoAulas";
+import Financeiro   from "./pages/Financeiro";
 import Admin        from "./pages/Admin";
 import NotFound     from "./pages/NotFound.tsx";
 import UserStateSync from "./components/UserStateSync";
@@ -39,12 +42,16 @@ const App = () => (
         <UserStateSync />
         <Routes>
           {/* ── Páginas públicas ─────────────────────────────── */}
-          <Route path="/"          element={<Landing />} />
-          <Route path="/entrar"    element={<Login />} />
-          <Route path="/cadastrar" element={<Cadastrar />} />
+          <Route path="/"              element={<Landing />} />
+          <Route path="/entrar"        element={<Login />} />
+          <Route path="/login"         element={<Navigate to="/entrar" replace />} />
+          <Route path="/cadastrar"     element={<Cadastrar />} />
+          <Route path="/register"      element={<Navigate to="/cadastrar" replace />} />
+          <Route path="/termos"        element={<Termos />} />
+          <Route path="/privacidade"   element={<Privacidade />} />
 
-          {/* ── Painel de administração (autoprotegido por senha) ── */}
-          <Route path="/admin"     element={<Admin />} />
+          {/* ── Gestão interna (protegida por senha) ── */}
+          <Route path="/ta-painel-gestao" element={<Admin />} />
 
           {/* ── Páginas protegidas (requerem login) ──────────── */}
           <Route element={<AuthGuard />}>
@@ -63,6 +70,7 @@ const App = () => (
               <Route path="/estrategias"           element={<Estrategias />} />
               <Route path="/video-aulas"           element={<VideoAulas />} />
               <Route path="/video-aulas/:videoId"  element={<VideoAulas />} />
+              <Route path="/financeiro"            element={<Financeiro />} />
             </Route>
           </Route>
 

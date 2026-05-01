@@ -25,11 +25,31 @@ async function request<T>(
     headers: Object.keys(headers).length ? headers : undefined,
     body:    body ? JSON.stringify(body) : undefined,
   });
+
   if (!res.ok) {
+    // Token expirado ou inválido → logout automático para limpar sessão
+    if (res.status === 401 && extraHeaders?.["Authorization"]) {
+      try {
+        const { useAuthStore } = await import("@/store/useAuthStore");
+        useAuthStore.getState().logout();
+      } catch { /* ignorar */ }
+    }
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** Helper for authenticated user endpoints — injects the JWT Bearer token */
+function authRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let token = "";
+  try {
+    const raw = localStorage.getItem("trade-academy-auth");
+    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
+  } catch {
+    /* ignore */
+  }
+  return request<T>(method, path, body, token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
 /** Helper used by admin endpoints — injects the x-admin-token header */
@@ -45,14 +65,20 @@ function adminRequest<T>(method: string, path: string, body?: unknown): Promise<
 }
 
 export const api = {
+  /* ---------- Public (no auth) ---------- */
+  public: {
+    getPlanConfig: () =>
+      request<{ priceAoa: number; planName: string }>("GET", "/plan-config"),
+  },
+
   /* ---------- Auth ---------- */
   auth: {
-    register: (data: { id: string; name: string; email: string; passwordHash: string }) =>
-      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+    register: (data: { id: string; name: string; email: string; password: string }) =>
+      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/register", data,
       ),
-    login: (data: { email: string; passwordHash: string }) =>
-      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+    login: (data: { email: string; password: string }) =>
+      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/login", data,
       ),
   },
@@ -60,45 +86,45 @@ export const api = {
   /* ---------- Progress ---------- */
   progress: {
     get:  (userId: string) =>
-      request<Record<string, unknown>>("GET", `/progress/${userId}`),
+      authRequest<Record<string, unknown>>("GET", `/progress/${userId}`),
     save: (userId: string, data: Record<string, unknown>) =>
-      request<{ ok: boolean }>("PUT", `/progress/${userId}`, data),
+      authRequest<{ ok: boolean }>("PUT", `/progress/${userId}`, data),
   },
 
   /* ---------- Trades ---------- */
   trades: {
     list:  (userId: string, limit = 500) =>
-      request<unknown[]>("GET", `/trades/${userId}?limit=${limit}`),
+      authRequest<unknown[]>("GET", `/trades/${userId}?limit=${limit}`),
     sync:  (userId: string, trades: unknown[]) =>
-      request<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
+      authRequest<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
     clear: (userId: string) =>
-      request<{ ok: boolean }>("DELETE", `/trades/${userId}`),
+      authRequest<{ ok: boolean }>("DELETE", `/trades/${userId}`),
   },
 
   /* ---------- Notifications ---------- */
   notifications: {
     list:    (userId: string) =>
-      request<unknown[]>("GET", `/notifications/${userId}`),
+      authRequest<unknown[]>("GET", `/notifications/${userId}`),
     create:  (userId: string, n: Record<string, unknown>) =>
-      request<{ ok: boolean; id: string }>("POST", `/notifications/${userId}`, n),
+      authRequest<{ ok: boolean; id: string }>("POST", `/notifications/${userId}`, n),
     readAll: (userId: string) =>
-      request<{ ok: boolean }>("PATCH", `/notifications/${userId}/read-all`, {}),
+      authRequest<{ ok: boolean }>("PATCH", `/notifications/${userId}/read-all`, {}),
     dismiss: (userId: string, id: string) =>
-      request<{ ok: boolean }>("DELETE", `/notifications/${userId}/${id}`),
+      authRequest<{ ok: boolean }>("DELETE", `/notifications/${userId}/${id}`),
   },
 
   /* ---------- Duelos ---------- */
   duelos: {
     list:   (userId: string) =>
-      request<unknown[]>("GET", `/duelos/${userId}`),
+      authRequest<unknown[]>("GET", `/duelos/${userId}`),
     byCode: (code: string) =>
       request<unknown>("GET", `/duelos/code/${code}`),
     create: (userId: string, d: Record<string, unknown>) =>
-      request<{ ok: boolean; id: string; code: string }>("POST", `/duelos/${userId}`, d),
+      authRequest<{ ok: boolean; id: string; code: string }>("POST", `/duelos/${userId}`, d),
     update: (userId: string, id: string, patch: Record<string, unknown>) =>
-      request<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
+      authRequest<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
-      request<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
+      authRequest<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
   },
 
   /* ---------- Admin ---------- */
@@ -150,10 +176,91 @@ export const api = {
 
     getVideos:  () => adminRequest<unknown[]>("GET", "/admin/videos"),
     saveVideos: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/videos", items),
+
+    getPlanConfig: () =>
+      adminRequest<{ priceAoa: number; planName: string }>("GET", "/admin/plan-config"),
+    savePlanConfig: (cfg: { priceAoa: number; planName: string }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
+
+    getAiConfig: () =>
+      adminRequest<{ configured: boolean; keyPreview: string; model: string }>("GET", "/admin/ai-config"),
+    saveAiConfig: (cfg: { openaiKey?: string; model?: string }) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/ai-config", cfg),
+    testAiConfig: () =>
+      adminRequest<{ ok: boolean; model: string }>("POST", "/admin/ai-config/test"),
+
+    finance: () =>
+      adminRequest<{
+        plan:    { priceAoa: number; planName: string };
+        counts:  { total: number; active: number; pending: number; expired: number; rejected: number };
+        revenue: { mrr: number; totalReceived: number; pendingRevenue: number; newLast30: number; newActiveLast30: number };
+      }>("GET", "/admin/finance"),
   },
 
-  /* ---------- Public Videos (students) ---------- */
+  /* ---------- Public content (students) ---------- */
   videos: {
     list: () => request<unknown[]>("GET", "/videos"),
   },
+  leaderboard: () =>
+    request<{ rank: number; userId: string; name: string; xp: number }[]>("GET", "/leaderboard"),
+  content: {
+    glossary:   () => request<unknown[]>("GET", "/glossary"),
+    strategies: () => request<unknown[]>("GET", "/strategies"),
+    books:      () => request<unknown[]>("GET", "/books"),
+    resources:  () => request<unknown[]>("GET", "/resources"),
+    curriculum: () => request<unknown[]>("GET", "/curriculum"),
+  },
+
+  /* ---------- Subscrições (aluno) ---------- */
+  subscription: {
+    get: (userId: string) =>
+      authRequest<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
+    history: (userId: string) =>
+      authRequest<{ subscriptions: SubscriptionData[] }>("GET", `/subscription/${userId}/history`),
+    request: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
+      authRequest<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, body),
+    updateReference: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
+      authRequest<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
+    getReceipt: (userId: string, subId: string) =>
+      authRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
+  },
+
+  /* ---------- Subscrições (admin) ---------- */
+  adminSubscriptions: {
+    list: (status?: string) =>
+      adminRequest<SubscriptionWithUser[]>(
+        "GET",
+        status ? `/admin/subscriptions?status=${status}` : "/admin/subscriptions",
+      ),
+    stats: () =>
+      adminRequest<{ pending: number; active: number; expired: number; rejected: number; total: number }>(
+        "GET", "/admin/subscriptions/stats",
+      ),
+    approve: (id: string) =>
+      adminRequest<{ ok: boolean; expiresAt: number }>("PATCH", `/admin/subscriptions/${id}/approve`),
+    reject: (id: string, notes?: string) =>
+      adminRequest<{ ok: boolean }>("PATCH", `/admin/subscriptions/${id}/reject`, { notes }),
+    getReceipt: (id: string) =>
+      adminRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/admin/subscriptions/${id}/receipt`),
+  },
 } as const;
+
+export type SubscriptionData = {
+  id: string;
+  userId: string;
+  status: "pending" | "active" | "expired" | "rejected";
+  amount: number;
+  paymentReference: string | null;
+  hasReceipt?: boolean;
+  receiptMimeType?: string | null;
+  receiptFilename?: string | null;
+  notes: string | null;
+  createdAt: number;
+  expiresAt: number | null;
+  approvedAt: number | null;
+  updatedAt: number;
+};
+
+export type SubscriptionWithUser = SubscriptionData & {
+  user: { id: string; name: string; email: string };
+};

@@ -102,8 +102,38 @@ export const SYMBOL_MAP: Record<string, SymbolMeta> = Object.fromEntries(
 );
 
 /* ──────────────────────────────────────────────────────────
-   Gerador de ruído gaussiano (Box-Muller)
+   PRNG com seed determinístico — mulberry32
+   Produz valores em [0, 1) a partir de um seed fixo.
+   Garante que os mesmos inputs geram sempre os mesmos candles.
 ────────────────────────────────────────────────────────── */
+function seededRNG(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* djb2 hash de string → número inteiro sem sinal */
+function hashStr(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = (((h << 5) + h) ^ s.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+/* Distribuição normal por Box-Muller com PRNG injectável */
+function randnSeeded(rng: () => number): number {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/* Gerador de ruído gaussiano (Box-Muller) — usado em priceTick ao vivo */
 function randn() {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
@@ -135,6 +165,11 @@ export function priceTick(meta: SymbolMeta, currentPrice: number, intervalSec: n
 /* ──────────────────────────────────────────────────────────
    Seed de candles históricos (geração acelerada)
    Termina em endTime — liveStart (a vela live começa aí)
+
+   DETERMINISTICO: a mesma combinação de (símbolo + janela temporal)
+   produz sempre os mesmos candles, seja qual for o número de reloads.
+   A janela "rola" a cada `count * intervalSec` segundos — os candles
+   passados nunca mudam dentro dessa janela.
 ────────────────────────────────────────────────────────── */
 export function seedCandles(
   meta: SymbolMeta,
@@ -142,17 +177,25 @@ export function seedCandles(
   intervalSec: number,
   endTime = Math.floor(Date.now() / 1000),
 ): Candle[] {
+  // Índice de sessão: muda a cada (count * intervalSec) segundos.
+  // Para 200 candles × 60 s → sessão de 200 min; × 300 s → ~16 h.
+  const sessionLen  = count * intervalSec;
+  const sessionIdx  = Math.floor(endTime / sessionLen);
+  const seed        = (hashStr(meta.symbol) ^ sessionIdx) >>> 0;
+  const rng         = seededRNG(seed);
+
   const candles: Candle[] = [];
-  let price = meta.basePrice * (1 + (Math.random() - 0.5) * 0.05);
+  // Preço inicial determinístico (±2.5 % em torno do basePrice)
+  let price = meta.basePrice * (1 + (rng() - 0.5) * 0.05);
   let t = endTime - count * intervalSec;
-  t = t - (t % intervalSec); // alinha ao boundary
+  t = t - (t % intervalSec); // alinha ao boundary do intervalo
+
   for (let i = 0; i < count; i++) {
     const open = price;
     let high = open, low = open, close = open;
-    // Simula N ticks acelerados por vela (usa volatilidade já por-vela)
-    const ticks = 8;
-    for (let k = 0; k < ticks; k++) {
-      const change = close * (meta.drift + meta.volatility * randn() * 0.35);
+    // 8 ticks acelerados por vela com PRNG determinístico
+    for (let k = 0; k < 8; k++) {
+      const change = close * (meta.drift + meta.volatility * randnSeeded(rng) * 0.35);
       close += change;
       if (close > high) high = close;
       if (close < low)  low  = close;

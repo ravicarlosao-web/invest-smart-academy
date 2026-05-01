@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, X, Trophy, Zap, TrendingUp, Info, CheckCircle2, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +28,17 @@ function fmtTime(ts: number) {
 }
 
 export function NotificationCenter() {
-  const notifications   = useAppStore((s) => s.notifications);
-  const achievements    = useAppStore((s) => s.progress.achievements);
+  const navigate        = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const notifications    = useAppStore((s) => s.notifications);
+  const achievements     = useAppStore((s) => s.progress.achievements);
   const seenAchievements = useAppStore((s) => s.seenAchievements);
-  const addNotification = useAppStore((s) => s.addNotification);
-  const markAllRead     = useAppStore((s) => s.markAllRead);
-  const dismiss         = useAppStore((s) => s.dismissNotification);
-  const markSeen        = useAppStore((s) => s.markAchievementsSeen);
+  const addNotification  = useAppStore((s) => s.addNotification);
+  const markAllRead      = useAppStore((s) => s.markAllRead);
+  const markRead         = useAppStore((s) => s.markRead);
+  const dismiss          = useAppStore((s) => s.dismissNotification);
+  const markSeen         = useAppStore((s) => s.markAchievementsSeen);
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -71,8 +75,16 @@ export function NotificationCenter() {
     return () => { if (alertTimer.current) clearTimeout(alertTimer.current); };
   }, [addNotification]);
 
+  function handleNotifClick(n: typeof notifications[0]) {
+    markRead(n.id);
+    if (n.link) {
+      setOpen(false);
+      navigate(n.link);
+    }
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -127,31 +139,27 @@ export function NotificationCenter() {
                   key={n.id}
                   className={`group flex gap-3 px-4 py-3 transition-colors hover:bg-surface-1 ${
                     !n.read ? "bg-primary/5" : ""
-                  }`}
+                  } ${n.link ? "cursor-pointer" : ""}`}
+                  onClick={() => n.link && handleNotifClick(n)}
                 >
                   <div className="mt-0.5 shrink-0">
                     {TYPE_ICON[n.type] ?? <Info className="h-4 w-4 text-muted-foreground" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    {n.link ? (
-                      <Link to={n.link} className="block">
-                        <p className={`text-xs font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
-                          {n.title}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{n.message}</p>
-                      </Link>
-                    ) : (
-                      <>
-                        <p className={`text-xs font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
-                          {n.title}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{n.message}</p>
-                      </>
+                    <p className={`text-xs font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
+                      {n.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{n.message}</p>
+                    {n.link && n.type === "market" && (
+                      <p className="mt-1 text-[10px] font-semibold text-primary flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        Abrir no simulador →
+                      </p>
                     )}
                     <p className="mt-1 text-[10px] text-muted-foreground/50">{fmtTime(n.createdAt)}</p>
                   </div>
                   <button
-                    onClick={() => dismiss(n.id)}
+                    onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
                     className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label="Dispensar"
                   >

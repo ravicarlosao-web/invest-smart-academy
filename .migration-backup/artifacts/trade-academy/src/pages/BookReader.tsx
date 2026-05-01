@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, BookOpen, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Loader2, AlertTriangle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/useAppStore";

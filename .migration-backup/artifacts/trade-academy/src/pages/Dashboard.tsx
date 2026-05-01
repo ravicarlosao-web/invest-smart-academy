@@ -1,17 +1,29 @@
+import { useEffect } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   GraduationCap, LineChart, TrendingUp, Trophy, Flame, Wallet, Target,
+  Crown, AlertTriangle, Clock, CreditCard,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { LEVELS, TOTAL_LESSONS } from "@/data/curriculum";
 import { fmtUSD } from "@/lib/market";
 
 export default function Dashboard() {
+  useSEO({ title: "Dashboard — TradeAcademy", noindex: true });
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
+  const user = useAuthStore((s) => s.user);
+  const { subscription, fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
+
+  useEffect(() => {
+    if (user) fetchSub(user.id);
+  }, [user, fetchSub]);
 
   const completedPct = (progress.completedLessons.length / TOTAL_LESSONS) * 100;
 
@@ -29,6 +41,14 @@ export default function Dashboard() {
     ? (sim.history.filter((t) => t.pnl > 0).length / sim.history.length) * 100
     : 0;
   const totalPnl = sim.history.reduce((s, t) => s + t.pnl, 0);
+
+  const isActive = hasActiveSubscription();
+  const daysLeft = subscription?.expiresAt
+    ? Math.max(0, Math.ceil((subscription.expiresAt - Date.now()) / 86_400_000))
+    : null;
+  const expiringSoon = isActive && daysLeft !== null && daysLeft <= 7;
+  const isPending = subscription?.status === "pending";
+  const isExpired = subscription?.status === "expired" || subscription?.status === "rejected";
 
   return (
     <div className="container py-6 lg:py-8">
@@ -59,6 +79,47 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* Subscription banners */}
+      {expiringSoon && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-warning">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>A tua subscrição expira em <strong>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</strong>. Renova para manter o acesso ao conteúdo premium.</span>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0 border-warning/50 text-warning hover:bg-warning/10">
+            <Link to="/financeiro">Renovar</Link>
+          </Button>
+        </div>
+      )}
+      {isPending && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">
+          <Clock className="h-4 w-4 shrink-0" />
+          <span>O teu pedido de subscrição está <strong>a aguardar aprovação</strong>. Receberás uma notificação assim que for processado.</span>
+        </div>
+      )}
+      {isExpired && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-bear/30 bg-bear/10 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-bear">
+            <CreditCard className="h-4 w-4 shrink-0" />
+            <span>A tua subscrição expirou. <strong>Renova</strong> para aceder ao conteúdo Intermédio e Avançado.</span>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0 border-bear/50 text-bear hover:bg-bear/10">
+            <Link to="/financeiro">Renovar</Link>
+          </Button>
+        </div>
+      )}
+      {!subscription && user && !isPending && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-foreground">
+            <Crown className="h-4 w-4 shrink-0 text-primary" />
+            <span>Nível Iniciante é <strong>gratuito</strong>. Subscreve por 5.000 AOA/mês para aceder ao conteúdo Intermédio e Avançado.</span>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/financeiro">Subscrever</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Stats */}
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

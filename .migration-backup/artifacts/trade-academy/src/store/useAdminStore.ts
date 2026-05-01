@@ -14,7 +14,7 @@ import { api } from "@/lib/apiClient";
 interface AdminState {
   token: string | null;          // sha256(password) — also acts as the bearer
   loggedInAt: number | null;
-  login:  (password: string) => Promise<{ ok: boolean; error?: string }>;
+  login:  (password: string) => Promise<{ ok: boolean; error?: string; message?: string }>;
   logout: () => void;
   isAuthenticated: () => boolean;
 }
@@ -31,18 +31,29 @@ export const useAdminStore = create<AdminState>()(
       loggedInAt: null,
 
       login: async (password) => {
-        if (!password) return { ok: false, error: "Informe a senha." };
+        if (!password) return { ok: false, error: "invalid_password", message: "Informe a senha." };
         const hash = await sha256(password);
         try {
           await api.admin.login(hash);
           set({ token: hash, loggedInAt: Date.now() });
           return { ok: true };
         } catch (err) {
-          const msg =
-            err instanceof Error && err.message.includes("401")
-              ? "Senha incorreta."
-              : "Não foi possível verificar a senha.";
-          return { ok: false, error: msg };
+          // Tentar extrair o corpo JSON da resposta de erro
+          if (err instanceof Response || (err && typeof (err as any).json === "function")) {
+            try {
+              const body = await (err as Response).json();
+              return { ok: false, error: body.error ?? "invalid_password", message: body.message };
+            } catch { /* ignorar */ }
+          }
+          // Fallback para erros de rede ou outros
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("429") || msg.includes("too_many")) {
+            return { ok: false, error: "too_many_attempts", message: "Acesso bloqueado por demasiadas tentativas." };
+          }
+          if (msg.includes("401")) {
+            return { ok: false, error: "invalid_password", message: "Senha incorrecta." };
+          }
+          return { ok: false, error: "network_error", message: "Não foi possível verificar a senha." };
         }
       },
 

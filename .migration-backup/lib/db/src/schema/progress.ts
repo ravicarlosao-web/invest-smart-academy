@@ -28,6 +28,7 @@ export const progressTable = sqliteTable("progress", {
   // extra app state
   booksProgress:    text("books_progress").notNull().default("{}"),
   seenAchievements: text("seen_achievements").notNull().default("[]"),
+  watchedVideos:    text("watched_videos").notNull().default("[]"),
   // sim balance (restored on login)
   simCashBalance:   real("sim_cash_balance").notNull().default(10000),
   updatedAt:        integer("updated_at").notNull(),

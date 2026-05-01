@@ -14,7 +14,7 @@ const req   = createRequire(path.resolve(root, "artifacts/api-server/package.jso
 const { build } = req("esbuild");
 
 await build({
-  entryPoints: [path.resolve(__dirname, "server.ts")],
+  entryPoints: [path.resolve(__dirname, "_server.ts")],
   bundle:      true,
   platform:    "node",
   format:      "cjs",
@@ -31,6 +31,11 @@ await build({
     path.resolve(root, "lib/db/node_modules"),
   ],
   logLevel: "info",
+  // Vercel's CJS runtime calls module.exports directly.
+  // esbuild wraps ESM default exports as { default: fn }, so we unwrap it.
+  footer: {
+    js: "if (typeof module.exports.default === 'function') module.exports = module.exports.default;",
+  },
 });
 
 console.log("✓ api/index.js built successfully");

@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Link, useNavigate } from "react-router-dom";
-import { TrendingUp, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 
 export default function Login() {
+  useSEO({
+    title: "Entrar — TradeAcademy Angola",
+    description: "Inicia sessão no TradeAcademy Angola e continua a aprender trading em português.",
+    canonical: "/entrar",
+  });
   const navigate   = useNavigate();
   const { login }  = useAuthStore();
 
@@ -35,9 +41,7 @@ export default function Login() {
     <div className="min-h-screen bg-[#0f1117] text-white flex flex-col items-center justify-center px-4">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 mb-8">
-        <div className="w-9 h-9 rounded-xl bg-cyan-500 flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-white" />
-        </div>
+        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-10 h-10 object-contain" />
         <span className="font-bold text-xl tracking-tight">TradeAcademy</span>
       </Link>
 

@@ -1,8 +1,0 @@
-{
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": {
-    "noEmitOnError": false,
-    "skipLibCheck": true
-  },
-  "include": ["."]
-}

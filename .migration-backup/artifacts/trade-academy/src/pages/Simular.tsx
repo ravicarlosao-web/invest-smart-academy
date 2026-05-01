@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { PriceChart } from "@/components/PriceChart";
+import { PriceChart, type ChartType } from "@/components/PriceChart";
 import {
   useAppStore,
   calcUnrealizedPnL,
@@ -23,7 +25,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2 } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -91,6 +93,192 @@ function fmtCountdown(ms: number): string {
 }
 
 /* ============================================================
+   MOTOR DE FEEDBACK INTELIGENTE
+============================================================ */
+
+interface TradeFeedback {
+  type: "success" | "warning" | "error" | "info";
+  message: string;
+  hint?: string;
+}
+
+function calcMA(candles: Candle[], period: number): number | null {
+  if (candles.length < period) return null;
+  return candles.slice(-period).reduce((s, c) => s + c.close, 0) / period;
+}
+
+/** Analisa uma entrada de trade e devolve feedback educativo */
+function analyzeEntry(
+  candles: Candle[],
+  side: "buy" | "sell",
+  entryPrice: number,
+  stopLoss: number | undefined,
+  takeProfit: number | undefined,
+  size: number,
+  leverage: number,
+  equity: number,
+): TradeFeedback[] {
+  const items: TradeFeedback[] = [];
+  const dir = side === "buy" ? 1 : -1;
+
+  /* ── 1. Alinhamento com a tendência (MM20 vs MM50) ─── */
+  const ma20 = calcMA(candles, 20);
+  const ma50 = calcMA(candles, 50);
+  if (ma20 !== null && ma50 !== null) {
+    const trendUp = ma20 > ma50;
+    if ((side === "buy" && !trendUp) || (side === "sell" && trendUp)) {
+      items.push({
+        type: "warning",
+        message: "Entraste contra a tendência",
+        hint: trendUp
+          ? "MM20 está acima da MM50 — tendência de alta. Vender contra ela é de alto risco."
+          : "MM20 está abaixo da MM50 — tendência de baixa. Comprar contra ela é de alto risco.",
+      });
+    } else {
+      items.push({
+        type: "success",
+        message: "Entrada alinhada com a tendência",
+        hint: trendUp
+          ? "MM20 acima de MM50 — tendência de alta confirmada. Bem entrado!"
+          : "MM20 abaixo de MM50 — tendência de baixa confirmada. Bem entrado!",
+      });
+    }
+  }
+
+  /* ── 2. Stop loss check ─── */
+  if (!stopLoss || stopLoss <= 0) {
+    items.push({
+      type: leverage > 5 ? "error" : "warning",
+      message: leverage > 5 ? "Stop loss em falta — risco crítico" : "Sem stop loss definido",
+      hint: leverage > 5
+        ? `Com ${leverage}× de alavancagem, operar sem stop é uma receita para liquidação.`
+        : "Sem stop loss, as tuas perdas são ilimitadas. Define sempre um stop.",
+    });
+  } else {
+    const slDistPct = Math.abs((entryPrice - stopLoss) / entryPrice) * 100;
+    if (slDistPct < 0.3) {
+      items.push({
+        type: "warning",
+        message: "Stop loss demasiado apertado",
+        hint: `Está apenas ${slDistPct.toFixed(2)}% do preço de entrada — o ruído normal pode activá-lo prematuramente.`,
+      });
+    } else {
+      /* Risco por operação */
+      const riskUsd = Math.abs((entryPrice - stopLoss) * dir) * size;
+      const riskPct = equity > 0 ? (riskUsd / equity) * 100 : 0;
+      if (riskPct > 5) {
+        items.push({
+          type: "error",
+          message: "Risco por operação muito elevado",
+          hint: `Estás a arriscar ${riskPct.toFixed(1)}% do capital. A regra profissional é máx. 1–2% por trade.`,
+        });
+      } else if (riskPct > 2) {
+        items.push({
+          type: "warning",
+          message: `Risco de ${riskPct.toFixed(1)}% por operação`,
+          hint: "Ligeiramente acima da regra dos 2% — pondera reduzir o tamanho da posição.",
+        });
+      } else {
+        items.push({
+          type: "success",
+          message: `Risco bem calibrado: ${riskPct.toFixed(1)}%`,
+          hint: "Dentro da regra dos 2% por operação. Excelente gestão de risco!",
+        });
+      }
+
+      /* R:R check */
+      if (takeProfit && takeProfit > 0) {
+        const slDist = Math.abs(entryPrice - stopLoss);
+        const tpDist = Math.abs(takeProfit - entryPrice);
+        const rr = slDist > 0 ? tpDist / slDist : 0;
+        if (rr < 1) {
+          items.push({
+            type: "warning",
+            message: "Relação risco-retorno desfavorável",
+            hint: `R:R de ${rr.toFixed(2)}:1 — o take profit está mais perto do que o stop loss.`,
+          });
+        } else if (rr >= 2) {
+          items.push({
+            type: "success",
+            message: `Excelente R:R de ${rr.toFixed(1)}:1`,
+            hint: "R:R acima de 2:1 é o padrão dos traders profissionais. Muito bem!",
+          });
+        }
+      }
+    }
+  }
+
+  return items.slice(0, 3);
+}
+
+/** Analisa a saída de um trade e devolve feedback educativo */
+function analyzeExit(
+  trade: { side: "buy" | "sell"; pnl: number; reason: string; entryPrice: number; exitPrice: number; size: number },
+  equity: number,
+): TradeFeedback[] {
+  const items: TradeFeedback[] = [];
+  const pnlPct = equity > 0 ? (Math.abs(trade.pnl) / equity) * 100 : 0;
+  const priceMovePct = Math.abs((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100;
+
+  if (trade.reason === "liquidation") {
+    items.push({
+      type: "error",
+      message: "Liquidação — capital perdido",
+      hint: "Com alavancagem elevada, o stop loss é obrigatório. Nunca trades sem ele.",
+    });
+  } else if (trade.reason === "stop") {
+    if (priceMovePct < 0.3) {
+      items.push({
+        type: "warning",
+        message: "Stop loss mal posicionado",
+        hint: "O stop estava demasiado apertado — o ruído normal do mercado activou-o. Dá mais espaço ao preço.",
+      });
+    } else {
+      items.push({
+        type: "info",
+        message: "Stop loss activado — perda controlada",
+        hint: "Limitar perdas é boa gestão de risco. Reavalia o ponto de entrada e o posicionamento do stop.",
+      });
+    }
+  } else if (trade.reason === "target") {
+    items.push({
+      type: "success",
+      message: "Take profit atingido! 🎯",
+      hint: "Excelente disciplina — seguiste o plano e deixaste o trade correr até ao objectivo.",
+    });
+  } else {
+    /* Manual */
+    if (trade.pnl > 0) {
+      items.push({
+        type: "info",
+        message: "Lucro realizado manualmente",
+        hint: "Boa saída! Para mais consistência, define take profits automáticos e evita decisões emocionais.",
+      });
+    } else {
+      items.push({
+        type: "warning",
+        message: "Saída manual em prejuízo",
+        hint: "Tinhas um stop loss definido? Saídas manuais emocionais prejudicam a consistência.",
+      });
+    }
+  }
+
+  if (pnlPct > 8) {
+    items.push({
+      type: trade.pnl > 0 ? "success" : "error",
+      message: trade.pnl > 0
+        ? `Grande ganho: +${pnlPct.toFixed(1)}% do capital`
+        : `Grande perda: −${pnlPct.toFixed(1)}% do capital`,
+      hint: trade.pnl > 0
+        ? "Regista este trade no diário — o que fizeste bem? Consegues repetir?"
+        : "Regista este trade — o que falhaste? Como o evitar no futuro?",
+    });
+  }
+
+  return items;
+}
+
+/* ============================================================
    PÁGINA PRINCIPAL
 ============================================================ */
 
@@ -138,17 +326,39 @@ function CandleCountdown({ intervalSec }: { intervalSec: number }) {
 }
 
 export default function Simular() {
+  useSEO({ title: "Simulador de Trading — TradeAcademy", noindex: true });
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];
   const tf = TIMEFRAMES[tfIdx];
 
+  /* ── Auto-switch symbol via ?symbol= query param (deep-link from notifications) ── */
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const paramSymbol = searchParams.get("symbol");
+    if (paramSymbol && SYMBOL_MAP[paramSymbol] && paramSymbol !== symbol) {
+      setSymbol(paramSymbol);
+      // Clean the param from the URL after applying it
+      setSearchParams((p) => { p.delete("symbol"); return p; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [showRsi, setShowRsi] = useState(false);
   const [rsiPeriod, setRsiPeriod] = useState(14);
   const [showMacd, setShowMacd] = useState(false);
   const [macdFast, setMacdFast] = useState(12);
   const [macdSlow, setMacdSlow] = useState(26);
   const [macdSignal, setMacdSignal] = useState(9);
+
+  const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
+    { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
+    { id: "heikin-ashi",  label: "Heikin-Ashi",     short: "H.Ashi", Icon: Activity   },
+    { id: "bar",          label: "Barras OHLC",      short: "Barras", Icon: BarChart3  },
+    { id: "line",         label: "Linha",            short: "Linha",  Icon: Minus      },
+    { id: "area",         label: "Área",             short: "Área",   Icon: AreaChart  },
+  ];
 
   /* responsive chart height */
   const [windowWidth, setWindowWidth] = useState(() =>
@@ -300,7 +510,10 @@ export default function Simular() {
   const [cooldownUntil, setCooldownUntil]   = useState<number | null>(null);
   const [cooldownReason, setCooldownReason] = useState("");
   const [tickNow, setTickNow]               = useState(Date.now());
-  const prevHistLen = useRef(history.length);
+  // Initialize to -1 so the first effect run (which may fire AFTER Zustand
+  // rehydrates from localStorage, causing history.length to jump from 0→N)
+  // is always treated as a "baseline snapshot" and never shows stale feedback.
+  const prevHistLen = useRef(-1);
 
   // Ticking clock — updates every second for the countdown
   useEffect(() => {
@@ -310,6 +523,12 @@ export default function Simular() {
 
   // Detect new trade closures and trigger cooldown if needed
   useEffect(() => {
+    // -1 means first run. Snapshot the current length (could be post-hydration)
+    // without treating existing trades as new ones.
+    if (prevHistLen.current === -1) {
+      prevHistLen.current = history.length;
+      return;
+    }
     if (history.length <= prevHistLen.current) {
       prevHistLen.current = history.length;
       return;
@@ -340,6 +559,16 @@ export default function Simular() {
       setCooldownReason("2 perdas seguidas — respira 5 minutos");
       toast.warning("Cooldown de 5 min activado — 2 perdas seguidas.");
     }
+
+    // Feedback inteligente de saída
+    if (feedbackEnabled) {
+      const fb = analyzeExit(latest, cash + positions.reduce((s, p) => s + positionMargin(p), 0) + upnl);
+      if (fb.length > 0) {
+        setExitFeedback(fb);
+        if (exitFeedbackTimer.current) window.clearTimeout(exitFeedbackTimer.current);
+        exitFeedbackTimer.current = window.setTimeout(() => setExitFeedback(null), 14_000);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
 
@@ -354,6 +583,11 @@ export default function Simular() {
   /* ── Custo Realista (Spread + Comissão) ─────────────── */
   const [spreadEnabled,     setSpreadEnabled]     = useState(true);
   const [commissionEnabled, setCommissionEnabled] = useState(true);
+
+  /* ── Feedback Inteligente ────────────────────────────── */
+  const [feedbackEnabled, setFeedbackEnabled] = useState(true);
+  const [exitFeedback, setExitFeedback]       = useState<TradeFeedback[] | null>(null);
+  const exitFeedbackTimer = useRef<number | null>(null);
   const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
@@ -395,6 +629,24 @@ export default function Simular() {
 
       {/* Desafios ativos */}
       <ActiveChallengeBanner challenges={challenges} equityVal={equityVal} historyCount={history.length} />
+
+      {/* Feedback de saída de trade */}
+      {exitFeedback && exitFeedback.length > 0 && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-xs font-bold text-primary uppercase tracking-wider">Análise do teu trade</p>
+            </div>
+            <button onClick={() => setExitFeedback(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {exitFeedback.map((fb, i) => (
+            <FeedbackCard key={i} item={fb} />
+          ))}
+        </div>
+      )}
 
       {/* Conta zerada — banner de quarentena */}
       {isBusted && (
@@ -449,6 +701,33 @@ export default function Simular() {
                 <CandleCountdown intervalSec={tf.seconds} />
               </div>
               <div className="flex items-center gap-2">
+                {/* ── Seletor de tipo de gráfico ── */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1 rounded border border-border/40 px-2 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2">
+                      {(() => { const ct = CHART_TYPES.find(t => t.id === chartType)!; return <><ct.Icon className="h-3 w-3" /><span>{ct.short}</span><ChevronDown className="h-2.5 w-2.5 opacity-60" /></>; })()}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-44 p-1">
+                    {CHART_TYPES.map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => setChartType(id)}
+                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-[11px] transition-colors ${
+                          chartType === id
+                            ? "bg-primary/15 text-primary font-semibold"
+                            : "text-foreground/80 hover:bg-surface-2"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {label}
+                        {chartType === id && <span className="ml-auto text-primary">✓</span>}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+
+                <div className="h-4 w-px bg-border/40" />
                 <Badge variant="outline" className="font-mono text-[10px]">MM 20</Badge>
                 <button
                   onClick={() => setShowRsi((v) => !v)}
@@ -458,6 +737,22 @@ export default function Simular() {
                   onClick={() => setShowMacd((v) => !v)}
                   className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${showMacd ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"}`}
                 >MACD</button>
+                {/* ── Botão Coach IA ── */}
+                <button
+                  onClick={() => setFeedbackEnabled((v) => !v)}
+                  title={feedbackEnabled ? "Desactivar análise de trades" : "Activar análise de trades"}
+                  className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold transition-all ${
+                    feedbackEnabled
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-surface-2"
+                  }`}
+                >
+                  <Brain className="h-3 w-3" />
+                  <span className="hidden sm:inline">Coach IA</span>
+                  {feedbackEnabled && (
+                    <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-primary-foreground/80 animate-pulse" />
+                  )}
+                </button>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground">
@@ -528,6 +823,24 @@ export default function Simular() {
                         <span className="text-[10px] font-semibold text-primary">ON</span>
                       </div>
                     </div>
+                    {/* ── Feedback Inteligente ── */}
+                    <div className="border-t border-border pt-3 space-y-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                        <Brain className="h-3.5 w-3.5 text-primary" />Feedback Inteligente
+                      </Label>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-medium">Análise de trades</p>
+                          <p className="text-[10px] text-muted-foreground">Tendência, stop, risco, R:R</p>
+                        </div>
+                        <Switch checked={feedbackEnabled} onCheckedChange={setFeedbackEnabled} />
+                      </div>
+                      {feedbackEnabled && (
+                        <p className="text-[10px] text-primary bg-primary/10 rounded px-2 py-1">
+                          ✓ Feedback activo — cada trade será analisado
+                        </p>
+                      )}
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
@@ -542,6 +855,7 @@ export default function Simular() {
               <PriceChart
                 candles={candles}
                 precision={meta.precision}
+                chartType={chartType}
                 movingAverage={20}
                 showRsi={showRsi}
                 rsiPeriod={rsiPeriod}
@@ -632,6 +946,9 @@ export default function Simular() {
           bustCooldownEnd={bustCooldownEnd}
           now={tickNow}
           onClearCooldown={() => setCooldownUntil(null)}
+          feedbackEnabled={feedbackEnabled}
+          candles={candles}
+          equity={equityVal}
           onSubmitMarket={(order) => {
             if (cooldownActive) {
               toast.error("Trading bloqueado — aguarda o fim do cooldown.");
@@ -1250,6 +1567,7 @@ function OrderPanel({
   cooldownActive, cooldownSecsLeft, cooldownReason, onClearCooldown,
   bustCooldownEnd, now,
   onSubmitMarket, onSubmitPending, onReset,
+  feedbackEnabled, candles, equity,
 }: {
   symbol: string;
   lastPrice: number;
@@ -1267,12 +1585,17 @@ function OrderPanel({
   onSubmitMarket: (o: OrderInput) => void;
   onSubmitPending: (o: OrderInput) => void;
   onReset: () => void;
+  feedbackEnabled: boolean;
+  candles: Candle[];
+  equity: number;
 }) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [leverage, setLeverage] = useState<number>(1);
   const [orderType, setOrderType] = useState<OrderTypeUI>("market");
   const [triggerPrice, setTriggerPrice] = useState<string>("");
   const [note, setNote] = useState<string>("");
+  const [entryFeedback, setEntryFeedback] = useState<TradeFeedback[] | null>(null);
+  const entryFeedbackTimer = useRef<number | null>(null);
 
   const defaultSize = useMemo(() => {
     const target = cash * 0.02;
@@ -1346,6 +1669,20 @@ function OrderPanel({
 
     if (orderType === "market") {
       onSubmitMarket(order);
+      /* Feedback de entrada apenas em ordens de mercado executadas imediatamente */
+      if (feedbackEnabled) {
+        const fb = analyzeEntry(
+          candles, side, effectivePrice,
+          !isNaN(slNum) && slNum > 0 ? slNum : undefined,
+          !isNaN(tpNum) && tpNum > 0 ? tpNum : undefined,
+          sizeNum, leverage, equity,
+        );
+        if (fb.length > 0) {
+          setEntryFeedback(fb);
+          if (entryFeedbackTimer.current) window.clearTimeout(entryFeedbackTimer.current);
+          entryFeedbackTimer.current = window.setTimeout(() => setEntryFeedback(null), 18_000);
+        }
+      }
     } else {
       onSubmitPending(order);
     }
@@ -1566,6 +1903,24 @@ function OrderPanel({
 
       {exceeds && <p className="text-center text-[11px] text-bear">Margem insuficiente. Reduza tamanho ou aumente alavancagem.</p>}
 
+      {/* ── Feedback de Entrada ── */}
+      {entryFeedback && entryFeedback.length > 0 && (
+        <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Brain className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[11px] font-bold text-primary uppercase tracking-wider">Análise da entrada</span>
+            </div>
+            <button onClick={() => setEntryFeedback(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          {entryFeedback.map((fb, i) => (
+            <FeedbackCard key={i} item={fb} compact />
+          ))}
+        </div>
+      )}
+
       <div className="border-t border-border pt-2 space-y-1.5">
         {bustCooldownEnd != null && now < bustCooldownEnd ? (
           <div className="rounded-md border border-bear/30 bg-bear/10 px-3 py-2 text-center">
@@ -1588,6 +1943,50 @@ function MetricRow({ label, value, mono, valueClass = "" }: { label: string; val
     <div className="flex items-center justify-between py-0.5">
       <span className="text-muted-foreground">{label}</span>
       <span className={`${mono ? "font-mono" : ""} font-semibold ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
+/* ============================================================
+   COMPONENTE: Cartão de feedback de trade
+============================================================ */
+
+function FeedbackCard({ item, compact = false }: { item: TradeFeedback; compact?: boolean }) {
+  const cfg = {
+    success: {
+      bg: "bg-bull/10 border-bull/30",
+      text: "text-bull",
+      icon: <ThumbsUp className="h-3.5 w-3.5 shrink-0 text-bull" />,
+    },
+    warning: {
+      bg: "bg-warning/10 border-warning/30",
+      text: "text-warning",
+      icon: <Lightbulb className="h-3.5 w-3.5 shrink-0 text-warning" />,
+    },
+    error: {
+      bg: "bg-bear/10 border-bear/30",
+      text: "text-bear",
+      icon: <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-bear" />,
+    },
+    info: {
+      bg: "bg-primary/10 border-primary/30",
+      text: "text-primary",
+      icon: <Zap className="h-3.5 w-3.5 shrink-0 text-primary" />,
+    },
+  }[item.type];
+
+  return (
+    <div className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${cfg.bg}`}>
+      <div className="mt-0.5">{cfg.icon}</div>
+      <div>
+        <p className={`text-[11px] font-semibold ${cfg.text}`}>{item.message}</p>
+        {item.hint && !compact && (
+          <p className="mt-0.5 text-[10px] text-muted-foreground leading-relaxed">{item.hint}</p>
+        )}
+        {item.hint && compact && (
+          <p className="mt-0.5 text-[10px] text-muted-foreground leading-relaxed">{item.hint}</p>
+        )}
+      </div>
     </div>
   );
 }

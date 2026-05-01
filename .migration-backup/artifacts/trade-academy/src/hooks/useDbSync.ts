@@ -11,6 +11,11 @@ import { useAppStore }                    from "@/store/useAppStore";
 import type { DueloEntry }               from "@/store/useAppStore";
 import type { AppNotification }          from "@/data/notifications";
 import { api }                           from "@/lib/apiClient";
+import { useAuthStore }                  from "@/store/useAuthStore";
+
+function isUnauthorized(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("→ 401");
+}
 
 const PROGRESS_DEBOUNCE_MS = 4_000;
 
@@ -25,6 +30,7 @@ function buildProgressPayload(s: ReturnType<typeof useAppStore.getState>) {
     settings:         s.settings,
     booksProgress:    s.booksProgress,
     seenAchievements: s.seenAchievements,
+    watchedVideos:    s.watchedVideos,
     simCashBalance:   s.sim.cashBalance,
   };
 }
@@ -52,7 +58,10 @@ export function useDbSync(userId: string | null) {
     if (progressTimer.current) clearTimeout(progressTimer.current);
     progressTimer.current = setTimeout(() => {
       const payload = buildProgressPayload(store.getState());
-      api.progress.save(uid, payload).catch(console.error);
+      api.progress.save(uid, payload).catch((err) => {
+        if (isUnauthorized(err)) useAuthStore.getState().logout();
+        else console.error(err);
+      });
     }, PROGRESS_DEBOUNCE_MS);
   }, [store]);
 
@@ -86,6 +95,15 @@ export function useDbSync(userId: string | null) {
 
         if (cancelled) return;
 
+        /* ── Auto-logout if any request returned 401 ─────── */
+        const any401 = [progressRes, tradesRes, notifsRes, duelosRes].some(
+          (r) => r.status === "rejected" && isUnauthorized(r.reason),
+        );
+        if (any401) {
+          useAuthStore.getState().logout();
+          return;
+        }
+
         /* ── Apply progress ──────────────────────────────── */
         if (progressRes.status === "fulfilled") {
           const p = progressRes.value as Record<string, unknown>;
@@ -109,6 +127,7 @@ export function useDbSync(userId: string | null) {
             settings:         (p.settings  as typeof s.settings)  ?? s.settings,
             booksProgress:    (p.booksProgress as typeof s.booksProgress) ?? s.booksProgress,
             seenAchievements: Array.isArray(p.seenAchievements)   ? p.seenAchievements as string[] : s.seenAchievements,
+            watchedVideos:    Array.isArray(p.watchedVideos)       ? p.watchedVideos    as string[] : s.watchedVideos,
             sim: {
               ...s.sim,
               cashBalance: typeof p.simCashBalance === "number" ? p.simCashBalance : s.sim.cashBalance,

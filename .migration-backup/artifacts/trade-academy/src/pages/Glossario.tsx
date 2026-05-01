@@ -1,16 +1,34 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, BookOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { GLOSSARY, ALPHABET, CATEGORIES, CATEGORY_COLORS, GlossaryCategory } from "@/data/glossary";
+import { GLOSSARY as GLOSSARY_STATIC, CATEGORY_COLORS, type GlossaryTerm, type GlossaryCategory } from "@/data/glossary";
+import { api } from "@/lib/apiClient";
 
 export default function Glossario() {
+  const [glossary, setGlossary] = useState<GlossaryTerm[]>(GLOSSARY_STATIC);
   const [query, setQuery] = useState("");
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<GlossaryCategory | null>(null);
 
+  useEffect(() => {
+    api.content.glossary()
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setGlossary(data as GlossaryTerm[]); })
+      .catch(() => {/* keep static fallback */});
+  }, []);
+
+  const categories = useMemo(
+    () => Array.from(new Set(glossary.map((t) => t.category))).sort() as GlossaryCategory[],
+    [glossary],
+  );
+
+  const alphabet = useMemo(
+    () => Array.from(new Set(glossary.map((t) => t.term[0]?.toUpperCase()).filter(Boolean))).sort(),
+    [glossary],
+  );
+
   const filtered = useMemo(() => {
-    return GLOSSARY.filter((t) => {
+    return glossary.filter((t) => {
       const matchQuery =
         query.trim() === "" ||
         t.term.toLowerCase().includes(query.toLowerCase()) ||
@@ -19,7 +37,7 @@ export default function Glossario() {
       const matchCat = !activeCategory || t.category === activeCategory;
       return matchQuery && matchLetter && matchCat;
     }).sort((a, b) => a.term.localeCompare(b.term, "pt"));
-  }, [query, activeLetter, activeCategory]);
+  }, [glossary, query, activeLetter, activeCategory]);
 
   const grouped = useMemo(() => {
     const map: Record<string, typeof filtered> = {};
@@ -48,7 +66,7 @@ export default function Glossario() {
           <h2 className="text-lg font-semibold">Glossário de Trading</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          {GLOSSARY.length} termos essenciais explicados em português
+          {glossary.length} termos essenciais explicados em português
         </p>
       </div>
 
@@ -66,7 +84,7 @@ export default function Glossario() {
 
         {/* Category filter */}
         <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
@@ -83,7 +101,7 @@ export default function Glossario() {
 
         {/* Alphabet nav */}
         <div className="flex flex-wrap gap-1">
-          {ALPHABET.map((letter) => (
+          {alphabet.map((letter) => (
             <button
               key={letter}
               onClick={() => { setActiveLetter(activeLetter === letter ? null : letter); setQuery(""); }}

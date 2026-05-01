@@ -2,20 +2,23 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   CandlestickSeries,
+  BarSeries,
   LineSeries,
+  AreaSeries,
   HistogramSeries,
   type IChartApi,
-  type ISeriesApi,
-  type CandlestickData,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { Candle } from "@/lib/market";
 import { rsi as calcRsi, macd as calcMacd } from "@/lib/indicators";
 
+export type ChartType = "candlestick" | "bar" | "line" | "area" | "heikin-ashi";
+
 interface Props {
   candles: Candle[];
   precision: number;
+  chartType?: ChartType;
   movingAverage?: number;
   showRsi?: boolean;
   rsiPeriod?: number;
@@ -27,16 +30,18 @@ interface Props {
 }
 
 const COLORS = {
-  up: "hsl(152 78% 42%)",
-  down: "hsl(350 89% 60%)",
-  ma: "hsl(192 95% 55%)",
-  rsi: "hsl(38 92% 60%)",
+  up:       "hsl(152 78% 42%)",
+  down:     "hsl(350 89% 60%)",
+  ma:       "hsl(192 95% 55%)",
+  rsi:      "hsl(38 92% 60%)",
   rsiGuide: "rgba(220, 226, 235, 0.25)",
-  macd: "hsl(192 95% 55%)",
-  signal: "hsl(38 92% 60%)",
-  text: "rgba(220, 226, 235, 0.7)",
-  border: "rgba(255,255,255,0.06)",
-  grid: "rgba(255,255,255,0.04)",
+  macd:     "hsl(192 95% 55%)",
+  signal:   "hsl(38 92% 60%)",
+  text:     "rgba(220, 226, 235, 0.7)",
+  border:   "rgba(255,255,255,0.06)",
+  grid:     "rgba(255,255,255,0.04)",
+  areaTop:  "hsl(152 78% 42% / 0.35)",
+  areaBot:  "hsl(152 78% 42% / 0.02)",
 };
 
 function baseLayout() {
@@ -57,9 +62,26 @@ function baseLayout() {
   };
 }
 
+/* ── Heikin-Ashi transform ── */
+function toHeikinAshi(candles: Candle[]): Candle[] {
+  const ha: Candle[] = [];
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i];
+    const close = (c.open + c.high + c.low + c.close) / 4;
+    const open  = i === 0
+      ? (c.open + c.close) / 2
+      : (ha[i - 1].open + ha[i - 1].close) / 2;
+    const high = Math.max(c.high, open, close);
+    const low  = Math.min(c.low,  open, close);
+    ha.push({ time: c.time, open, high, low, close });
+  }
+  return ha;
+}
+
 export function PriceChart({
   candles,
   precision,
+  chartType = "candlestick",
   movingAverage = 20,
   showRsi = false,
   rsiPeriod = 14,
@@ -69,43 +91,65 @@ export function PriceChart({
   macdSignal = 9,
   className,
 }: Props) {
-  const mainRef = useRef<HTMLDivElement>(null);
-  const rsiContainerRef = useRef<HTMLDivElement>(null);
-  const macdContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef    = useRef<HTMLDivElement>(null);
+  const rsiContRef = useRef<HTMLDivElement>(null);
+  const macdContRef= useRef<HTMLDivElement>(null);
 
-  const mainChart = useRef<IChartApi | null>(null);
-  const candleSeries = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const maSeries = useRef<ISeriesApi<"Line"> | null>(null);
+  const mainChart  = useRef<IChartApi | null>(null);
+  const mainSeries = useRef<any>(null);      // typed loosely — varies per chart type
+  const maSeries   = useRef<any>(null);
 
-  const rsiChart = useRef<IChartApi | null>(null);
-  const rsiSeries = useRef<ISeriesApi<"Line"> | null>(null);
-  const rsi70 = useRef<ISeriesApi<"Line"> | null>(null);
-  const rsi30 = useRef<ISeriesApi<"Line"> | null>(null);
+  const rsiChart  = useRef<IChartApi | null>(null);
+  const rsiSeries = useRef<any>(null);
+  const rsi70     = useRef<any>(null);
+  const rsi30     = useRef<any>(null);
 
-  const macdChart = useRef<IChartApi | null>(null);
-  const macdLine = useRef<ISeriesApi<"Line"> | null>(null);
-  const signalLine = useRef<ISeriesApi<"Line"> | null>(null);
-  const histSeries = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const macdChart  = useRef<IChartApi | null>(null);
+  const macdLine   = useRef<any>(null);
+  const signalLine = useRef<any>(null);
+  const histSeries = useRef<any>(null);
 
-  // ---- init / re-init main chart when precision changes ----
+  /* ── Main chart: recreate when precision OR chart type changes ── */
   useEffect(() => {
     if (!mainRef.current) return;
     const chart = createChart(mainRef.current, baseLayout());
     mainChart.current = chart;
 
-    candleSeries.current = chart.addSeries(CandlestickSeries, {
-      upColor: COLORS.up,
-      downColor: COLORS.down,
-      borderUpColor: COLORS.up,
-      borderDownColor: COLORS.down,
-      wickUpColor: COLORS.up,
-      wickDownColor: COLORS.down,
-      priceFormat: { type: "price", precision, minMove: 1 / Math.pow(10, precision) },
-    });
+    const priceFormat = { type: "price" as const, precision, minMove: 1 / Math.pow(10, precision) };
+
+    if (chartType === "candlestick" || chartType === "heikin-ashi") {
+      mainSeries.current = chart.addSeries(CandlestickSeries, {
+        upColor: COLORS.up, downColor: COLORS.down,
+        borderUpColor: COLORS.up, borderDownColor: COLORS.down,
+        wickUpColor: COLORS.up, wickDownColor: COLORS.down,
+        priceFormat,
+      });
+    } else if (chartType === "bar") {
+      mainSeries.current = chart.addSeries(BarSeries, {
+        upColor: COLORS.up, downColor: COLORS.down,
+        priceFormat,
+      });
+    } else if (chartType === "line") {
+      mainSeries.current = chart.addSeries(LineSeries, {
+        color: COLORS.up,
+        lineWidth: 2 as const,
+        priceLineVisible: false,
+        priceFormat,
+      });
+    } else if (chartType === "area") {
+      mainSeries.current = chart.addSeries(AreaSeries, {
+        lineColor:   COLORS.up,
+        topColor:    COLORS.areaTop,
+        bottomColor: COLORS.areaBot,
+        lineWidth: 2 as const,
+        priceLineVisible: false,
+        priceFormat,
+      });
+    }
 
     maSeries.current = chart.addSeries(LineSeries, {
       color: COLORS.ma,
-      lineWidth: 2,
+      lineWidth: 2 as const,
       priceLineVisible: false,
       lastValueVisible: false,
     });
@@ -113,40 +157,32 @@ export function PriceChart({
     return () => {
       chart.remove();
       mainChart.current = null;
-      candleSeries.current = null;
+      mainSeries.current = null;
       maSeries.current = null;
     };
-  }, [precision]);
+  }, [precision, chartType]);
 
-  // ---- RSI chart lifecycle ----
+  /* ── RSI chart lifecycle ── */
   useEffect(() => {
-    if (!showRsi || !rsiContainerRef.current) return;
-    const chart = createChart(rsiContainerRef.current, {
+    if (!showRsi || !rsiContRef.current) return;
+    const chart = createChart(rsiContRef.current, {
       ...baseLayout(),
       rightPriceScale: { borderColor: COLORS.border, scaleMargins: { top: 0.1, bottom: 0.1 } },
     });
     rsiChart.current = chart;
 
     rsiSeries.current = chart.addSeries(LineSeries, {
-      color: COLORS.rsi,
-      lineWidth: 2,
-      priceLineVisible: false,
-      lastValueVisible: true,
+      color: COLORS.rsi, lineWidth: 2 as const,
+      priceLineVisible: false, lastValueVisible: true,
       priceFormat: { type: "price", precision: 2, minMove: 0.01 },
     });
     rsi70.current = chart.addSeries(LineSeries, {
-      color: COLORS.rsiGuide,
-      lineWidth: 1,
-      lineStyle: 2,
-      priceLineVisible: false,
-      lastValueVisible: false,
+      color: COLORS.rsiGuide, lineWidth: 1 as const, lineStyle: 2,
+      priceLineVisible: false, lastValueVisible: false,
     });
     rsi30.current = chart.addSeries(LineSeries, {
-      color: COLORS.rsiGuide,
-      lineWidth: 1,
-      lineStyle: 2,
-      priceLineVisible: false,
-      lastValueVisible: false,
+      color: COLORS.rsiGuide, lineWidth: 1 as const, lineStyle: 2,
+      priceLineVisible: false, lastValueVisible: false,
     });
 
     return () => {
@@ -158,29 +194,24 @@ export function PriceChart({
     };
   }, [showRsi]);
 
-  // ---- MACD chart lifecycle ----
+  /* ── MACD chart lifecycle ── */
   useEffect(() => {
-    if (!showMacd || !macdContainerRef.current) return;
-    const chart = createChart(macdContainerRef.current, baseLayout());
+    if (!showMacd || !macdContRef.current) return;
+    const chart = createChart(macdContRef.current, baseLayout());
     macdChart.current = chart;
 
     histSeries.current = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
-      priceLineVisible: false,
-      lastValueVisible: false,
+      priceLineVisible: false, lastValueVisible: false,
     });
     macdLine.current = chart.addSeries(LineSeries, {
-      color: COLORS.macd,
-      lineWidth: 2,
-      priceLineVisible: false,
-      lastValueVisible: true,
+      color: COLORS.macd, lineWidth: 2 as const,
+      priceLineVisible: false, lastValueVisible: true,
       priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
     });
     signalLine.current = chart.addSeries(LineSeries, {
-      color: COLORS.signal,
-      lineWidth: 2,
-      priceLineVisible: false,
-      lastValueVisible: true,
+      color: COLORS.signal, lineWidth: 2 as const,
+      priceLineVisible: false, lastValueVisible: true,
       priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
     });
 
@@ -193,13 +224,12 @@ export function PriceChart({
     };
   }, [showMacd]);
 
-  // ---- Sync time scales between charts ----
+  /* ── Sync time scales ── */
   useEffect(() => {
     const charts = [mainChart.current, rsiChart.current, macdChart.current].filter(
       (c): c is IChartApi => !!c,
     );
     if (charts.length < 2) return;
-
     const handlers: Array<() => void> = [];
     for (const src of charts) {
       const handler = (range: { from: Time; to: Time } | null) => {
@@ -215,17 +245,25 @@ export function PriceChart({
     return () => handlers.forEach((fn) => fn());
   }, [showRsi, showMacd]);
 
-  // ---- Push data ----
+  /* ── Push candle data ── */
   useEffect(() => {
-    if (!candleSeries.current) return;
-    const data: CandlestickData<Time>[] = candles.map((c) => ({
-      time: c.time as UTCTimestamp,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-    candleSeries.current.setData(data);
+    if (!mainSeries.current) return;
+
+    const isOHLC = chartType === "candlestick" || chartType === "heikin-ashi" || chartType === "bar";
+    const srcCandles = chartType === "heikin-ashi" ? toHeikinAshi(candles) : candles;
+
+    if (isOHLC) {
+      mainSeries.current.setData(
+        srcCandles.map((c) => ({
+          time: c.time as UTCTimestamp,
+          open: c.open, high: c.high, low: c.low, close: c.close,
+        })),
+      );
+    } else {
+      mainSeries.current.setData(
+        srcCandles.map((c) => ({ time: c.time as UTCTimestamp, value: c.close })),
+      );
+    }
 
     if (maSeries.current && movingAverage > 0) {
       const ma: { time: Time; value: number }[] = [];
@@ -236,9 +274,9 @@ export function PriceChart({
       }
       maSeries.current.setData(ma);
     }
-  }, [candles, movingAverage]);
+  }, [candles, movingAverage, chartType]);
 
-  // RSI data
+  /* ── RSI data ── */
   useEffect(() => {
     if (!showRsi || !rsiSeries.current) return;
     const values = calcRsi(candles, rsiPeriod);
@@ -249,31 +287,21 @@ export function PriceChart({
 
     if (rsi70.current && rsi30.current && data.length > 0) {
       const first = data[0].time;
-      const last = data[data.length - 1].time;
-      rsi70.current.setData([
-        { time: first, value: 70 },
-        { time: last, value: 70 },
-      ]);
-      rsi30.current.setData([
-        { time: first, value: 30 },
-        { time: last, value: 30 },
-      ]);
+      const last  = data[data.length - 1].time;
+      rsi70.current.setData([{ time: first, value: 70 }, { time: last, value: 70 }]);
+      rsi30.current.setData([{ time: first, value: 30 }, { time: last, value: 30 }]);
     }
   }, [candles, showRsi, rsiPeriod]);
 
-  // MACD data
+  /* ── MACD data ── */
   useEffect(() => {
     if (!showMacd || !macdLine.current || !signalLine.current || !histSeries.current) return;
     const values = calcMacd(candles, macdFast, macdSlow, macdSignal);
     const defined = values.filter(
       (v): v is { time: number; macd: number; signal: number; hist: number } => v != null,
     );
-    macdLine.current.setData(
-      defined.map((v) => ({ time: v.time as UTCTimestamp, value: v.macd })),
-    );
-    signalLine.current.setData(
-      defined.map((v) => ({ time: v.time as UTCTimestamp, value: v.signal })),
-    );
+    macdLine.current.setData(defined.map((v) => ({ time: v.time as UTCTimestamp, value: v.macd })));
+    signalLine.current.setData(defined.map((v) => ({ time: v.time as UTCTimestamp, value: v.signal })));
     histSeries.current.setData(
       defined.map((v) => ({
         time: v.time as UTCTimestamp,
@@ -283,11 +311,9 @@ export function PriceChart({
     );
   }, [candles, showMacd, macdFast, macdSlow, macdSignal]);
 
-  // Layout: main chart shrinks when sub-panes are visible
-  const subPanes = (showRsi ? 1 : 0) + (showMacd ? 1 : 0);
-  const mainBasis =
-    subPanes === 0 ? "100%" : subPanes === 1 ? "70%" : "55%";
-  const subBasis = subPanes === 1 ? "30%" : "22.5%";
+  const subPanes   = (showRsi ? 1 : 0) + (showMacd ? 1 : 0);
+  const mainBasis  = subPanes === 0 ? "100%" : subPanes === 1 ? "70%" : "55%";
+  const subBasis   = subPanes === 1 ? "30%" : "22.5%";
 
   return (
     <div className={className} style={{ display: "flex", flexDirection: "column" }}>
@@ -299,7 +325,7 @@ export function PriceChart({
               RSI ({rsiPeriod})
             </span>
           </div>
-          <div ref={rsiContainerRef} style={{ height: "calc(100% - 18px)" }} />
+          <div ref={rsiContRef} style={{ height: "calc(100% - 18px)" }} />
         </div>
       )}
       {showMacd && (
@@ -309,7 +335,7 @@ export function PriceChart({
               MACD ({macdFast}, {macdSlow}, {macdSignal})
             </span>
           </div>
-          <div ref={macdContainerRef} style={{ height: "calc(100% - 18px)" }} />
+          <div ref={macdContRef} style={{ height: "calc(100% - 18px)" }} />
         </div>
       )}
     </div>
