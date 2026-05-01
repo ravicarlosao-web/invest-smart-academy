@@ -30,6 +30,7 @@ function buildProgressPayload(s: ReturnType<typeof useAppStore.getState>) {
     settings:         s.settings,
     booksProgress:    s.booksProgress,
     seenAchievements: s.seenAchievements,
+    watchedVideos:    s.watchedVideos,
     simCashBalance:   s.sim.cashBalance,
   };
 }
@@ -126,6 +127,7 @@ export function useDbSync(userId: string | null) {
             settings:         (p.settings  as typeof s.settings)  ?? s.settings,
             booksProgress:    (p.booksProgress as typeof s.booksProgress) ?? s.booksProgress,
             seenAchievements: Array.isArray(p.seenAchievements)   ? p.seenAchievements as string[] : s.seenAchievements,
+            watchedVideos:    Array.isArray(p.watchedVideos)       ? p.watchedVideos    as string[] : s.watchedVideos,
             sim: {
               ...s.sim,
               cashBalance: typeof p.simCashBalance === "number" ? p.simCashBalance : s.sim.cashBalance,

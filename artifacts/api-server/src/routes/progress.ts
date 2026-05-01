@@ -33,6 +33,7 @@ router.get("/:userId", async (req, res) => {
       settings:         JSON.parse(row.settings),
       booksProgress:    JSON.parse(row.booksProgress),
       seenAchievements: JSON.parse(row.seenAchievements),
+      watchedVideos:    JSON.parse(row.watchedVideos),
       onboarded:        row.onboarded === 1,
     });
   } catch (err) {
@@ -65,6 +66,7 @@ router.put("/:userId", async (req, res) => {
       settings:         JSON.stringify(body.settings         ?? {}),
       booksProgress:    JSON.stringify(body.booksProgress    ?? {}),
       seenAchievements: JSON.stringify(body.seenAchievements ?? []),
+      watchedVideos:    JSON.stringify(body.watchedVideos    ?? []),
       simCashBalance:   body.simCashBalance    ?? 10000,
       updatedAt:        now,
     };
