@@ -32,6 +32,10 @@ import {
   PartyPopper,
   CreditCard,
   AlertTriangle,
+  BookOpen,
+  BarChart2,
+  Mail,
+  User,
 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 
@@ -55,7 +59,12 @@ export default function Perfil() {
     if (user?.id) fetchSub(user.id);
   }, [user?.id, fetchSub]);
 
-  const completedPct = (progress.completedLessons.length / TOTAL_LESSONS) * 100;
+  const displayName = user?.name || user?.email?.split("@")[0] || "Utilizador";
+  const initials = displayName.slice(0, 2).toUpperCase();
+
+  const completedLessons = progress.completedLessons.length;
+  const completedPct = (completedLessons / TOTAL_LESSONS) * 100;
+
   const trades = sim.history;
   const wins = trades.filter((t) => t.pnl > 0).length;
   const losses = trades.filter((t) => t.pnl <= 0).length;
@@ -63,6 +72,7 @@ export default function Perfil() {
   const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
   const avgWin = wins ? trades.filter((t) => t.pnl > 0).reduce((s, t) => s + t.pnl, 0) / wins : 0;
   const avgLoss = losses ? trades.filter((t) => t.pnl <= 0).reduce((s, t) => s + t.pnl, 0) / losses : 0;
+
   const avgQuiz = (() => {
     const scores = Object.values(progress.quizScores);
     return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
@@ -73,158 +83,217 @@ export default function Perfil() {
   const rankPct = rankProgress(progress.xp);
   const unlockedCount = ACHIEVEMENTS.filter((a) => progress.achievements.includes(a.id)).length;
 
+  const isActive = hasActiveSubscription();
+  const isPending = subscription?.status === "pending";
+  const isExpired = subscription?.status === "expired" || subscription?.status === "rejected";
+  const daysLeft = subscription?.expiresAt
+    ? Math.max(0, Math.ceil((subscription.expiresAt - Date.now()) / 86_400_000))
+    : null;
+  const expiringSoon = isActive && daysLeft !== null && daysLeft <= 7;
+
   return (
-    <div className="container max-w-5xl py-6 lg:py-8 space-y-5">
+    <div className="container max-w-6xl py-6 lg:py-8 space-y-5">
+
       {/* ── Profile Header ── */}
       <Card className="overflow-hidden">
         <div className="bg-gradient-surface p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-primary text-2xl font-bold text-primary-foreground shadow-glow">
-                T
-                <span className="absolute -bottom-1 -right-1 rounded-full bg-background p-0.5">
-                  <IconByName name={rank.icon} className="h-3.5 w-3.5" />
-                </span>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+
+            {/* Avatar */}
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-2xl font-bold text-primary-foreground shadow-glow">
+              {initials}
+              <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-background p-1 shadow">
+                <IconByName name={rank.icon} className="h-4 w-4" />
+              </span>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold leading-tight">{displayName}</h2>
+                  {user?.email && (
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Mail className="h-3 w-3" />{user.email}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${rank.bgColor} ${rank.color}`}>
+                      <IconByName name={rank.icon} className="h-3 w-3" /> {rank.label}
+                    </span>
+                    <Badge className="bg-warning/15 text-warning hover:bg-warning/20">
+                      <Flame className="mr-1 h-3 w-3" />{progress.streakDays} dias de sequência
+                    </Badge>
+                    <Badge className="bg-primary/15 text-primary hover:bg-primary/20">
+                      <Trophy className="mr-1 h-3 w-3" />{progress.xp} XP
+                    </Badge>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">{unlockedCount}<span className="text-sm font-normal text-muted-foreground">/{ACHIEVEMENTS.length}</span></p>
+                  <p className="text-xs text-muted-foreground">conquistas</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">Trader</h2>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${rank.bgColor} ${rank.color}`}>
-                    <IconByName name={rank.icon} className="h-3 w-3" /> {rank.label}
-                  </span>
-                  <Badge className="bg-warning/15 text-warning hover:bg-warning/20">
-                    <Flame className="mr-1 h-3 w-3" />{progress.streakDays} dias
-                  </Badge>
-                  <Badge className="bg-primary/15 text-primary hover:bg-primary/20">
-                    <Trophy className="mr-1 h-3 w-3" />{progress.xp} XP
-                  </Badge>
+
+              {/* Rank progression */}
+              <div className="mt-4 space-y-2">
+                <div>
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-muted-foreground">{rank.label} → {nextRank?.label ?? "Nível Máximo"}</span>
+                    <span className="font-mono font-semibold">{nextRank ? `${progress.xp} / ${nextRank.minXp} XP` : "MAX"}</span>
+                  </div>
+                  <Progress value={rankPct} className="h-2" />
+                  <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                    {XP_RANKS.map((r) => (
+                      <span key={r.id} title={r.label} className={progress.xp >= r.minXp ? `font-bold ${r.color}` : "opacity-25"}>
+                        <IconByName name={r.icon} className="h-3 w-3 inline" />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progresso da trilha</span>
+                    <span className="font-mono font-semibold">{completedLessons} / {TOTAL_LESSONS} aulas</span>
+                  </div>
+                  <Progress value={completedPct} className="h-1.5" />
                 </div>
               </div>
             </div>
-            <div className="text-right text-sm text-muted-foreground">
-              {unlockedCount}/{ACHIEVEMENTS.length} conquistas
-            </div>
-          </div>
-
-          {/* Rank progress */}
-          <div className="mt-5">
-            <div className="mb-1.5 flex justify-between text-xs">
-              <span className="font-medium text-muted-foreground">
-                {rank.label} → {nextRank?.label ?? "Máximo"}
-              </span>
-              <span className="font-mono font-semibold">
-                {nextRank ? `${progress.xp} / ${nextRank.minXp} XP` : "MAX"}
-              </span>
-            </div>
-            <Progress value={rankPct} className="h-2.5" />
-            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-              {XP_RANKS.map((r) => (
-                <span key={r.id} className={progress.xp >= r.minXp ? `font-bold ${r.color}` : "text-muted-foreground/30"}>
-                  <IconByName name={r.icon} className="h-3 w-3 inline" />
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Learning progress */}
-          <div className="mt-4">
-            <div className="mb-1.5 flex justify-between text-xs">
-              <span className="text-muted-foreground">Progresso da trilha</span>
-              <span className="font-mono font-semibold">{progress.completedLessons.length}/{TOTAL_LESSONS}</span>
-            </div>
-            <Progress value={completedPct} className="h-2" />
           </div>
         </div>
       </Card>
 
-      {/* ── Stats row ── */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <BookCheck className="h-4 w-4 text-primary" />Aprendizado
-          </h3>
-          <Row label="Aulas concluídas" value={`${progress.completedLessons.length} / ${TOTAL_LESSONS}`} />
-          <Row label="Média nos quizzes" value={`${avgQuiz.toFixed(0)}%`} />
-          <Row label="Quizzes perfeitos" value={`${progress.perfectQuizCount}`} />
-          <Row label="Para revisar" value={`${(progress.reviewQueue ?? []).length} aulas`} />
-          <Row label="Sequência atual" value={`${progress.streakDays} dias`} />
-          <div className="mt-4 space-y-1.5">
-            {LEVELS.map((lvl) => {
-              const done = lvl.lessons.filter((l) => progress.completedLessons.includes(l.id)).length;
-              const pct = (done / lvl.lessons.length) * 100;
-              return (
-                <div key={lvl.id}>
-                  <div className="mb-0.5 flex justify-between text-[11px]">
-                    <span className="text-muted-foreground">N{lvl.id} · {lvl.title}</span>
-                    <span className="font-mono">{done}/{lvl.lessons.length}</span>
-                  </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-surface-2">
-                    <div className="h-full rounded-full bg-gradient-primary" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-            <TrendingUp className="h-4 w-4 text-primary" />Trading
-          </h3>
-          <Row label="Total de trades" value={`${trades.length}`} />
-          <Row label="Taxa de acerto" value={`${winRate.toFixed(1)}%`} accent={winRate >= 50 ? "bull" : undefined} />
-          <Row label="Trades ganhos" value={`${wins}`} accent="bull" />
-          <Row label="Trades perdidos" value={`${losses}`} accent="bear" />
-          <Row label="P&L realizado" value={fmtUSD(totalPnl)} accent={totalPnl >= 0 ? "bull" : "bear"} />
-          <Row label="Ganho médio" value={fmtUSD(avgWin)} accent="bull" />
-          <Row label="Perda média" value={fmtUSD(avgLoss)} accent="bear" />
-          <Row label="Saldo demo atual" value={fmtUSD(sim.cashBalance)} />
-        </Card>
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          icon={<BookOpen className="h-5 w-5 text-primary" />}
+          label="Aulas concluídas"
+          value={`${completedLessons}`}
+          sub={`de ${TOTAL_LESSONS} no total`}
+          color="bg-primary/8"
+        />
+        <KpiCard
+          icon={<Flame className="h-5 w-5 text-warning" />}
+          label="Sequência"
+          value={`${progress.streakDays}`}
+          sub="dias consecutivos"
+          color="bg-warning/8"
+        />
+        <KpiCard
+          icon={<BarChart2 className="h-5 w-5 text-bull" />}
+          label="Taxa de acerto"
+          value={`${winRate.toFixed(1)}%`}
+          sub={`${trades.length} trades`}
+          color="bg-bull/8"
+          accent={winRate >= 50 ? "bull" : undefined}
+        />
+        <KpiCard
+          icon={<Trophy className="h-5 w-5 text-primary" />}
+          label="XP Total"
+          value={progress.xp.toLocaleString()}
+          sub={rank.label}
+          color="bg-primary/8"
+        />
       </div>
 
-      {/* ── Subscription Status ── */}
-      {(() => {
-        const isActive = hasActiveSubscription();
-        const isPending = subscription?.status === "pending";
-        const isExpired = subscription?.status === "expired" || subscription?.status === "rejected";
-        const daysLeft = subscription?.expiresAt
-          ? Math.max(0, Math.ceil((subscription.expiresAt - Date.now()) / 86_400_000))
-          : null;
-        const expiringSoon = isActive && daysLeft !== null && daysLeft <= 7;
+      {/* ── Main Content: 2 Columns ── */}
+      <div className="grid gap-5 lg:grid-cols-5">
 
-        return (
+        {/* Left: Learning (wider) */}
+        <div className="lg:col-span-3 space-y-4">
           <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <CreditCard className="h-4 w-4 text-primary" />Subscrição
-              </h3>
+            <SectionTitle icon={<BookCheck className="h-4 w-4 text-primary" />} title="Aprendizado" />
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <MiniStat label="Média nos quizzes" value={`${avgQuiz.toFixed(0)}%`} />
+              <MiniStat label="Quizzes perfeitos" value={`${progress.perfectQuizCount}`} />
+              <MiniStat label="Para revisar" value={`${(progress.reviewQueue ?? []).length}`} sub="aulas" />
+            </div>
+
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progresso por módulo</p>
+            <div className="space-y-2.5">
+              {LEVELS.map((lvl) => {
+                const done = lvl.lessons.filter((l) => progress.completedLessons.includes(l.id)).length;
+                const pct = (done / lvl.lessons.length) * 100;
+                const complete = done === lvl.lessons.length;
+                return (
+                  <div key={lvl.id} className="flex items-center gap-3">
+                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      complete ? "bg-bull/20 text-bull" : "bg-surface-2 text-muted-foreground"
+                    }`}>
+                      {complete ? <CheckCircle2 className="h-3.5 w-3.5" /> : lvl.id}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="truncate text-foreground/80">{lvl.title}</span>
+                        <span className="font-mono ml-2 shrink-0 text-muted-foreground">{done}/{lvl.lessons.length}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className={`h-full rounded-full transition-all ${complete ? "bg-bull" : "bg-gradient-primary"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+
+        {/* Right: Trading + Subscription */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* Trading Stats */}
+          <Card className="p-5">
+            <SectionTitle icon={<TrendingUp className="h-4 w-4 text-bull" />} title="Simulador" />
+            <div className="space-y-0.5">
+              <Row label="Total de trades" value={`${trades.length}`} />
+              <Row label="Ganhos" value={`${wins}`} accent="bull" />
+              <Row label="Perdas" value={`${losses}`} accent="bear" />
+              <Row label="P&L total" value={fmtUSD(totalPnl)} accent={totalPnl >= 0 ? "bull" : "bear"} />
+              <Row label="Ganho médio" value={fmtUSD(avgWin)} accent="bull" />
+              <Row label="Perda média" value={fmtUSD(avgLoss)} accent="bear" />
+              <Row label="Saldo atual" value={fmtUSD(sim.cashBalance)} />
+            </div>
+            <p className="mt-3 text-[10px] text-muted-foreground text-center">
+              Dados do simulador — sem dinheiro real envolvido
+            </p>
+          </Card>
+
+          {/* Subscription */}
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle icon={<CreditCard className="h-4 w-4 text-primary" />} title="Subscrição" />
               <Link to="/financeiro" className="text-xs text-primary hover:underline">Gerir →</Link>
             </div>
 
             {expiringSoon && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-warning">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                <span>A tua subscrição expira em <strong>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</strong>. Renova para manter o acesso.</span>
+              <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning/10 border border-warning/30 px-3 py-2.5 text-xs text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>Expira em <strong>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</strong>. Renova para manter o acesso.</span>
               </div>
             )}
 
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                 isActive ? "bg-bull/15" : isPending ? "bg-warning/15" : "bg-surface-2"
               }`}>
                 <Crown className={`h-5 w-5 ${isActive ? "text-bull" : isPending ? "text-warning" : "text-muted-foreground"}`} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {isActive ? (
                   <>
                     <p className="text-sm font-semibold text-bull">Subscrição Ativa</p>
                     <p className="text-xs text-muted-foreground">
-                      {daysLeft !== null ? `Expira em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""}` : "Acesso Premium"}
+                      {daysLeft !== null ? `Expira em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""}` : "Acesso completo"}
                     </p>
                   </>
                 ) : isPending ? (
                   <>
-                    <p className="text-sm font-semibold text-warning">Aguardando Confirmação</p>
+                    <p className="text-sm font-semibold text-warning">A aguardar confirmação</p>
                     <p className="text-xs text-muted-foreground">O admin irá confirmar em breve</p>
                   </>
                 ) : isExpired ? (
@@ -234,30 +303,30 @@ export default function Perfil() {
                   </>
                 ) : (
                   <>
-                    <p className="text-sm font-semibold">Sem Subscrição</p>
-                    <p className="text-xs text-muted-foreground">Nível Iniciante disponível gratuitamente</p>
+                    <p className="text-sm font-semibold">Sem subscrição</p>
+                    <p className="text-xs text-muted-foreground">Nível Iniciante gratuito</p>
                   </>
                 )}
               </div>
               {!isActive && !isPending && (
                 <Link to="/financeiro">
-                  <Badge className="bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer text-[10px]">
+                  <Badge className="bg-primary/15 text-primary hover:bg-primary/25 cursor-pointer text-[10px] shrink-0">
                     Subscrever
                   </Badge>
                 </Link>
               )}
             </div>
           </Card>
-        );
-      })()}
+        </div>
+      </div>
 
       {/* ── Tabs ── */}
       <Card className="overflow-hidden">
         <div className="grid grid-cols-3 border-b border-border">
           {([
-            { id: "conquistas",  label: "Conquistas", icon: Award },
-            { id: "missoes",     label: "Missões",    icon: Target },
-            { id: "leaderboard", label: "Ranking",    icon: Crown },
+            { id: "conquistas",   label: "Conquistas",  icon: Award  },
+            { id: "missoes",      label: "Missões",     icon: Target },
+            { id: "leaderboard",  label: "Ranking",     icon: Crown  },
           ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -269,17 +338,66 @@ export default function Perfil() {
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span>{label}</span>
+              <span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </div>
-
         <div className="p-5">
-          {tab === "conquistas" && <AchievementsTab achievements={progress.achievements} />}
-          {tab === "missoes" && <MissoesTab progress={progress} />}
+          {tab === "conquistas"  && <AchievementsTab achievements={progress.achievements} />}
+          {tab === "missoes"     && <MissoesTab progress={progress} />}
           {tab === "leaderboard" && <LeaderboardTab xp={progress.xp} />}
         </div>
       </Card>
+    </div>
+  );
+}
+
+/* ── Sub-components ── */
+
+function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
+      {icon}{title}
+    </h3>
+  );
+}
+
+function KpiCard({
+  icon, label, value, sub, color, accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
+  accent?: "bull" | "bear";
+}) {
+  const valColor = accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
+  return (
+    <Card className={`p-4 ${color ?? ""}`}>
+      <div className="mb-2">{icon}</div>
+      <p className={`text-2xl font-bold leading-none ${valColor}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
+      <p className="mt-2 text-xs text-muted-foreground">{label}</p>
+    </Card>
+  );
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl bg-surface-1 px-3 py-2.5">
+      <p className="text-lg font-bold leading-none">{value}{sub && <span className="text-xs font-normal text-muted-foreground ml-0.5">{sub}</span>}</p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{label}</p>
+    </div>
+  );
+}
+
+function Row({ label, value, accent }: { label: string; value: string; accent?: "bull" | "bear" }) {
+  const color = accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
+  return (
+    <div className="flex items-center justify-between border-b border-border/50 py-2 text-sm last:border-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-mono font-semibold ${color}`}>{value}</span>
     </div>
   );
 }
@@ -321,9 +439,7 @@ function AchievementsTab({ achievements }: { achievements: string[] }) {
                   <div
                     key={a.id}
                     className={`rounded-xl border p-3.5 transition-all ${
-                      unlocked
-                        ? "border-primary/30 bg-primary/5"
-                        : "border-border bg-surface-1 opacity-50"
+                      unlocked ? "border-primary/30 bg-primary/5" : "border-border bg-surface-1 opacity-50"
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
@@ -370,7 +486,7 @@ function MissoesTab({ progress }: { progress: ReturnType<typeof useAppStore.getS
       </div>
 
       <div className="space-y-3">
-        {missionDefs.map((def, i) => {
+        {missionDefs.map((def) => {
           const state = missionStates.find((m) => m.id === def.id) ?? { id: def.id, progress: 0, completed: false };
           const pct = Math.min(100, Math.round((state.progress / def.target) * 100));
           return (
@@ -417,7 +533,6 @@ function MissoesTab({ progress }: { progress: ReturnType<typeof useAppStore.getS
         </div>
       )}
 
-      {/* XP bonus info */}
       <div className="mt-5 rounded-xl bg-surface-2 p-4">
         <div className="flex items-center gap-2 mb-2">
           <Zap className="h-4 w-4 text-warning" />
@@ -448,9 +563,8 @@ function LeaderboardTab({ xp }: { xp: number }) {
 
       <div className="space-y-2">
         {board.slice(0, 10).map((entry) => {
-          const rank = XP_RANKS.find((r) => r.id === entry.rankId) ?? XP_RANKS[0];
+          const r = XP_RANKS.find((r) => r.id === entry.rankId) ?? XP_RANKS[0];
           const isTop3 = entry.rank <= 3;
-
           return (
             <div
               key={entry.id}
@@ -466,16 +580,16 @@ function LeaderboardTab({ xp }: { xp: number }) {
                 {isTop3 ? (
                   <Medal className={`h-5 w-5 mx-auto ${entry.rank === 1 ? "text-yellow-400" : entry.rank === 2 ? "text-slate-400" : "text-amber-600"}`} />
                 ) : (
-                  <span className="font-mono text-sm font-bold text-muted-foreground">
-                    #{entry.rank}
-                  </span>
+                  <span className="font-mono text-sm font-bold text-muted-foreground">#{entry.rank}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold ${entry.isCurrentUser ? "text-primary" : ""}`}>
+                <p className={`text-sm font-semibold truncate ${entry.isCurrentUser ? "text-primary" : ""}`}>
                   {entry.name} {entry.isCurrentUser && <span className="text-xs font-normal">(você)</span>}
                 </p>
-                <p className={`text-[11px] ${rank.color} flex items-center gap-1`}><IconByName name={rank.icon} className="h-3 w-3 inline" />{rank.label}</p>
+                <p className={`text-[11px] ${r.color} flex items-center gap-1`}>
+                  <IconByName name={r.icon} className="h-3 w-3 inline" />{r.label}
+                </p>
               </div>
               <div className="text-right">
                 <p className="font-mono text-sm font-bold">{entry.xp.toLocaleString()}</p>
@@ -486,7 +600,6 @@ function LeaderboardTab({ xp }: { xp: number }) {
         })}
       </div>
 
-      {/* User position if not in top 10 */}
       {userEntry && userEntry.rank > 10 && (
         <>
           <div className="my-3 flex items-center gap-2 text-muted-foreground">
@@ -495,12 +608,12 @@ function LeaderboardTab({ xp }: { xp: number }) {
             <div className="flex-1 border-t border-dashed border-border" />
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3">
-            <span className="w-8 text-center font-mono text-sm font-bold text-muted-foreground">
-              #{userEntry.rank}
-            </span>
+            <span className="w-8 text-center font-mono text-sm font-bold text-muted-foreground">#{userEntry.rank}</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-primary">Você</p>
-              <p className={`text-[11px] ${getRank(xp).color} flex items-center gap-1`}><IconByName name={getRank(xp).icon} className="h-3 w-3 inline" />{getRank(xp).label}</p>
+              <p className={`text-[11px] ${getRank(xp).color} flex items-center gap-1`}>
+                <IconByName name={getRank(xp).icon} className="h-3 w-3 inline" />{getRank(xp).label}
+              </p>
             </div>
             <div className="text-right">
               <p className="font-mono text-sm font-bold">{xp.toLocaleString()}</p>
@@ -519,14 +632,3 @@ function LeaderboardTab({ xp }: { xp: number }) {
     </div>
   );
 }
-
-function Row({ label, value, accent }: { label: string; value: string; accent?: "bull" | "bear" }) {
-  const color = accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
-  return (
-    <div className="flex items-center justify-between border-b border-border/60 py-2 text-sm last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`font-mono font-semibold ${color}`}>{value}</span>
-    </div>
-  );
-}
-
