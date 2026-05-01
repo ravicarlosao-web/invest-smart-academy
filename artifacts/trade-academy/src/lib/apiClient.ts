@@ -32,6 +32,18 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
+/** Helper for authenticated user endpoints — injects the JWT Bearer token */
+function authRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let token = "";
+  try {
+    const raw = localStorage.getItem("trade-academy-auth");
+    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
+  } catch {
+    /* ignore */
+  }
+  return request<T>(method, path, body, token ? { Authorization: `Bearer ${token}` } : undefined);
+}
+
 /** Helper used by admin endpoints — injects the x-admin-token header */
 function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
   let token = "";
@@ -47,12 +59,12 @@ function adminRequest<T>(method: string, path: string, body?: unknown): Promise<
 export const api = {
   /* ---------- Auth ---------- */
   auth: {
-    register: (data: { id: string; name: string; email: string; passwordHash: string }) =>
-      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+    register: (data: { id: string; name: string; email: string; password: string }) =>
+      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/register", data,
       ),
-    login: (data: { email: string; passwordHash: string }) =>
-      request<{ ok: boolean; user: { id: string; name: string; email: string } }>(
+    login: (data: { email: string; password: string }) =>
+      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/login", data,
       ),
   },
@@ -60,45 +72,45 @@ export const api = {
   /* ---------- Progress ---------- */
   progress: {
     get:  (userId: string) =>
-      request<Record<string, unknown>>("GET", `/progress/${userId}`),
+      authRequest<Record<string, unknown>>("GET", `/progress/${userId}`),
     save: (userId: string, data: Record<string, unknown>) =>
-      request<{ ok: boolean }>("PUT", `/progress/${userId}`, data),
+      authRequest<{ ok: boolean }>("PUT", `/progress/${userId}`, data),
   },
 
   /* ---------- Trades ---------- */
   trades: {
     list:  (userId: string, limit = 500) =>
-      request<unknown[]>("GET", `/trades/${userId}?limit=${limit}`),
+      authRequest<unknown[]>("GET", `/trades/${userId}?limit=${limit}`),
     sync:  (userId: string, trades: unknown[]) =>
-      request<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
+      authRequest<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
     clear: (userId: string) =>
-      request<{ ok: boolean }>("DELETE", `/trades/${userId}`),
+      authRequest<{ ok: boolean }>("DELETE", `/trades/${userId}`),
   },
 
   /* ---------- Notifications ---------- */
   notifications: {
     list:    (userId: string) =>
-      request<unknown[]>("GET", `/notifications/${userId}`),
+      authRequest<unknown[]>("GET", `/notifications/${userId}`),
     create:  (userId: string, n: Record<string, unknown>) =>
-      request<{ ok: boolean; id: string }>("POST", `/notifications/${userId}`, n),
+      authRequest<{ ok: boolean; id: string }>("POST", `/notifications/${userId}`, n),
     readAll: (userId: string) =>
-      request<{ ok: boolean }>("PATCH", `/notifications/${userId}/read-all`, {}),
+      authRequest<{ ok: boolean }>("PATCH", `/notifications/${userId}/read-all`, {}),
     dismiss: (userId: string, id: string) =>
-      request<{ ok: boolean }>("DELETE", `/notifications/${userId}/${id}`),
+      authRequest<{ ok: boolean }>("DELETE", `/notifications/${userId}/${id}`),
   },
 
   /* ---------- Duelos ---------- */
   duelos: {
     list:   (userId: string) =>
-      request<unknown[]>("GET", `/duelos/${userId}`),
+      authRequest<unknown[]>("GET", `/duelos/${userId}`),
     byCode: (code: string) =>
       request<unknown>("GET", `/duelos/code/${code}`),
     create: (userId: string, d: Record<string, unknown>) =>
-      request<{ ok: boolean; id: string; code: string }>("POST", `/duelos/${userId}`, d),
+      authRequest<{ ok: boolean; id: string; code: string }>("POST", `/duelos/${userId}`, d),
     update: (userId: string, id: string, patch: Record<string, unknown>) =>
-      request<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
+      authRequest<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
-      request<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
+      authRequest<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
   },
 
   /* ---------- Admin ---------- */
@@ -167,15 +179,15 @@ export const api = {
   /* ---------- Subscrições (aluno) ---------- */
   subscription: {
     get: (userId: string) =>
-      request<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
+      authRequest<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
     history: (userId: string) =>
-      request<{ subscriptions: SubscriptionData[] }>("GET", `/subscription/${userId}/history`),
+      authRequest<{ subscriptions: SubscriptionData[] }>("GET", `/subscription/${userId}/history`),
     request: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
-      request<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, body),
+      authRequest<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, body),
     updateReference: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
-      request<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
+      authRequest<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
     getReceipt: (userId: string, subId: string) =>
-      request<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
+      authRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
   },
 
   /* ---------- Subscrições (admin) ---------- */

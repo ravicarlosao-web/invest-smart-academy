@@ -1,7 +1,15 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { db, notificationsTable, eq, desc } from "@workspace/db";
 
 const router = Router();
+
+router.param("userId", (req: Request, res: Response, next: NextFunction, userId: string) => {
+  if (req.userId !== userId) {
+    return res.status(403).json({ error: "forbidden", message: "Acesso não autorizado." });
+  }
+  next();
+});
 
 /** GET /api/notifications/:userId?limit=50 */
 router.get("/:userId", async (req, res) => {

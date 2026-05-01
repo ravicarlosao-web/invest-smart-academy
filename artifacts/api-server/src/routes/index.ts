@@ -7,6 +7,7 @@ import notificationsRouter from "./notifications";
 import duelosRouter        from "./duelos";
 import adminRouter         from "./admin";
 import subscriptionsRouter from "./subscriptions";
+import { requireAuth }     from "../middlewares/auth";
 import {
   db, asc,
   glossaryTermsTable,
@@ -23,12 +24,12 @@ const router = Router();
 
 router.use(healthRouter);
 router.use("/auth",          authRouter);
-router.use("/progress",      progressRouter);
-router.use("/trades",        tradesRouter);
-router.use("/notifications", notificationsRouter);
-router.use("/duelos",        duelosRouter);
+router.use("/progress",      requireAuth, progressRouter);
+router.use("/trades",        requireAuth, tradesRouter);
+router.use("/notifications", requireAuth, notificationsRouter);
+router.use("/duelos",        requireAuth, duelosRouter);
 router.use("/admin",         adminRouter);
-router.use("/subscription",  subscriptionsRouter);
+router.use("/subscription",  requireAuth, subscriptionsRouter);
 
 /* ── Public content routes — no auth required ─────────────────────────── */
 

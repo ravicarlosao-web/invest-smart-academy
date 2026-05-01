@@ -11,6 +11,11 @@ import { useAppStore }                    from "@/store/useAppStore";
 import type { DueloEntry }               from "@/store/useAppStore";
 import type { AppNotification }          from "@/data/notifications";
 import { api }                           from "@/lib/apiClient";
+import { useAuthStore }                  from "@/store/useAuthStore";
+
+function isUnauthorized(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("→ 401");
+}
 
 const PROGRESS_DEBOUNCE_MS = 4_000;
 
@@ -52,7 +57,10 @@ export function useDbSync(userId: string | null) {
     if (progressTimer.current) clearTimeout(progressTimer.current);
     progressTimer.current = setTimeout(() => {
       const payload = buildProgressPayload(store.getState());
-      api.progress.save(uid, payload).catch(console.error);
+      api.progress.save(uid, payload).catch((err) => {
+        if (isUnauthorized(err)) useAuthStore.getState().logout();
+        else console.error(err);
+      });
     }, PROGRESS_DEBOUNCE_MS);
   }, [store]);
 
@@ -85,6 +93,15 @@ export function useDbSync(userId: string | null) {
         ]);
 
         if (cancelled) return;
+
+        /* ── Auto-logout if any request returned 401 ─────── */
+        const any401 = [progressRes, tradesRes, notifsRes, duelosRes].some(
+          (r) => r.status === "rejected" && isUnauthorized(r.reason),
+        );
+        if (any401) {
+          useAuthStore.getState().logout();
+          return;
+        }
 
         /* ── Apply progress ──────────────────────────────── */
         if (progressRes.status === "fulfilled") {
