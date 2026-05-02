@@ -1069,7 +1069,8 @@ function maskKey(key: string): string {
 
 router.get("/ai-config", async (req: any, res: any) => {
   try {
-    const cfg = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
+    const stored = await getSetting<Partial<AiCfg>>("ai.config", {});
+    const cfg: AiCfg = { ...AI_CFG_DEFAULT, ...stored };
     res.json({
       textConfigured:  cfg.geminiTextKey.length  > 0,
       textEnabled:     cfg.geminiTextEnabled,
@@ -1088,7 +1089,7 @@ router.put("/ai-config", async (req: any, res: any) => {
   try {
     const { geminiTextKey, geminiTextEnabled, geminiImageKey, geminiImageEnabled } =
       req.body as Partial<AiCfg>;
-    const current = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
+    const current: AiCfg = { ...AI_CFG_DEFAULT, ...await getSetting<Partial<AiCfg>>("ai.config", {}) };
     await setSetting("ai.config", {
       geminiTextKey:     geminiTextKey  !== undefined ? geminiTextKey.trim()  : current.geminiTextKey,
       geminiTextEnabled: geminiTextEnabled !== undefined ? geminiTextEnabled   : current.geminiTextEnabled,
@@ -1105,7 +1106,7 @@ router.put("/ai-config", async (req: any, res: any) => {
 router.post("/ai-config/test", async (req: any, res: any) => {
   try {
     const { type = "text" } = req.body as { type?: "text" | "image" };
-    const cfg = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
+    const cfg: AiCfg = { ...AI_CFG_DEFAULT, ...await getSetting<Partial<AiCfg>>("ai.config", {}) };
     const key = type === "image" ? cfg.geminiImageKey : cfg.geminiTextKey;
     if (!key) {
       return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada para este modelo." });
