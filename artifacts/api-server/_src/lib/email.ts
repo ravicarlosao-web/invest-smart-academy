@@ -14,6 +14,16 @@ import { db, adminSettingsTable, eq } from "@workspace/db";
 
 const APP_URL = process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`;
 
+/* ── HTML escape — prevents XSS in email templates ──────────────────────── */
+function escHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 /* ── Config loader ───────────────────────────────────────────────────────── */
 async function loadEmailConfig(): Promise<{ apiKey: string; fromEmail: string; fromName: string } | null> {
   try {
@@ -90,7 +100,7 @@ export async function sendPasswordResetEmail(opts: {
     <div style="padding:32px 40px;">
       <h2 style="color:#e2e8f0;margin:0 0 16px;font-size:20px;">Recuperação de password</h2>
       <p style="color:#94a3b8;margin:0 0 24px;line-height:1.6;">
-        Olá <strong style="color:#e2e8f0;">${opts.name}</strong>,<br><br>
+        Olá <strong style="color:#e2e8f0;">${escHtml(opts.name)}</strong>,<br><br>
         Recebemos um pedido para redefinires a tua password. Clica no botão abaixo para criar uma nova password.
         O link expira em <strong style="color:#e2e8f0;">1 hora</strong>.
       </p>
@@ -102,7 +112,7 @@ export async function sendPasswordResetEmail(opts: {
       <p style="color:#64748b;font-size:12px;margin:24px 0 0;line-height:1.6;">
         Se não pediste a recuperação de password, podes ignorar este email — a tua conta está em segurança.<br><br>
         Ou copia e cola este link no browser:<br>
-        <a href="${link}" style="color:#00c7e6;word-break:break-all;">${link}</a>
+        <a href="${link}" style="color:#00c7e6;word-break:break-all;">${escHtml(link)}</a>
       </p>
     </div>
     <div style="padding:20px 40px;border-top:1px solid #2d3148;text-align:center;">
@@ -145,8 +155,8 @@ export async function sendSubscriptionApprovalEmail(opts: {
       </div>
       <h2 style="color:#e2e8f0;margin:0 0 16px;font-size:20px;text-align:center;">Subscrição aprovada!</h2>
       <p style="color:#94a3b8;margin:0 0 24px;line-height:1.6;">
-        Olá <strong style="color:#e2e8f0;">${opts.name}</strong>,<br><br>
-        A tua subscrição foi <strong style="color:#00c7e6;">aprovada</strong>! Tens agora acesso completo a todo o conteúdo Intermédio e Avançado até <strong style="color:#e2e8f0;">${expireDate}</strong>.
+        Olá <strong style="color:#e2e8f0;">${escHtml(opts.name)}</strong>,<br><br>
+        A tua subscrição foi <strong style="color:#00c7e6;">aprovada</strong>! Tens agora acesso completo a todo o conteúdo Intermédio e Avançado até <strong style="color:#e2e8f0;">${escHtml(expireDate)}</strong>.
       </p>
       <ul style="color:#94a3b8;padding-left:20px;margin:0 0 24px;line-height:2;">
         <li>📚 Todas as lições Intermédias e Avançadas desbloqueadas</li>
@@ -184,7 +194,7 @@ export async function sendSubscriptionRejectionEmail(opts: {
 
   const noteSection = opts.notes
     ? `<div style="background:#ff444415;border-left:3px solid #ff4444;padding:12px 16px;border-radius:4px;margin:16px 0;">
-        <p style="color:#ff8888;margin:0;font-size:13px;"><strong>Motivo:</strong> ${opts.notes}</p>
+        <p style="color:#ff8888;margin:0;font-size:13px;"><strong>Motivo:</strong> ${escHtml(opts.notes)}</p>
        </div>`
     : "";
 
@@ -200,7 +210,7 @@ export async function sendSubscriptionRejectionEmail(opts: {
     <div style="padding:32px 40px;">
       <h2 style="color:#e2e8f0;margin:0 0 16px;font-size:20px;">Subscrição não aprovada</h2>
       <p style="color:#94a3b8;margin:0 0 16px;line-height:1.6;">
-        Olá <strong style="color:#e2e8f0;">${opts.name}</strong>,<br><br>
+        Olá <strong style="color:#e2e8f0;">${escHtml(opts.name)}</strong>,<br><br>
         O teu pedido de subscrição não pôde ser aprovado desta vez.
       </p>
       ${noteSection}
