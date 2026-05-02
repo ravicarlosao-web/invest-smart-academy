@@ -76930,6 +76930,11 @@ var emailVerificationsTable = sqliteTable("email_verifications", {
 var aiUsageTable = sqliteTable("ai_usage", {
   userId: text("user_id").primaryKey(),
   usageCount: integer("usage_count").notNull().default(0),
+  // legacy total (kept for compat)
+  chartAnalysisCount: integer("chart_analysis_count").notNull().default(0),
+  // análise de gráfico
+  tradeFeedbackCount: integer("trade_feedback_count").notNull().default(0),
+  // feedback de trade
   lastUsedAt: integer("last_used_at")
 });
 
@@ -79649,7 +79654,8 @@ async function callGemini(apiKey, parts) {
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
-var AI_FREE_LIMIT = 1;
+var AI_FREE_LIMIT_CHART = 1;
+var AI_FREE_LIMIT_TRADE = 1;
 async function getUserAiUsage(userId) {
   const [row] = await db.select().from(aiUsageTable).where(eq(aiUsageTable.userId, userId));
   return row ?? null;
@@ -79665,21 +79671,30 @@ async function isUserPremium(userId) {
   );
   return !!sub;
 }
-async function checkAndIncrementAiUsage(userId) {
+async function checkAndIncrementAiUsage(userId, type) {
   const premium = await isUserPremium(userId);
   if (premium) return { allowed: true, isPremium: true, usageCount: 0 };
   const usage = await getUserAiUsage(userId);
-  const count = usage?.usageCount ?? 0;
-  if (count >= AI_FREE_LIMIT) {
-    return { allowed: false, isPremium: false, usageCount: count };
-  }
   const now = Date.now();
-  if (!usage) {
-    await db.insert(aiUsageTable).values({ userId, usageCount: 1, lastUsedAt: now });
+  if (type === "chart") {
+    const count = usage?.chartAnalysisCount ?? 0;
+    if (count >= AI_FREE_LIMIT_CHART) return { allowed: false, isPremium: false, usageCount: count };
+    if (!usage) {
+      await db.insert(aiUsageTable).values({ userId, usageCount: 1, chartAnalysisCount: 1, tradeFeedbackCount: 0, lastUsedAt: now });
+    } else {
+      await db.update(aiUsageTable).set({ chartAnalysisCount: count + 1, lastUsedAt: now }).where(eq(aiUsageTable.userId, userId));
+    }
+    return { allowed: true, isPremium: false, usageCount: count + 1 };
   } else {
-    await db.update(aiUsageTable).set({ usageCount: count + 1, lastUsedAt: now }).where(eq(aiUsageTable.userId, userId));
+    const count = usage?.tradeFeedbackCount ?? 0;
+    if (count >= AI_FREE_LIMIT_TRADE) return { allowed: false, isPremium: false, usageCount: count };
+    if (!usage) {
+      await db.insert(aiUsageTable).values({ userId, usageCount: 1, chartAnalysisCount: 0, tradeFeedbackCount: 1, lastUsedAt: now });
+    } else {
+      await db.update(aiUsageTable).set({ tradeFeedbackCount: count + 1, lastUsedAt: now }).where(eq(aiUsageTable.userId, userId));
+    }
+    return { allowed: true, isPremium: false, usageCount: count + 1 };
   }
-  return { allowed: true, isPremium: false, usageCount: count + 1 };
 }
 router9.get("/ai/usage", requireAuth, requireEmailVerified, async (req, res) => {
   try {
@@ -79688,8 +79703,14 @@ router9.get("/ai/usage", requireAuth, requireEmailVerified, async (req, res) => 
     const usage = await getUserAiUsage(userId);
     res.json({
       isPremium: premium,
-      usageCount: usage?.usageCount ?? 0,
-      freeLimit: AI_FREE_LIMIT
+      // Per-type counters
+      chartAnalysisCount: usage?.chartAnalysisCount ?? 0,
+      tradeFeedbackCount: usage?.tradeFeedbackCount ?? 0,
+      chartAnalysisLimit: AI_FREE_LIMIT_CHART,
+      tradeFeedbackLimit: AI_FREE_LIMIT_TRADE,
+      // Legacy field — sum of both for backward compat
+      usageCount: (usage?.chartAnalysisCount ?? 0) + (usage?.tradeFeedbackCount ?? 0),
+      freeLimit: AI_FREE_LIMIT_CHART + AI_FREE_LIMIT_TRADE
     });
   } catch (err) {
     res.status(500).json({ error: "internal" });
@@ -79698,7 +79719,7 @@ router9.get("/ai/usage", requireAuth, requireEmailVerified, async (req, res) => 
 router9.post("/ai/chart-analysis", requireAuth, requireEmailVerified, async (req, res) => {
   try {
     const userId = req.userId;
-    const limit = await checkAndIncrementAiUsage(userId);
+    const limit = await checkAndIncrementAiUsage(userId, "chart");
     if (!limit.allowed) {
       return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
     }
@@ -79774,7 +79795,7 @@ REGRAS:
 router9.post("/ai/trade-feedback", requireAuth, requireEmailVerified, async (req, res) => {
   try {
     const userId = req.userId;
-    const limit = await checkAndIncrementAiUsage(userId);
+    const limit = await checkAndIncrementAiUsage(userId, "trade");
     if (!limit.allowed) {
       return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
     }

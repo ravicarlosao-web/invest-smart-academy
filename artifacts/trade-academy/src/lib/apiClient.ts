@@ -141,7 +141,11 @@ export const api = {
     }) =>
       authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/trade-feedback", trade),
     getUsage: () =>
-      authRequest<{ usageCount: number; isPremium: boolean; freeLimit: number }>("GET", "/ai/usage"),
+      authRequest<{
+        usageCount: number; isPremium: boolean; freeLimit: number;
+        chartAnalysisCount: number; chartAnalysisLimit: number;
+        tradeFeedbackCount: number; tradeFeedbackLimit: number;
+      }>("GET", "/ai/usage"),
   },
 
   /* ---------- Notifications ---------- */

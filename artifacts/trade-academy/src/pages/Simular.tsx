@@ -1274,7 +1274,7 @@ export default function Simular() {
             <div className="space-y-1">
               <h2 className="text-lg font-bold tracking-tight">Limite do plano gratuito</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Já utilizaste o teu <span className="font-semibold text-foreground">1 uso gratuito</span> do Aluka IA.
+                Já utilizaste os teus <span className="font-semibold text-foreground">2 usos gratuitos</span> do Aluka IA (1 para análise de gráfico + 1 para feedback de trade).
                 Para acesso <span className="font-semibold text-primary">ilimitado</span> à análise de gráficos e feedback de trades, actualiza para o plano Premium.
               </p>
             </div>

@@ -224,6 +224,8 @@ export async function initDb(): Promise<void> {
     `ALTER TABLE users ADD COLUMN google_id TEXT`,
     `ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)`,
     `ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE ai_usage ADD COLUMN chart_analysis_count INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE ai_usage ADD COLUMN trade_feedback_count INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const stmt of alterStatements) {
     try {
