@@ -32,7 +32,7 @@ import { LEVELS } from "@/data/curriculum";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
 import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
-import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS } from "@/data/videos";
+import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES, CATEGORY_ICONS } from "@/data/videos";
 
 /* =========================================================================
  * Login screen
@@ -2032,8 +2032,8 @@ function SimulatorTab() {
 const VIDEO_LEVELS: VideoLesson["level"][] = ["Iniciante", "Intermediário", "Avançado"];
 
 const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
-  creator: "", title: "", level: "Iniciante", videoUrl: "",
-  description: "", requiredXp: undefined, order: 99, duration: "",
+  creator: "", title: "", level: "Iniciante", category: "Geral", tags: [],
+  videoUrl: "", description: "", requiredXp: undefined, order: 99, duration: "",
 };
 
 function VideosTab() {
@@ -2043,13 +2043,17 @@ function VideosTab() {
   const [isNew, setIsNew]     = useState(false);
   const [saving, setSaving]   = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterCat, setFilterCat]       = useState("Todas");
 
   useEffect(() => {
     api.admin.getVideos()
       .then((r) => {
         const migrated = (r as any[]).map((v) => ({
           ...v,
-          videoUrl: v.videoUrl ?? v.youtubeUrl ?? "",
+          videoUrl:  v.videoUrl ?? v.youtubeUrl ?? "",
+          category:  v.category ?? "Geral",
+          tags:      Array.isArray(v.tags) ? v.tags : [],
         })) as VideoLesson[];
         setVideos(migrated.sort((a, b) => a.order - b.order));
         setLoaded(true);
@@ -2151,6 +2155,28 @@ function VideosTab() {
                 <Input type="number" value={editing.order}
                   onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} />
               </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Categoria</Label>
+                <Select value={editing.category || "Geral"} onValueChange={(v) => setEditing({ ...editing, category: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {VIDEO_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>{CATEGORY_ICONS[c] ?? "🎬"} {c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs text-muted-foreground">Tags <span className="text-muted-foreground/60">(separadas por vírgula, opcional)</span></Label>
+                <Input
+                  value={(editing.tags ?? []).join(", ")}
+                  placeholder="velas, price action, suporte, resistência..."
+                  onChange={(e) => setEditing({
+                    ...editing,
+                    tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean),
+                  })}
+                />
+              </div>
               <div className="md:col-span-2">
                 <Label className="text-xs text-muted-foreground">
                   Link do vídeo <span className="text-muted-foreground/60">(YouTube, Vimeo, Facebook, TikTok, etc.)</span>
@@ -2247,67 +2273,143 @@ function VideosTab() {
         </Card>
       )}
 
-      {/* Video list */}
+      {/* Filter bar */}
       {loaded && videos.length > 0 && (
-        <div className="space-y-2">
-          {videos.map((v, i) => {
-            const ytId = extractYouTubeId(v.videoUrl);
-            return (
-              <Card key={v.id} className="border-border/60">
-                <CardContent className="flex items-center gap-3 p-3">
-                  {/* Thumbnail */}
-                  <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-md bg-muted">
-                    {ytId ? (
-                      <img src={thumbnailUrl(ytId)} alt={v.title}
-                        className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <PlayCircle className="h-6 w-6 text-muted-foreground/30" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm truncate">{v.title}</span>
-                      <Badge className={cn("text-[10px]", LEVEL_COLORS[v.level])}>{v.level}</Badge>
-                      {v.requiredXp && (
-                        <Badge variant="outline" className="text-[10px]">
-                          <Lock className="h-2.5 w-2.5 mr-0.5" />{v.requiredXp} XP
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{v.creator}</p>
-                    {v.duration && <p className="text-[11px] text-muted-foreground/60 font-mono">{v.duration}</p>}
-                  </div>
-
-                  {/* Order controls */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveUp(v.id)} disabled={i === 0}>
-                      <ChevronRight className="h-3.5 w-3.5 -rotate-90" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveDown(v.id)} disabled={i === videos.length - 1}>
-                      <ChevronRight className="h-3.5 w-3.5 rotate-90" />
-                    </Button>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-1 shrink-0">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(v)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-                      onClick={() => { if (window.confirm(`Excluir "${v.title}"?`)) save(videos.filter((x) => x.id !== v.id)); }}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              placeholder="Pesquisar vídeos..."
+              className="pl-8 h-8 text-xs"
+            />
+          </div>
+          <Select value={filterCat} onValueChange={setFilterCat}>
+            <SelectTrigger className="h-8 text-xs w-auto min-w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todas">Todas as categorias</SelectItem>
+              {Array.from(new Set(videos.map((v) => v.category || "Geral"))).sort().map((cat) => (
+                <SelectItem key={cat} value={cat}>{CATEGORY_ICONS[cat] ?? "🎬"} {cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterSearch || filterCat !== "Todas") && (
+            <Button size="sm" variant="ghost" className="h-8 text-xs px-2"
+              onClick={() => { setFilterSearch(""); setFilterCat("Todas"); }}>
+              <X className="h-3.5 w-3.5 mr-1" />Limpar
+            </Button>
+          )}
         </div>
       )}
+
+      {/* Video list — grouped by category */}
+      {loaded && videos.length > 0 && (() => {
+        const filteredVids = videos.filter((v) => {
+          const matchCat    = filterCat === "Todas" || (v.category || "Geral") === filterCat;
+          const matchSearch = !filterSearch ||
+            v.title.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            v.creator.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            (v.tags ?? []).some((t) => t.toLowerCase().includes(filterSearch.toLowerCase()));
+          return matchCat && matchSearch;
+        });
+
+        if (filteredVids.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+              <Search className="h-7 w-7 text-muted-foreground/30" />
+              <p className="text-sm font-medium">Nenhum vídeo encontrado</p>
+            </div>
+          );
+        }
+
+        const grouped: Record<string, VideoLesson[]> = {};
+        filteredVids.forEach((v) => {
+          const cat = v.category || "Geral";
+          (grouped[cat] = grouped[cat] ?? []).push(v);
+        });
+
+        return (
+          <div className="space-y-6">
+            {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, catVideos]) => (
+              <div key={cat} className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-border/40">
+                  <span className="text-base">{CATEGORY_ICONS[cat] ?? "🎬"}</span>
+                  <h3 className="font-medium text-sm">{cat}</h3>
+                  <Badge variant="outline" className="text-[10px] ml-auto">{catVideos.length} vídeo{catVideos.length !== 1 ? "s" : ""}</Badge>
+                </div>
+                {catVideos.map((v) => {
+                  const i    = videos.indexOf(v);
+                  const ytId = extractYouTubeId(v.videoUrl);
+                  return (
+                    <Card key={v.id} className="border-border/60">
+                      <CardContent className="flex items-center gap-3 p-3">
+                        {/* Thumbnail */}
+                        <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+                          {ytId ? (
+                            <img src={thumbnailUrl(ytId)} alt={v.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <PlayCircle className="h-5 w-5 text-muted-foreground/30" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <span className="font-medium text-sm truncate">{v.title}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge className={cn("text-[10px]", LEVEL_COLORS[v.level])}>{v.level}</Badge>
+                            {v.requiredXp && (
+                              <Badge variant="outline" className="text-[10px]">
+                                <Lock className="h-2.5 w-2.5 mr-0.5" />{v.requiredXp} XP
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{v.creator}</p>
+                          {v.tags && v.tags.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {v.tags.slice(0, 4).map((tag) => (
+                                <span key={tag} className="text-[10px] bg-muted/60 text-muted-foreground rounded px-1.5 py-0.5">#{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                          {v.duration && <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">{v.duration}</p>}
+                        </div>
+
+                        {/* Order controls */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveUp(v.id)} disabled={i === 0}>
+                            <ChevronRight className="h-3.5 w-3.5 -rotate-90" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveDown(v.id)} disabled={i === videos.length - 1}>
+                            <ChevronRight className="h-3.5 w-3.5 rotate-90" />
+                          </Button>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" onClick={() => openEdit(v)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+                            onClick={() => { if (window.confirm(`Excluir "${v.title}"?`)) save(videos.filter((x) => x.id !== v.id)); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

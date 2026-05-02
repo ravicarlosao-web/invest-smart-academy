@@ -1,8 +1,40 @@
+export const VIDEO_CATEGORIES = [
+  "Análise Técnica",
+  "Análise de Velas",
+  "Price Action",
+  "Gestão de Risco",
+  "Psicologia de Trading",
+  "Macroeconomia",
+  "Forex",
+  "Criptomoedas",
+  "Acções & Índices",
+  "Fundamentos",
+  "Geral",
+] as const;
+
+export type VideoCategory = (typeof VIDEO_CATEGORIES)[number] | string;
+
+export const CATEGORY_ICONS: Record<string, string> = {
+  "Análise Técnica":       "📈",
+  "Análise de Velas":      "🕯️",
+  "Price Action":          "📊",
+  "Gestão de Risco":       "🛡️",
+  "Psicologia de Trading": "🧠",
+  "Macroeconomia":         "🌍",
+  "Forex":                 "💱",
+  "Criptomoedas":          "₿",
+  "Acções & Índices":      "🏦",
+  "Fundamentos":           "📚",
+  "Geral":                 "🎬",
+};
+
 export interface VideoLesson {
   id: string;
   creator: string;
   title: string;
   level: "Iniciante" | "Intermediário" | "Avançado";
+  category: string;
+  tags?: string[];
   videoUrl: string;
   description?: string;
   requiredXp?: number;

@@ -84,6 +84,30 @@ The frontend (`trade-academy`) calls `/api` by default. This is routed to the `a
 - Button behaviour: if `enabled=false` → friendly toast (no technical errors shown)
 - `users.google_id` column added via idempotent `ALTER TABLE` in `initDb()`
 
+## Video Section (VideoAulas)
+
+Videos stored as JSON blob in `admin_settings` key `"content.videos"` via GET/PUT `/api/admin/videos`. No dedicated DB table — backward-compatible with existing data.
+
+**`VideoLesson` interface** (`artifacts/trade-academy/src/data/videos.ts`):
+- `id`, `creator`, `title`, `level`, `videoUrl`, `description`, `requiredXp`, `order`, `duration`
+- `category: string` — one of `VIDEO_CATEGORIES` (11 predefined: Análise Técnica, Análise de Velas, Price Action, Gestão de Risco, Psicologia de Trading, Macroeconomia, Forex, Criptomoedas, Acções & Índices, Fundamentos, Geral)
+- `tags?: string[]` — optional free-form tags
+
+**Admin panel** (`/ta-painel-gestao` → Vídeos tab):
+- Form fields: Criador, Título, Nível, Ordem, **Categoria** (Select), **Tags** (comma-separated Input), URL, Descrição
+- Filter bar above list: search input + category dropdown ("Todas as categorias")
+- Video list grouped by category with emoji icon headers
+
+**Student gallery** (`/video-aulas`):
+- Stats row: total videos / categories / creators
+- Search bar (filters by title, creator, description, tags)
+- Horizontal category pill tabs (scrollable, with emoji icons)
+- Creator chips (shown when ≥2 creators in current view)
+- Grouped display: by category (default) → by creator within category → by creator → flat search results
+- Video cards show level badge + category badge + tags
+
+**Migration**: on load, existing videos without `category`/`tags` get defaults: `category: "Geral"`, `tags: []`.
+
 ## Required Secrets
 
 All secrets must be set in Replit Secrets before the api-server will start:
