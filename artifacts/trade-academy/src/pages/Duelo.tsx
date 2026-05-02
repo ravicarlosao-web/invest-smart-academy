@@ -1,0 +1,536 @@
+import { useState, useEffect, useRef } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useAppStore } from "@/store/useAppStore";
+import { fmtUSD } from "@/lib/market";
+import { api } from "@/lib/apiClient";
+import {
+  Swords, Plus, Link2, Check, X, Copy, Trophy, Clock, Target,
+  TrendingUp, AlertCircle, Users, Loader2, RefreshCw, UserCheck,
+} from "lucide-react";
+import { toast } from "sonner";
+
+/* ── types ─────────────────────────────────────────────────────── */
+
+type LivePlayer = { name: string; equity: number };
+type LiveData   = { accepted: boolean; creator: LivePlayer | null; opponent: LivePlayer | null };
+
+/* ── helpers ────────────────────────────────────────────────────── */
+
+function formatDeadline(ts: number) {
+  const diff = ts - Date.now();
+  if (diff <= 0) return "Expirado";
+  const days  = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  if (days > 0) return `${days}d ${hours}h restantes`;
+  return `${hours}h restantes`;
+}
+
+/* ── polling hook ───────────────────────────────────────────────── */
+
+const POLL_INTERVAL = 15_000; // 15 s
+
+function useDueloPoll(codes: string[]) {
+  const [liveMap, setLiveMap]     = useState<Map<string, LiveData>>(new Map());
+  const [lastPoll, setLastPoll]   = useState<Date | null>(null);
+  const cancelledRef              = useRef(false);
+  const codesKey                  = codes.join(",");
+
+  useEffect(() => {
+    if (codes.length === 0) return;
+    cancelledRef.current = false;
+
+    async function poll() {
+      const results = await Promise.allSettled(codes.map((c) => api.duelos.live(c)));
+      if (cancelledRef.current) return;
+      const map = new Map<string, LiveData>();
+      codes.forEach((code, i) => {
+        const r = results[i];
+        if (r.status === "fulfilled") map.set(code, r.value);
+      });
+      setLiveMap(map);
+      setLastPoll(new Date());
+    }
+
+    poll();
+    const timer = setInterval(poll, POLL_INTERVAL);
+    return () => {
+      cancelledRef.current = true;
+      clearInterval(timer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codesKey]);
+
+  return { liveMap, lastPoll };
+}
+
+/* ── sub-components ─────────────────────────────────────────────── */
+
+function DuelProgress({
+  label,
+  currentEquity,
+  startEquity,
+  targetEquity,
+  highlight = false,
+}: {
+  label: string;
+  currentEquity: number;
+  startEquity: number;
+  targetEquity: number;
+  highlight?: boolean;
+}) {
+  const total  = targetEquity - startEquity;
+  const gained = currentEquity - startEquity;
+  const pct    = total > 0 ? Math.min(100, Math.max(0, (gained / total) * 100)) : 0;
+  const ahead  = currentEquity >= startEquity;
+
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-xs">
+        <span className={`font-medium ${highlight ? "text-primary" : "text-muted-foreground"}`}>
+          {label}
+        </span>
+        <span className={`font-mono font-semibold ${ahead ? "text-bull" : "text-bear"}`}>
+          {fmtUSD(currentEquity)} · {pct.toFixed(1)}%
+        </span>
+      </div>
+      <Progress value={pct} className="h-2" />
+    </div>
+  );
+}
+
+/* ── main component ─────────────────────────────────────────────── */
+
+export default function Duelo() {
+  const duelos      = useAppStore((s) => s.duelos);
+  const sim         = useAppStore((s) => s.sim);
+  const createDuelo = useAppStore((s) => s.createDuelo);
+  const acceptDuelo = useAppStore((s) => s.acceptDuelo);
+  const removeDuelo = useAppStore((s) => s.removeDuelo);
+  const addNotif    = useAppStore((s) => s.addNotification);
+
+  const currentEquity =
+    sim.cashBalance +
+    sim.positions.reduce((s, p) => s + (p.entryPrice * p.size) / (p.leverage ?? 1), 0);
+
+  const [tab, setTab]           = useState<"active" | "create" | "join">("active");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  /* Create form */
+  const [form, setForm] = useState({
+    title: "", targetEquity: "12000", startBalance: "10000",
+    maxDrawdownPct: "20", maxTrades: "30", days: "7",
+  });
+  const [creating, setCreating] = useState(false);
+  const [lastCode, setLastCode] = useState<string | null>(null);
+
+  /* Join form */
+  const [joinCode,  setJoinCode]  = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [joining,   setJoining]   = useState(false);
+
+  /* Live polling — only for active (non-expired) duelos */
+  const active  = duelos.filter((d) => Date.now() < d.expiresAt);
+  const expired = duelos.filter((d) => Date.now() >= d.expiresAt);
+
+  const { liveMap, lastPoll } = useDueloPoll(active.map((d) => d.code));
+
+  /* ── handlers ─────────────────────────────────────────────── */
+
+  function handleCreate() {
+    const title          = form.title.trim() || "Duelo de Trading";
+    const targetEquity   = Number(form.targetEquity);
+    const startBalance   = Number(form.startBalance);
+    const maxDrawdownPct = Number(form.maxDrawdownPct);
+    const maxTrades      = Number(form.maxTrades);
+    const days           = Number(form.days);
+
+    if (targetEquity <= startBalance) { toast.error("O alvo deve ser superior ao saldo inicial."); return; }
+    if (days < 1 || days > 90)        { toast.error("O prazo deve estar entre 1 e 90 dias.");      return; }
+
+    setCreating(true);
+    const expiresAt = Date.now() + days * 86_400_000;
+    const code = createDuelo({ title, targetEquity, startBalance, maxDrawdownPct, maxTrades, expiresAt });
+    setLastCode(code);
+    addNotif({ type: "duelo", title: "Duelo criado!", message: `"${title}" — partilha o código com os teus amigos`, link: "/duelo" });
+    toast.success("Duelo criado! Partilha o código.");
+    setCreating(false);
+    setForm({ title: "", targetEquity: "12000", startBalance: "10000", maxDrawdownPct: "20", maxTrades: "30", days: "7" });
+    setTab("active");
+  }
+
+  async function handleJoin() {
+    setJoinError("");
+    const code = joinCode.trim();
+    if (!code) { setJoinError("Introduz um código de duelo."); return; }
+
+    setJoining(true);
+    try {
+      /* Try server join first — registers this user as opponent */
+      await api.duelos.joinByCode(code);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("own_duelo")) {
+        setJoinError("Não podes entrar no teu próprio duelo.");
+        setJoining(false);
+        return;
+      }
+      if (msg.includes("duelo_full")) {
+        setJoinError("Este duelo já tem um oponente.");
+        setJoining(false);
+        return;
+      }
+      if (msg.includes("expired")) {
+        setJoinError("Este duelo já expirou.");
+        setJoining(false);
+        return;
+      }
+      /* For network errors / not_found: fall through to local decode */
+    }
+
+    const ok = acceptDuelo(code, currentEquity);
+    setJoining(false);
+
+    if (!ok) {
+      setJoinError("Código inválido. Verifica e tenta novamente.");
+      return;
+    }
+    addNotif({ type: "duelo", title: "Entraste num Duelo!", message: "Segue o teu progresso no separador Activos.", link: "/duelo" });
+    toast.success("Duelo aceite! Boa sorte.");
+    setJoinCode("");
+    setTab("active");
+  }
+
+  function copyCode(code: string, id: string) {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  /* ── render ────────────────────────────────────────────────── */
+
+  return (
+    <div className="container py-6 lg:py-8">
+
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            <Swords className="h-6 w-6 text-purple-400" />
+            Duelos
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Cria desafios contra amigos ou entra num duelo com o código deles.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant={tab === "create" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setTab("create")}>
+            <Plus className="h-4 w-4" /> Criar duelo
+          </Button>
+          <Button variant={tab === "join" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setTab("join")}>
+            <Link2 className="h-4 w-4" /> Entrar com código
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Create tab ── */}
+      {tab === "create" && (
+        <Card className="mb-6 p-5">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
+            <Plus className="h-4 w-4 text-primary" /> Novo Duelo
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Nome do duelo</Label>
+              <Input placeholder="Ex: Quem chega a $12k primeiro" value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Saldo inicial ($)</Label>
+              <Input type="number" value={form.startBalance}
+                onChange={(e) => setForm({ ...form, startBalance: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Alvo de capital ($)</Label>
+              <Input type="number" value={form.targetEquity}
+                onChange={(e) => setForm({ ...form, targetEquity: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Drawdown máximo (%)</Label>
+              <Input type="number" value={form.maxDrawdownPct}
+                onChange={(e) => setForm({ ...form, maxDrawdownPct: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Máx. trades</Label>
+              <Input type="number" value={form.maxTrades}
+                onChange={(e) => setForm({ ...form, maxTrades: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Prazo (dias)</Label>
+              <Input type="number" value={form.days}
+                onChange={(e) => setForm({ ...form, days: e.target.value })} className="mt-1" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={handleCreate} disabled={creating} className="gap-2">
+              <Swords className="h-4 w-4" /> Criar e gerar código
+            </Button>
+            <Button variant="ghost" onClick={() => setTab("active")}>Cancelar</Button>
+          </div>
+
+          {lastCode && (
+            <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <p className="mb-2 text-xs font-semibold text-primary">Código do duelo</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded bg-surface-2 px-3 py-2 text-xs font-mono break-all">
+                  {lastCode}
+                </code>
+                <Button size="sm" variant="outline" className="shrink-0 gap-1"
+                  onClick={() => { navigator.clipboard.writeText(lastCode); setCopiedId("last"); setTimeout(() => setCopiedId(null), 2000); }}>
+                  {copiedId === "last" ? <Check className="h-3.5 w-3.5 text-bull" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedId === "last" ? "Copiado!" : "Copiar"}
+                </Button>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Envia este código a um amigo para ele entrar no duelo.
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── Join tab ── */}
+      {tab === "join" && (
+        <Card className="mb-6 p-5">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
+            <Link2 className="h-4 w-4 text-primary" /> Entrar num Duelo
+          </h3>
+          <div>
+            <Label className="text-xs">Código do duelo</Label>
+            <div className="mt-1 flex gap-2">
+              <Input
+                placeholder="Cola aqui o código que recebeste…"
+                value={joinCode}
+                onChange={(e) => { setJoinCode(e.target.value); setJoinError(""); }}
+                className={joinError ? "border-destructive" : ""}
+                disabled={joining}
+              />
+              <Button onClick={handleJoin} disabled={joining} className="shrink-0 gap-2">
+                {joining
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Check className="h-4 w-4" />}
+                {joining ? "A entrar…" : "Entrar"}
+              </Button>
+            </div>
+            {joinError && (
+              <p className="mt-1.5 flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5" /> {joinError}
+              </p>
+            )}
+          </div>
+          <Button variant="ghost" className="mt-3" onClick={() => setTab("active")}>Cancelar</Button>
+        </Card>
+      )}
+
+      {/* ── Polling indicator ── */}
+      {active.length > 0 && (
+        <div className="mb-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <RefreshCw className="h-3 w-3" />
+          {lastPoll
+            ? `Actualizado às ${lastPoll.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · actualiza a cada 15s`
+            : "A carregar dados em tempo real…"}
+        </div>
+      )}
+
+      {/* ── Active duelos ── */}
+      <div className="space-y-4">
+        {active.length === 0 && expired.length === 0 && (
+          <Card className="flex flex-col items-center gap-4 py-14 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2">
+              <Users className="h-7 w-7 text-muted-foreground/40" />
+            </div>
+            <div>
+              <p className="font-semibold">Nenhum duelo activo</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cria um desafio ou entra num com o código de um amigo.
+              </p>
+            </div>
+            <Button onClick={() => setTab("create")} className="gap-2">
+              <Plus className="h-4 w-4" /> Criar primeiro duelo
+            </Button>
+          </Card>
+        )}
+
+        {active.map((d) => {
+          const live         = liveMap.get(d.code);
+          const isAccepted   = d.accepted || live?.accepted === true;
+          const tradeCount   = sim.history.length;
+          const isWinning    = currentEquity >= d.startEquity;
+
+          /* Who is "me" vs "opponent" from the polling data */
+          const myLive       = d.isJoiner ? live?.creator  : live?.opponent;
+          const oppLive      = d.isJoiner ? live?.opponent : live?.creator;
+          const hasOpponent  = isAccepted && (oppLive != null || d.isJoiner);
+
+          /* Use polling equity if available, otherwise fall back to local equity */
+          const myEquity     = myLive?.equity  ?? currentEquity;
+          const oppEquity    = oppLive?.equity  ?? null;
+          const oppName      = oppLive?.name    ?? (d.isJoiner ? "Criador" : "Oponente");
+
+          const iWin = oppEquity !== null && myEquity >= oppEquity;
+
+          return (
+            <Card key={d.id} className="overflow-hidden">
+              {/* Card header */}
+              <div className="flex items-start justify-between gap-3 px-5 py-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/15">
+                    <Swords className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{d.title}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {formatDeadline(d.expiresAt)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Target className="h-3 w-3" /> Alvo {fmtUSD(d.targetEquity)}
+                      </span>
+                      {d.isJoiner && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Participante</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  {isAccepted && (
+                    <Badge className={`text-xs ${iWin ? "bg-bull/15 text-bull" : "bg-bear/15 text-bear"}`}>
+                      {oppEquity !== null ? (iWin ? "Na frente" : "Atrás") : (isWinning ? "Na frente" : "Atrás")}
+                    </Badge>
+                  )}
+                  {!d.isJoiner && (
+                    <button onClick={() => copyCode(d.code, d.id)}
+                      className="rounded-md p-1.5 hover:bg-surface-2 transition-colors" title="Copiar código">
+                      {copiedId === d.id
+                        ? <Check className="h-3.5 w-3.5 text-bull" />
+                        : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </button>
+                  )}
+                  <button onClick={() => removeDuelo(d.id)}
+                    className="rounded-md p-1.5 hover:bg-surface-2 transition-colors" title="Remover duelo">
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card body */}
+              <div className="border-t border-border px-5 pb-4 pt-3">
+                {isAccepted ? (
+                  <>
+                    {/* Progress bars — me vs opponent */}
+                    <div className="space-y-3">
+                      <DuelProgress
+                        label="Tu"
+                        currentEquity={currentEquity}
+                        startEquity={d.startEquity}
+                        targetEquity={d.targetEquity}
+                        highlight
+                      />
+                      {hasOpponent && oppEquity !== null ? (
+                        <DuelProgress
+                          label={oppName}
+                          currentEquity={oppEquity}
+                          startEquity={d.startEquity}
+                          targetEquity={d.targetEquity}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          A aguardar dados do oponente…
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                      <div className="rounded-lg bg-surface-1 px-2 py-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Capital</p>
+                        <p className={`mt-0.5 font-mono text-sm font-bold ${isWinning ? "text-bull" : "text-bear"}`}>
+                          {fmtUSD(currentEquity)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-surface-1 px-2 py-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Trades</p>
+                        <p className="mt-0.5 font-mono text-sm font-bold">{tradeCount}/{d.maxTrades}</p>
+                      </div>
+                      <div className="rounded-lg bg-surface-1 px-2 py-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Max DD</p>
+                        <p className="mt-0.5 font-mono text-sm font-bold">{d.maxDrawdownPct}%</p>
+                      </div>
+                    </div>
+
+                    {/* Opponent equity comparison */}
+                    {oppEquity !== null && (
+                      <div className={`mt-3 flex items-center justify-between rounded-lg px-4 py-2.5 text-sm
+                        ${iWin ? "bg-bull/10" : "bg-bear/10"}`}>
+                        <span className={`font-medium ${iWin ? "text-bull" : "text-bear"}`}>
+                          {iWin ? "Estás à frente" : "Estás atrás"} de {oppName}
+                        </span>
+                        <span className={`font-mono text-xs font-semibold ${iWin ? "text-bull" : "text-bear"}`}>
+                          {oppName}: {fmtUSD(oppEquity)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Victory banner */}
+                    {currentEquity >= d.targetEquity && (
+                      <div className="mt-3 flex items-center gap-2 rounded-lg bg-bull/10 px-4 py-2.5">
+                        <Trophy className="h-4 w-4 text-bull" />
+                        <p className="text-sm font-semibold text-bull">Objectivo atingido! Parabéns</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Awaiting opponent */
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <UserCheck className="h-3.5 w-3.5 animate-pulse text-purple-400" />
+                      A aguardar que um amigo entre com o código…
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => copyCode(d.code, d.id)}>
+                      {copiedId === d.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedId === d.id ? "Copiado!" : "Código"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+
+        {/* Expired */}
+        {expired.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Expirados</p>
+            {expired.map((d) => (
+              <Card key={d.id} className="mb-2 flex items-center justify-between px-5 py-3 opacity-50">
+                <div className="flex items-center gap-3">
+                  <Swords className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{d.title}</span>
+                </div>
+                <button onClick={() => removeDuelo(d.id)}>
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

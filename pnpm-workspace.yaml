@@ -158,3 +158,25 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+
+  # ── Security vulnerability fixes ────────────────────────────────────────────
+  # path-to-regexp: DoS via sequential optional groups — fixed in >=8.4.0
+  # Affects: api-server > express > router > path-to-regexp (PRODUCTION)
+  path-to-regexp: ">=8.4.0"
+  # picomatch: ReDoS + method injection — two separate major version streams,
+  # overridden per-consumer to avoid cross-major API conflicts
+  # 2.x consumers (chokidar>anymatch and fast-glob>micromatch)
+  "micromatch>picomatch": "2.3.2"
+  "anymatch>picomatch": "2.3.2"
+  # 4.x consumers (vite and vitest)
+  "vite>picomatch": "4.0.4"
+  "vitest>picomatch": "4.0.4"
+  # brace-expansion: zero-step sequence DoS — fixed in 2.0.3
+  # Affects: api-spec > orval > typedoc > minimatch > brace-expansion
+  "minimatch>brace-expansion": "2.0.3"
+  # yaml: stack overflow via deeply nested YAML — fixed in 2.8.3
+  # Affects: mockup-sandbox > vite > yaml
+  yaml: "2.8.3"
+  # NOTE: lodash <= 4.17.23 (in recharts) has no upstream fix yet
+  # (lodash 4.18.0 not released). Risk is low — only _.template() injection,
+  # not triggered by recharts' internal usage patterns.

@@ -1,0 +1,27 @@
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+
+export const strategiesTable = sqliteTable("strategies", {
+  id:             text("id").primaryKey(),
+  name:           text("name").notNull(),
+  subtitle:       text("subtitle").notNull(),
+  icon:           text("icon").notNull(),
+  timeframes:     text("timeframes").notNull().default("[]"),
+  markets:        text("markets").notNull().default("[]"),
+  riskLevel:      text("risk_level").notNull(),
+  winRate:        text("win_rate").notNull(),
+  riskReward:     text("risk_reward").notNull(),
+  difficulty:     text("difficulty").notNull(),
+  description:    text("description").notNull(),
+  howItWorks:     text("how_it_works").notNull(),
+  setup:          text("setup").notNull().default("[]"),
+  entrySignals:   text("entry_signals").notNull().default("[]"),
+  exitSignals:    text("exit_signals").notNull().default("[]"),
+  riskManagement: text("risk_management").notNull().default("[]"),
+  pros:           text("pros").notNull().default("[]"),
+  cons:           text("cons").notNull().default("[]"),
+  example:        text("example").notNull(),
+  tags:           text("tags").notNull().default("[]"),
+  sortOrder:      integer("sort_order").notNull().default(0),
+  createdAt:      integer("created_at").notNull(),
+  updatedAt:      integer("updated_at").notNull(),
+});

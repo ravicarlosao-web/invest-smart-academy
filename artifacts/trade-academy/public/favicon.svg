@@ -1,0 +1,24 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="36" fill="#0f1117"/>
+  <!-- Body -->
+  <ellipse cx="90" cy="105" rx="42" ry="48" fill="#00bcd4"/>
+  <!-- Head -->
+  <ellipse cx="90" cy="68" rx="36" ry="34" fill="#00bcd4"/>
+  <!-- Left ear -->
+  <polygon points="60,44 54,18 74,38" fill="#00bcd4"/>
+  <!-- Right ear -->
+  <polygon points="120,44 126,18 106,38" fill="#00bcd4"/>
+  <!-- Left eye ring -->
+  <circle cx="76" cy="68" r="13" fill="#0f1117"/>
+  <circle cx="76" cy="68" r="8" fill="#00e5ff"/>
+  <!-- Right eye ring -->
+  <circle cx="104" cy="68" r="13" fill="#0f1117"/>
+  <circle cx="104" cy="68" r="8" fill="#00e5ff"/>
+  <!-- Beak -->
+  <polygon points="90,76 84,85 96,85" fill="#0f1117"/>
+  <!-- Wing lines -->
+  <line x1="60" y1="100" x2="48" y2="140" stroke="#0f1117" stroke-width="3" stroke-linecap="round"/>
+  <line x1="120" y1="100" x2="132" y2="140" stroke="#0f1117" stroke-width="3" stroke-linecap="round"/>
+  <!-- Bottom point -->
+  <polygon points="78,148 90,162 102,148" fill="#00bcd4"/>
+</svg>
