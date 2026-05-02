@@ -773,6 +773,8 @@ function UsersTab() {
   const [busy, setBusy]       = useState<string | null>(null);
   const [editXp, setEditXp]   = useState<{ userId: string; current: number } | null>(null);
   const [newXp, setNewXp]     = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function reload() {
     setUsers(null);
@@ -795,6 +797,18 @@ function UsersTab() {
     try { await fn(); toast.success(`${label} concluído`); await reload(); }
     catch (e) { toast.error(`Falha: ${String(e)}`); }
     finally { setBusy(null); }
+  }
+
+  async function confirmDelete() {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await api.admin.deleteUser(deleteConfirm.id);
+      toast.success(`Aluno ${deleteConfirm.name || deleteConfirm.email} eliminado.`);
+      setDeleteConfirm(null);
+      await reload();
+    } catch (e) { toast.error(`Falha ao eliminar: ${String(e)}`); }
+    finally { setDeleting(false); }
   }
 
   async function saveXp() {
@@ -894,9 +908,8 @@ function UsersTab() {
                         <LineChartIcon className="h-3.5 w-3.5" />
                       </Button>
                       <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-                        title="Excluir aluno" disabled={busy === u.id + "Excluir"}
-                        onClick={() => action("Excluir", () => api.admin.deleteUser(u.id), u.id,
-                          `EXCLUIR DEFINITIVAMENTE ${u.email}? Esta acção não pode ser desfeita.`)}>
+                        title="Excluir aluno" disabled={deleting && deleteConfirm?.id === u.id}
+                        onClick={() => setDeleteConfirm({ id: u.id, name: u.name ?? "", email: u.email ?? "" })}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -907,6 +920,73 @@ function UsersTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* ── Modal de confirmação de eliminação ─────────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md rounded-2xl border border-destructive/40 bg-background shadow-2xl animate-in zoom-in-95 fade-in duration-200">
+            {/* Fechar */}
+            <button
+              onClick={() => !deleting && setDeleteConfirm(null)}
+              className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors disabled:opacity-50"
+              disabled={deleting}
+              aria-label="Cancelar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+              {/* Ícone de aviso */}
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-4 ring-destructive/20">
+                <Trash2 className="h-6 w-6 text-destructive" />
+              </div>
+
+              <div className="space-y-1">
+                <h2 className="text-lg font-bold tracking-tight">Eliminar aluno definitivamente?</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Estás prestes a eliminar a conta de:
+                </p>
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-2 mt-2">
+                  <p className="font-semibold text-foreground">{deleteConfirm.name || "—"}</p>
+                  <p className="text-xs text-muted-foreground">{deleteConfirm.email}</p>
+                </div>
+              </div>
+
+              {/* Aviso */}
+              <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-left">
+                <p className="text-xs text-amber-400 font-semibold mb-1">⚠ Esta acção é irreversível</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Serão eliminados permanentemente: conta, progresso, trades, subscrição e todos os dados associados a este aluno.
+                </p>
+              </div>
+
+              {/* Botões */}
+              <div className="flex w-full gap-2 pt-1">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />A eliminar...</>
+                  ) : (
+                    <><Trash2 className="mr-1.5 h-3.5 w-3.5" />Sim, eliminar</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
