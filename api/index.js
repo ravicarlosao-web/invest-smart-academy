@@ -78125,6 +78125,18 @@ router7.post("/users/:userId/reset-sim", async (req, res) => {
     res.status(500).json({ error: "internal" });
   }
 });
+router7.patch("/users/:userId/verify-email", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userId)).get();
+    if (!user) return res.status(404).json({ error: "user_not_found" });
+    await db.update(usersTable).set({ emailVerified: 1, updatedAt: Date.now() }).where(eq(usersTable.id, userId));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
 router7.patch("/users/:userId/xp", validate(AdminXpBody), async (req, res) => {
   try {
     const { xp } = req.body;

@@ -284,6 +284,20 @@ router.post("/users/:userId/reset-sim", async (req: any, res: any) => {
   }
 });
 
+/* Verify user email manually (admin action) */
+router.patch("/users/:userId/verify-email", async (req: any, res: any) => {
+  try {
+    const { userId } = req.params;
+    const user = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userId)).get();
+    if (!user) return res.status(404).json({ error: "user_not_found" });
+    await db.update(usersTable).set({ emailVerified: 1, updatedAt: Date.now() }).where(eq(usersTable.id, userId));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 /* Adjust user XP */
 router.patch("/users/:userId/xp", validate(AdminXpBody), async (req: any, res: any) => {
   try {

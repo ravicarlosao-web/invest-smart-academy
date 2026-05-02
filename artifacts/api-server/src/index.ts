@@ -30,6 +30,17 @@ try {
   process.exit(1);
 }
 
+/* One-time migration: set emailVerified = 1 for pre-existing users so they
+ * are not locked out after the email-verification enforcement was added.
+ * Safe to run on every startup — Drizzle+Turso is idempotent here.        */
+try {
+  const { db, usersTable, eq } = await import("@workspace/db");
+  await db.update(usersTable).set({ emailVerified: 1 }).where(eq(usersTable.emailVerified, 0));
+  logger.info("Email-verification migration: pre-existing users marked verified");
+} catch (err) {
+  logger.warn({ err }, "Email-verification migration failed (non-fatal)");
+}
+
 /* Seed static content into DB if not already present */
 try {
   await seedContent();
