@@ -371,9 +371,12 @@ export default function Duelo() {
           const tradeCount   = sim.history.length;
           const isWinning    = currentEquity >= d.startEquity;
 
-          /* Who is "me" vs "opponent" from the polling data */
-          const myLive       = d.isJoiner ? live?.creator  : live?.opponent;
-          const oppLive      = d.isJoiner ? live?.opponent : live?.creator;
+          /* Who is "me" vs "opponent" from the polling data.
+           * API always returns: creator = who created, opponent = who joined.
+           * isJoiner=true  → I am the opponent in the API response
+           * isJoiner=false → I am the creator in the API response */
+          const myLive       = d.isJoiner ? live?.opponent : live?.creator;
+          const oppLive      = d.isJoiner ? live?.creator  : live?.opponent;
           const hasOpponent  = isAccepted && (oppLive != null || d.isJoiner);
 
           /* Use polling equity if available, otherwise fall back to local equity */
