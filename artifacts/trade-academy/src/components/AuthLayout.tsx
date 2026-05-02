@@ -66,7 +66,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#080b12] text-white flex flex-col lg:flex-row">
+    <div className="h-screen overflow-hidden bg-[#080b12] text-white flex flex-col lg:flex-row">
 
       {/* ── LEFT PANEL (desktop only) ──────────────────── */}
       <div className="hidden lg:flex lg:w-[52%] xl:w-[55%] flex-col relative overflow-hidden bg-[#080b12]">
@@ -144,7 +144,7 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
       </div>
 
       {/* ── RIGHT PANEL (form) ─────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-5 py-10 lg:py-0 lg:px-12 xl:px-16 relative">
+      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto px-5 py-8 lg:py-6 lg:px-12 xl:px-16 relative">
 
         {/* Mobile: subtle top gradient */}
         <div className="lg:hidden absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none" />
