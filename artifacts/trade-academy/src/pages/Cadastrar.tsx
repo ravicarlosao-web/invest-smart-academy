@@ -148,8 +148,10 @@ function OtpInput({ value, onChange, disabled, firstInputRef }: {
           onChange={(e) => handleChange(i, e)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onFocus={(e) => e.target.select()}
-          className={`w-11 h-14 rounded-xl border text-center text-xl font-bold transition-all duration-150 bg-white/[0.04] text-white caret-transparent focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500/50 disabled:opacity-50 ${
-            d.trim() ? "border-cyan-500/60" : "border-white/10"
+          className={`w-11 h-14 rounded-xl border-2 text-center text-xl font-bold transition-all duration-150 bg-white/[0.06] text-white caret-transparent focus:outline-none focus:ring-0 disabled:opacity-50 ${
+            d.trim()
+              ? "border-cyan-500 shadow-[0_0_8px_rgba(0,199,230,0.35)]"
+              : "border-white/25 hover:border-white/40"
           }`}
         />
       ))}
