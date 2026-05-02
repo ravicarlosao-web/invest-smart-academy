@@ -254,6 +254,8 @@ export const api = {
       adminRequest<{ clientId: string; clientSecretPreview: string; enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/admin/google-oauth"),
     saveGoogleOAuth: (cfg: { clientId?: string; clientSecret?: string; enabled?: boolean }) =>
       adminRequest<{ ok: boolean; configured: boolean; enabled: boolean }>("PUT", "/admin/google-oauth", cfg),
+    testGoogleOAuth: () =>
+      adminRequest<{ ok: boolean; message?: string }>("POST", "/admin/google-oauth/test", {}),
 
     getCurriculumDb: () =>
       adminRequest<unknown[]>("GET", "/admin/curriculum-db"),

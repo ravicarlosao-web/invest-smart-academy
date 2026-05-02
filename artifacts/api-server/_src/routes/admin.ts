@@ -1111,14 +1111,40 @@ router.post("/ai-config/test", async (req: any, res: any) => {
     if (!key) {
       return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada para este modelo." });
     }
-    const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+
+    /* Use generateContent with a minimal prompt to detect quota issues,
+       invalid keys, and model availability — GET /models only validates
+       the key format but not quota or generateContent permissions. */
+    const model = type === "image" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash-lite";
+    const testRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Hi" }] }],
+          generationConfig: { maxOutputTokens: 5 },
+        }),
+      },
+    );
+
     if (!testRes.ok) {
       const body = await testRes.json().catch(() => ({})) as any;
-      return res.status(400).json({
-        error: "invalid_key",
-        message: body?.error?.message ?? "Chave inválida ou sem permissões.",
-      });
+      const status  = testRes.status;
+      const message = body?.error?.message ?? "Chave inválida ou sem permissões.";
+
+      if (status === 429) {
+        return res.status(429).json({
+          error: "quota_exceeded",
+          message: "Quota esgotada para esta chave. Aguarda o reset diário ou usa outra chave.",
+        });
+      }
+      if (status === 400 || status === 403) {
+        return res.status(400).json({ error: "invalid_key", message });
+      }
+      return res.status(400).json({ error: "api_error", message });
     }
+
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -1234,6 +1260,64 @@ router.get("/google-oauth", async (req: any, res: any) => {
       configured:          !!(cfg.clientId && cfg.clientSecret),
       callbackUrl,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/** POST /api/admin/google-oauth/test — validates stored credentials against Google */
+router.post("/google-oauth/test", async (req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "auth.google")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+
+    if (!cfg.clientId || !cfg.clientSecret) {
+      return res.status(400).json({ error: "not_configured", message: "Client ID e Client Secret são obrigatórios." });
+    }
+
+    /* Basic format validation */
+    if (!cfg.clientId.endsWith(".apps.googleusercontent.com")) {
+      return res.status(400).json({
+        error: "invalid_client_id",
+        message: "Client ID inválido — deve terminar em .apps.googleusercontent.com",
+      });
+    }
+    if (!cfg.clientSecret.startsWith("GOCSPX-") && !cfg.clientSecret.startsWith("GOCP-")) {
+      return res.status(400).json({
+        error: "invalid_client_secret",
+        message: "Client Secret inválido — deve começar com GOCSPX-",
+      });
+    }
+
+    /* Send a dummy token exchange to Google to verify the client credentials.
+       We expect:  invalid_grant  → credentials recognised (good)
+                   invalid_client → wrong client_id/secret (bad)           */
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code:          "dummy_test_code",
+        client_id:     cfg.clientId,
+        client_secret: cfg.clientSecret,
+        redirect_uri:  "https://localhost",
+        grant_type:    "authorization_code",
+      }),
+    });
+
+    const body = await resp.json().catch(() => ({})) as any;
+    const errCode = body?.error;
+
+    if (errCode === "invalid_client") {
+      return res.status(400).json({
+        error: "invalid_client",
+        message: "Client ID ou Client Secret inválidos — o Google rejeitou as credenciais.",
+      });
+    }
+
+    /* invalid_grant / redirect_uri_mismatch → credentials are valid, just wrong code/uri (expected) */
+    res.json({ ok: true, message: "Credenciais reconhecidas pelo Google." });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

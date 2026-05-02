@@ -11,7 +11,7 @@ import {
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
   Mail, Send, CheckCircle, Globe, Plug, Copy, ToggleLeft, ToggleRight,
-  Building2, ArrowLeftRight, Video, Share2,
+  Building2, ArrowLeftRight, Video, Share2, AlertCircle,
 } from "lucide-react";
 import type { SubscriptionWithUser, SeoConfig, SocialConfig } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -577,7 +577,10 @@ function AlukaIaTab() {
         if (!geminiImageEnabled) { setGeminiImageEnabled(true); await api.admin.saveAiConfig({ geminiImageEnabled: true }); }
       }
     } catch (err: any) {
-      const msg = err?.message ?? "Chave inválida ou sem permissões.";
+      let msg = err?.message ?? "Chave inválida ou sem permissões.";
+      if (err?.status === 429 || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("429")) {
+        msg = "Quota esgotada — a chave está válida mas sem créditos disponíveis. Aguarda o reset diário ou usa outra chave.";
+      }
       if (type === "text") { setAiTextStatus("error"); setAiTextMsg(msg); }
       else                 { setAiImageStatus("error");setAiImageMsg(msg); }
     } finally { setAiTesting(null); }
@@ -3437,6 +3440,9 @@ function IntegracoesTb() {
   });
   const [loading, setLoading]   = useState(true);
   const [saving,  setSaving]    = useState(false);
+  const [testing, setTesting]   = useState(false);
+  const [testStatus, setTestStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [testMsg,    setTestMsg]    = useState("");
   const [newSecret, setNewSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied]     = useState(false);
@@ -3466,10 +3472,32 @@ function IntegracoesTb() {
         clientSecretPreview: newSecret.trim() ? `${"•".repeat(Math.max(0, newSecret.length - 4))}${newSecret.slice(-4)}` : prev.clientSecretPreview,
       }));
       setNewSecret("");
+      setTestStatus("idle");
+      setTestMsg("");
     } catch {
       toast.error("Erro ao guardar configuração.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    if (newSecret.trim()) {
+      toast.error("Guarda primeiro as novas credenciais antes de testar.");
+      return;
+    }
+    setTesting(true);
+    setTestStatus("idle");
+    setTestMsg("");
+    try {
+      const res = await api.admin.testGoogleOAuth();
+      setTestStatus("ok");
+      setTestMsg(res.message ?? "Credenciais reconhecidas pelo Google.");
+    } catch (err: any) {
+      setTestStatus("error");
+      setTestMsg(err?.message ?? "Credenciais inválidas ou rejeitadas pelo Google.");
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -3631,9 +3659,29 @@ function IntegracoesTb() {
             </ol>
           </div>
 
-          <Button onClick={handleSave} disabled={saving} className="h-10 gap-2">
-            {saving ? <><Loader2 className="h-4 w-4 animate-spin" />A guardar…</> : <><Save className="h-4 w-4" />Guardar configuração</>}
-          </Button>
+          {/* Test result banner */}
+          {testStatus !== "idle" && (
+            <div className={cn(
+              "flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm",
+              testStatus === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400",
+            )}>
+              {testStatus === "ok"
+                ? <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                : <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />}
+              <span>{testMsg}</span>
+            </div>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleSave} disabled={saving || testing} className="h-10 gap-2">
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin" />A guardar…</> : <><Save className="h-4 w-4" />Guardar configuração</>}
+            </Button>
+            <Button variant="outline" onClick={handleTest} disabled={saving || testing || !cfg.configured} className="h-10 gap-2">
+              {testing ? <><Loader2 className="h-4 w-4 animate-spin" />A testar…</> : <><Wifi className="h-4 w-4" />Testar ligação</>}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
