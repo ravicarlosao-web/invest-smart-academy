@@ -1259,6 +1259,41 @@ router.put("/google-oauth", async (req: any, res: any) => {
   }
 });
 
+/* ---------------------------------------------------------------------------
+ * Social media links — GET / PUT /admin/social-config
+ * Stored in admin_settings key "social.config"
+ * ------------------------------------------------------------------------- */
+const SOCIAL_DEFAULTS = { youtube: "", instagram: "", tiktok: "", x: "", facebook: "" };
+
+router.get("/social-config", async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting("social.config", SOCIAL_DEFAULTS);
+    res.json({ ...SOCIAL_DEFAULTS, ...cfg });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/social-config", async (req: any, res: any) => {
+  try {
+    const { youtube, instagram, tiktok, x, facebook } = req.body ?? {};
+    const current = await getSetting("social.config", SOCIAL_DEFAULTS);
+    const merged = {
+      youtube:   typeof youtube   === "string" ? youtube.trim()   : current.youtube,
+      instagram: typeof instagram === "string" ? instagram.trim() : current.instagram,
+      tiktok:    typeof tiktok    === "string" ? tiktok.trim()    : current.tiktok,
+      x:         typeof x         === "string" ? x.trim()         : current.x,
+      facebook:  typeof facebook  === "string" ? facebook.trim()  : current.facebook,
+    };
+    await setSetting("social.config", merged);
+    res.json({ ok: true, config: merged });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 router.get("/seo-config", async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();

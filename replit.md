@@ -108,6 +108,27 @@ Videos stored as JSON blob in `admin_settings` key `"content.videos"` via GET/PU
 
 **Migration**: on load, existing videos without `category`/`tags` get defaults: `category: "Geral"`, `tags: []`.
 
+## Social Media Links
+
+Stored in `adminSettingsTable` under key `"social.config"` as JSON `{ youtube, instagram, tiktok, x, facebook }` (all URL strings).
+
+**Admin panel** (`/ta-painel-gestao` → "Redes Sociais" tab):
+- Form with one URL field per platform (YouTube, Instagram, TikTok, X/Twitter, Facebook)
+- Each field has the platform's branded icon + external link preview
+- Status card shows how many networks are active
+- Only platforms with a filled URL appear in the public footer
+
+**API endpoints**:
+- `GET /api/admin/social-config` — admin-protected read
+- `PUT /api/admin/social-config` — admin-protected write
+- `GET /api/social-config` — **public** read (no auth, used by frontend)
+
+**Frontend `Landing.tsx`**:
+- `SocialIcons` component fetches from `/api/social-config` on mount
+- Renders only icons where the URL is set; each is an `<a>` that opens in a new tab
+- Icons use inline SVG brand paths (YouTube, Instagram, TikTok, X, Facebook)
+- Footer shows nothing in the social area if no links are configured
+
 ## Required Secrets
 
 All secrets must be set in Replit Secrets before the api-server will start:

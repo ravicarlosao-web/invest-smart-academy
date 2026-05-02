@@ -222,6 +222,11 @@ export const api = {
     saveSeoConfig: (cfg: Partial<SeoConfig>) =>
       adminRequest<{ ok: boolean; config: SeoConfig }>("PUT", "/admin/seo-config", cfg),
 
+    getSocialConfig: () =>
+      adminRequest<SocialConfig>("GET", "/admin/social-config"),
+    saveSocialConfig: (cfg: Partial<SocialConfig>) =>
+      adminRequest<{ ok: boolean; config: SocialConfig }>("PUT", "/admin/social-config", cfg),
+
     getGoogleOAuth: () =>
       adminRequest<{ clientId: string; clientSecretPreview: string; enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/admin/google-oauth"),
     saveGoogleOAuth: (cfg: { clientId?: string; clientSecret?: string; enabled?: boolean }) =>
@@ -330,7 +335,20 @@ export type SeoConfig = {
   geoCity:       string;
 };
 
+export type SocialConfig = {
+  youtube:   string;
+  instagram: string;
+  tiktok:    string;
+  x:         string;
+  facebook:  string;
+};
+
 /** Public — no auth needed */
 export function getSiteConfig(): Promise<SeoConfig> {
   return request<SeoConfig>("GET", "/site-config");
+}
+
+/** Public — returns social media links configured in the admin panel */
+export function getSocialConfig(): Promise<SocialConfig> {
+  return request<SocialConfig>("GET", "/social-config");
 }

@@ -253,6 +253,19 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+/* ── Social media links — public read ────────────────────────────────── */
+router.get("/social-config", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "social.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const defaults = { youtube: "", instagram: "", tiktok: "", x: "", facebook: "" };
+    res.json({ ...defaults, ...cfg });
+  } catch {
+    res.json({ youtube: "", instagram: "", tiktok: "", x: "", facebook: "" });
+  }
+});
+
 /* ── SEO / Site Config — public read ──────────────────────────────────── */
 const SEO_DEFAULTS = {
   siteName:      "TradeAcademy Angola",
