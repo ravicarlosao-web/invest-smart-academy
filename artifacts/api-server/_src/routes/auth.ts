@@ -6,7 +6,9 @@ import {
   db, usersTable, passwordResetTokensTable, adminSettingsTable, eq,
 } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
-import { signToken } from "../middlewares/auth.js";
+import { signToken, revokeToken } from "../middlewares/auth.js";
+import jwt from "jsonwebtoken";
+import type { JwtPayload } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
 import { sendPasswordResetEmail } from "../lib/email.js";
 
@@ -346,6 +348,29 @@ router.get("/google/callback", async (req: any, res: any) => {
     req.log.error(err);
     return res.redirect(`${fe}/auth/google/resultado?error=google_error`);
   }
+});
+
+/**
+ * POST /api/auth/logout
+ * Revokes the JWT so it is rejected on all future requests, even before expiry.
+ * Always returns 200 — the client should clear its local session regardless.
+ */
+router.post("/logout", async (req: any, res: any) => {
+  const header = req.headers.authorization as string | undefined;
+  if (header?.startsWith("Bearer ")) {
+    const token = header.slice(7);
+    try {
+      const secret = process.env["JWT_SECRET"]!;
+      const decoded = jwt.verify(token, secret) as JwtPayload;
+      if (decoded.jti) {
+        const expiresAt = (decoded.exp ?? 0) * 1000; // JWT exp is in seconds
+        await revokeToken(decoded.jti, expiresAt);
+      }
+    } catch {
+      // Token already invalid/expired — nothing to revoke
+    }
+  }
+  return res.json({ ok: true });
 });
 
 export default router;

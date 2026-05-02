@@ -73,7 +73,11 @@ export const useAuthStore = create<AuthState>()(
 
       setFromOAuth: (user, token) => set({ user, token }),
 
-      logout: () => set({ user: null, token: null }),
+      logout: () => {
+        // Fire-and-forget: revoke token server-side before clearing local state
+        api.auth.logout().catch(() => {});
+        set({ user: null, token: null });
+      },
 
       isAuthenticated: () => get().user !== null && get().token !== null,
     }),

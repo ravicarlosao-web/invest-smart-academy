@@ -81,6 +81,8 @@ export const api = {
       request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/login", data,
       ),
+    logout: () =>
+      authRequest<{ ok: boolean }>("POST", "/auth/logout"),
     forgotPassword: (email: string) =>
       request<{ ok: boolean }>("POST", "/auth/forgot-password", { email }),
     resetPassword: (token: string, newPassword: string) =>

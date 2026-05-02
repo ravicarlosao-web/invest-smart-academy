@@ -188,6 +188,12 @@ export async function initDb(): Promise<void> {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS revoked_tokens (
+      jti        TEXT PRIMARY KEY,
+      expires_at INTEGER NOT NULL,
+      revoked_at INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
