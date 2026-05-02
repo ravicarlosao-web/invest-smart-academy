@@ -57,7 +57,7 @@
 
     <!-- ── PWA + App meta ─────────────────────────────────────────────────── -->
     <!-- manifest served dynamically by API so admin panel changes take effect immediately -->
-    <link rel="manifest" href="/api-server/api/manifest" />
+    <link rel="manifest" href="/api/manifest" />
     <meta name="theme-color" content="#06b6d4" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -497,7 +497,7 @@
     <script>
       (function () {
         try {
-          fetch("/api-server/api/site-config")
+          fetch("/api/site-config")
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (cfg) {
               if (!cfg || !cfg.domain) return;
