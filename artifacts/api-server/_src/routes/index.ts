@@ -379,19 +379,23 @@ async function getAiCfg(): Promise<AiCfgI> {
 
 async function callGemini(apiKey: string, parts: unknown[]): Promise<string> {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
+        generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
       }),
     },
   );
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as any;
-    throw new Error(err?.error?.message ?? "Erro ao contactar o Gemini.");
+    const body = await res.json().catch(() => ({})) as any;
+    const msg: string = body?.error?.message ?? "Erro ao contactar o Gemini.";
+    const err = new Error(msg) as any;
+    err.status = res.status;
+    err.isQuotaError = res.status === 429 || msg.includes("quota") || msg.includes("Quota") || msg.includes("RESOURCE_EXHAUSTED");
+    throw err;
   }
   const data = await res.json() as any;
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
@@ -441,8 +445,8 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
     res.json({ ok: true, analysis });
   } catch (err: any) {
     req.log?.error(err);
-    if (err?.message?.includes("Gemini")) return res.status(502).json({ error: "gemini_error", message: err.message });
-    res.status(500).json({ error: "internal" });
+    if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
+    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
   }
 });
 
@@ -462,7 +466,8 @@ router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
     res.json({ ok: true, analysis });
   } catch (err: any) {
     req.log?.error(err);
-    res.status(500).json({ error: "internal" });
+    if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
+    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
   }
 });
 

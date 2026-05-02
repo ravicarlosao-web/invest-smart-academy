@@ -655,8 +655,13 @@ export default function Simular() {
         imageBase64,
       });
       setChartAnalysis(result.analysis);
-    } catch {
-      toast.error("Erro ao obter análise do Aluka IA");
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (msg.includes("quota") || msg.includes("Quota") || msg.includes("Limite de pedidos")) {
+        toast.error("Limite de pedidos à IA atingido — tenta novamente em alguns segundos.");
+      } else {
+        toast.error("Erro ao obter análise do Aluka IA");
+      }
     } finally {
       setChartAnalyzing(false);
     }

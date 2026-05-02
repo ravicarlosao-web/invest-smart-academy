@@ -521,11 +521,15 @@ function AlukaIaTab() {
   async function saveAi() {
     setAiSaving(true);
     try {
+      const newTextEnabled  = geminiTextEnabled  || !!geminiTextKey.trim();
+      const newImageEnabled = geminiImageEnabled || !!geminiImageKey.trim();
+      if (newTextEnabled  !== geminiTextEnabled)  setGeminiTextEnabled(newTextEnabled);
+      if (newImageEnabled !== geminiImageEnabled) setGeminiImageEnabled(newImageEnabled);
       await api.admin.saveAiConfig({
         geminiTextKey:     geminiTextKey.trim()  || undefined,
-        geminiTextEnabled,
+        geminiTextEnabled: newTextEnabled,
         geminiImageKey:    geminiImageKey.trim() || undefined,
-        geminiImageEnabled,
+        geminiImageEnabled: newImageEnabled,
       });
       const updated = await api.admin.getAiConfig();
       setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
@@ -539,11 +543,15 @@ function AlukaIaTab() {
     if (hasNewKey) {
       setAiSaving(true);
       try {
+        const newTextEnabled  = geminiTextEnabled  || (type === "text"  && !!geminiTextKey.trim());
+        const newImageEnabled = geminiImageEnabled || (type === "image" && !!geminiImageKey.trim());
+        if (newTextEnabled  !== geminiTextEnabled)  setGeminiTextEnabled(newTextEnabled);
+        if (newImageEnabled !== geminiImageEnabled) setGeminiImageEnabled(newImageEnabled);
         await api.admin.saveAiConfig({
           geminiTextKey:     geminiTextKey.trim()  || undefined,
-          geminiTextEnabled,
+          geminiTextEnabled: newTextEnabled,
           geminiImageKey:    geminiImageKey.trim() || undefined,
-          geminiImageEnabled,
+          geminiImageEnabled: newImageEnabled,
         });
         const updated = await api.admin.getAiConfig();
         setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
@@ -559,8 +567,15 @@ function AlukaIaTab() {
     else { setAiImageStatus("idle"); setAiImageMsg(""); }
     try {
       await api.admin.testAiConfig(type);
-      if (type === "text") { setAiTextStatus("ok");    setAiTextMsg("Ligação bem-sucedida — chave válida."); }
-      else                 { setAiImageStatus("ok");   setAiImageMsg("Ligação bem-sucedida — chave válida."); }
+      if (type === "text") {
+        setAiTextStatus("ok");
+        setAiTextMsg("Ligação bem-sucedida — chave válida.");
+        if (!geminiTextEnabled) { setGeminiTextEnabled(true); await api.admin.saveAiConfig({ geminiTextEnabled: true }); }
+      } else {
+        setAiImageStatus("ok");
+        setAiImageMsg("Ligação bem-sucedida — chave válida.");
+        if (!geminiImageEnabled) { setGeminiImageEnabled(true); await api.admin.saveAiConfig({ geminiImageEnabled: true }); }
+      }
     } catch (err: any) {
       const msg = err?.message ?? "Chave inválida ou sem permissões.";
       if (type === "text") { setAiTextStatus("error"); setAiTextMsg(msg); }
