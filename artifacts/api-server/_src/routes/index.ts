@@ -361,7 +361,7 @@ router.get("/manifest", async (_req: any, res: any) => {
   }
 });
 
-/* ── Coach IA — análise de gráfico ─────────────────────────────────────── */
+/* ── Aluka IA — análise de gráfico ─────────────────────────────────────── */
 
 router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
   try {
@@ -371,7 +371,7 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
       : { openaiKey: "", model: "gpt-4o-mini" };
 
     if (!cfg.openaiKey) {
-      return res.status(503).json({ error: "no_key", message: "Coach IA não configurado pelo administrador." });
+      return res.status(503).json({ error: "no_key", message: "Aluka IA não configurado pelo administrador." });
     }
 
     const { symbol, timeframe, chartType, currentPrice, lastCandles, showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue } = req.body as any;
@@ -382,7 +382,7 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
         ).join(" | ")
       : "N/A";
 
-    const systemPrompt = `És o Coach IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado fornecidos e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar ou ter cuidado agora.`;
+    const systemPrompt = `És o Aluka IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado fornecidos e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar ou ter cuidado agora.`;
 
     const lines = [
       `Instrumento: ${symbol ?? "N/A"}`,

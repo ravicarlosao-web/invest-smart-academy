@@ -160,7 +160,7 @@ export async function sendSubscriptionApprovalEmail(opts: {
       </p>
       <ul style="color:#94a3b8;padding-left:20px;margin:0 0 24px;line-height:2;">
         <li>📚 Todas as lições Intermédias e Avançadas desbloqueadas</li>
-        <li>🤖 Coach IA personalizado para cada trade</li>
+        <li>🤖 Aluka IA personalizado para cada trade</li>
         <li>🏆 Duelos premium com outros traders</li>
         <li>📹 Acesso completo às vídeo-aulas</li>
       </ul>

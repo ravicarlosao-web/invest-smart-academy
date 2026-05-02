@@ -30,7 +30,7 @@ const FEATURES = [
   },
   {
     icon: Brain,
-    title: "Coach IA por trade",
+    title: "Aluka IA por trade",
     desc: "Análise inteligente de cada operação: entrada, saída, risco e lições concretas para melhorares.",
   },
   {
@@ -137,7 +137,7 @@ export default function Landing() {
 
   useSEO({
     title: "TradeAcademy Angola — Curso de Trading em Português | Grátis",
-    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Coach IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
+    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Aluka IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
     canonical: "/",
   });
 
@@ -181,7 +181,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
-            40 aulas estruturadas, simulador com 5 tipos de gráfico, Coach IA por trade
+            40 aulas estruturadas, simulador com 5 tipos de gráfico, Aluka IA por trade
             e vídeo aulas curadas. Nível Iniciante totalmente grátis — tudo em português.
           </p>
 
@@ -586,14 +586,14 @@ export default function Landing() {
             <p className="text-gray-400 leading-relaxed mb-6">
               Escolhe entre 5 tipos de gráfico, 6 timeframes com velas que fecham
               no segundo exacto — exactamente como o TradingView e o MetaTrader.
-              O Coach IA analisa cada trade e dá-te feedback imediato.
+              O Aluka IA analisa cada trade e dá-te feedback imediato.
             </p>
             <ul className="space-y-2 mb-8">
               {[
                 "5 tipos: Velas · Heikin-Ashi · Barras · Linha · Área",
                 "6 timeframes: 1S · 1m · 5m · 1h · 4h · 1D",
                 "Countdown ao fecho de cada vela, em tempo real",
-                "Coach IA com análise de risco por operação",
+                "Aluka IA com análise de risco por operação",
                 "Indicadores: RSI, MACD, Média Móvel 20",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
@@ -618,14 +618,14 @@ export default function Landing() {
           <div>
             <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
               <Brain className="w-3.5 h-3.5" />
-              Coach IA · Novo
+              Aluka IA · Novo
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
               Feedback inteligente<br />
               <span className="text-cyan-400">em cada operação.</span>
             </h2>
             <p className="text-gray-400 leading-relaxed mb-6">
-              Após cada trade no simulador, o Coach IA analisa automaticamente
+              Após cada trade no simulador, o Aluka IA analisa automaticamente
               a tua entrada, saída, gestão de risco e disciplina — e dá-te
               lições concretas para evoluíres mais rápido.
             </p>
@@ -648,17 +648,17 @@ export default function Landing() {
               to="/cadastrar"
               className="inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-[#060709] font-bold px-6 py-3 rounded-full text-sm transition-colors"
             >
-              Activar Coach IA <ArrowRight className="w-4 h-4" />
+              Activar Aluka IA <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Coach IA mockup card */}
+          {/* Aluka IA mockup card */}
           <div className="rounded-2xl border border-white/10 bg-[#0d0f18] p-5 shadow-2xl shadow-black/40">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
                 <Brain className="w-3.5 h-3.5 text-cyan-400" />
               </div>
-              <span className="text-sm font-semibold text-white">Coach IA</span>
+              <span className="text-sm font-semibold text-white">Aluka IA</span>
               <span className="ml-auto text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">Novo trade</span>
             </div>
 

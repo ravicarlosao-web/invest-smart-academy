@@ -109,7 +109,7 @@ export const api = {
       authRequest<{ ok: boolean }>("DELETE", `/trades/${userId}`),
   },
 
-  /* ---------- AI / Coach IA ---------- */
+  /* ---------- AI / Aluka IA ---------- */
   ai: {
     analyzeChart: (ctx: {
       symbol: string; timeframe: string; chartType: string; currentPrice: number;

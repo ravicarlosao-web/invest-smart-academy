@@ -630,7 +630,7 @@ export default function Simular() {
       });
       setChartAnalysis(result.analysis);
     } catch {
-      toast.error("Erro ao obter análise do Coach IA");
+      toast.error("Erro ao obter análise do Aluka IA");
     } finally {
       setChartAnalyzing(false);
     }
@@ -796,7 +796,7 @@ export default function Simular() {
                   <span className="hidden sm:inline">Print</span>
                 </button>
 
-                {/* ── Botão Coach IA ── */}
+                {/* ── Botão Aluka IA ── */}
                 <button
                   onClick={() => setFeedbackEnabled((v) => !v)}
                   title={feedbackEnabled ? "Desactivar análise de trades" : "Activar análise de trades"}
@@ -807,7 +807,7 @@ export default function Simular() {
                   }`}
                 >
                   <Brain className="h-3 w-3" />
-                  <span className="hidden sm:inline">Coach IA</span>
+                  <span className="hidden sm:inline">Aluka IA</span>
                   {feedbackEnabled && (
                     <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-primary-foreground/80 animate-pulse" />
                   )}
@@ -1105,13 +1105,13 @@ export default function Simular() {
             style={{ maxHeight: "55vh" }}
           />
 
-          {/* ── Análise Coach IA ── */}
+          {/* ── Análise Aluka IA ── */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
             {chartAnalysis ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Brain className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="text-xs font-semibold text-primary">Análise Coach IA</span>
+                  <span className="text-xs font-semibold text-primary">Análise Aluka IA</span>
                 </div>
                 <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{chartAnalysis}</p>
                 <button
@@ -1136,7 +1136,7 @@ export default function Simular() {
                 ) : (
                   <>
                     <Brain className="h-4 w-4" />
-                    Analisar com Coach IA
+                    Analisar com Aluka IA
                   </>
                 )}
               </button>

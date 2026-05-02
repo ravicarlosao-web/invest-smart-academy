@@ -417,7 +417,7 @@ function SettingsTab() {
       await api.admin.saveAiConfig(payload);
       const updated = await api.admin.getAiConfig();
       setAiCfg(updated); setAiModel(updated.model); setAiKey("");
-      toast.success("Configurações do Coach IA guardadas");
+      toast.success("Configurações do Aluka IA guardadas");
     } catch { toast.error("Falha ao guardar"); }
     finally { setAiSaving(false); }
   }
@@ -524,10 +524,10 @@ function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* ── Coach IA — AI Config ── */}
+      {/* ── Aluka IA — AI Config ── */}
       <div className="pt-2">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" /> Coach IA
+          <Brain className="h-5 w-5 text-primary" /> Aluka IA
         </h2>
         <p className="text-sm text-muted-foreground mt-0.5">
           Configura a chave API da OpenAI para activar a análise inteligente de trades no simulador.
@@ -675,7 +675,7 @@ function SettingsTab() {
       {/* Info about AI */}
       <Card className="border-border/40 bg-muted/30">
         <CardContent className="p-4 space-y-2">
-          <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">O que o Coach IA faz</p>
+          <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">O que o Aluka IA faz</p>
           <ul className="space-y-1.5 text-sm text-muted-foreground">
             {[
               "Analisa cada trade após ser fechado — entrada, saída, risco e R:R",

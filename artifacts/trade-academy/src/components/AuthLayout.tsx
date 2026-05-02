@@ -107,7 +107,7 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
               )}
             </h2>
             <p className="text-gray-400 text-sm xl:text-base leading-relaxed max-w-sm">
-              {panelBody ?? "40 aulas estruturadas, simulador com dados reais e Coach IA por trade — tudo em português, grátis para iniciar."}
+              {panelBody ?? "40 aulas estruturadas, simulador com dados reais e Aluka IA por trade — tudo em português, grátis para iniciar."}
             </p>
 
             {/* Chart */}
