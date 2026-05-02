@@ -120,7 +120,7 @@ export default function Cadastrar() {
   const [interests, setInterests] = useState<string[]>([]);
 
   const handleGoogleSignUp = () => {
-    navigate("/auth/google");
+    window.location.href = "/api/auth/google";
   };
 
   function toggleInterest(id: string) {
