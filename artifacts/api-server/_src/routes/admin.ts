@@ -1071,13 +1071,16 @@ router.get("/ai-config", async (req: any, res: any) => {
   try {
     const stored = await getSetting<Partial<AiCfg>>("ai.config", {});
     const cfg: AiCfg = { ...AI_CFG_DEFAULT, ...stored };
+    /* Coerce to string in case persisted data contains null/non-string values */
+    const textKey  = typeof cfg.geminiTextKey  === "string" ? cfg.geminiTextKey  : "";
+    const imageKey = typeof cfg.geminiImageKey === "string" ? cfg.geminiImageKey : "";
     res.json({
-      textConfigured:  cfg.geminiTextKey.length  > 0,
+      textConfigured:  textKey.length  > 0,
       textEnabled:     cfg.geminiTextEnabled,
-      textKeyPreview:  maskKey(cfg.geminiTextKey),
-      imageConfigured: cfg.geminiImageKey.length > 0,
+      textKeyPreview:  maskKey(textKey),
+      imageConfigured: imageKey.length > 0,
       imageEnabled:    cfg.geminiImageEnabled,
-      imageKeyPreview: maskKey(cfg.geminiImageKey),
+      imageKeyPreview: maskKey(imageKey),
     });
   } catch (err) {
     req.log.error(err);
@@ -1115,7 +1118,7 @@ router.post("/ai-config/test", async (req: any, res: any) => {
     /* Use generateContent with a minimal prompt to detect quota issues,
        invalid keys, and model availability — GET /models only validates
        the key format but not quota or generateContent permissions. */
-    const model = type === "image" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash-lite";
+    const model = "gemini-2.5-flash-lite";
     const testRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
       {
