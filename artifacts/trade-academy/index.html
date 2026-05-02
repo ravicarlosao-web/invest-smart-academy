@@ -6,7 +6,7 @@
     <meta name="format-detection" content="telephone=no" />
 
     <!-- ── Título e Descrição Principal ───────────────────────────────────── -->
-    <title>ALUKA — Aprende a investir sem arriscar dinheiro</title>
+    <title>ALUKA — Aprende Trading em Português | Grátis para Começar</title>
     <meta name="description" content="ALUKA é a plataforma de educação em trading 100% em português. Aprende do zero ao avançado com aulas estruturadas, simulador com dinheiro virtual e Coach IA. Nível Iniciante grátis para sempre." />
     <meta name="author" content="ALUKA" />
     <meta name="application-name" content="ALUKA" />
@@ -25,6 +25,13 @@
 
     <!-- ── Canonical ─────────────────────────────────────────────────────── -->
     <link rel="canonical" href="https://aluka.app/" />
+
+    <!-- ── Hreflang — targeting lusófono (AO, BR, PT) ───────────────────── -->
+    <link rel="alternate" hreflang="pt-AO"     href="https://aluka.app/" />
+    <link rel="alternate" hreflang="pt-BR"     href="https://aluka.app/" />
+    <link rel="alternate" hreflang="pt-PT"     href="https://aluka.app/" />
+    <link rel="alternate" hreflang="pt"        href="https://aluka.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://aluka.app/" />
 
     <!-- ── Robots ─────────────────────────────────────────────────────────── -->
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
@@ -85,29 +92,22 @@
       "@context": "https://schema.org",
       "@type": "EducationalOrganization",
       "name": "ALUKA",
-      "alternateName": ["ALUKA", "ALUKA"],
       "url": "https://aluka.app",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://aluka.app/pwa-icon-512.png",
-        "width": 512,
-        "height": 512
-      },
-      "description": "A plataforma angolana de educação em trading e investimentos financeiros. Oferecemos curso gratuito de Forex, análise técnica e criptomoedas em português, com simulador de mercado realista, Coach IA por operação, 5 tipos de gráfico e vídeo aulas curadas.",
+      "logo": "https://aluka.app/pwa-icon-512.png",
+      "description": "Plataforma de educação em trading 100% em português. Aulas estruturadas, simulador com dinheiro virtual e Coach IA. Nível Iniciante grátis para sempre.",
+      "inLanguage": "pt",
       "address": {
         "@type": "PostalAddress",
         "addressCountry": "AO",
         "addressLocality": "Luanda",
         "addressRegion": "Luanda"
       },
-      "areaServed": [
-        { "@type": "Country", "name": "Angola" },
-        { "@type": "Country", "name": "Portugal" },
-        { "@type": "Country", "name": "Moçambique" },
-        { "@type": "Country", "name": "Cabo Verde" }
+      "areaServed": ["AO", "BR", "PT", "MZ", "CV"],
+      "knowsLanguage": ["pt-AO", "pt-BR", "pt-PT"],
+      "sameAs": [
+        "https://instagram.com/aluka",
+        "https://twitter.com/aluka"
       ],
-      "knowsLanguage": ["pt-AO", "pt-PT"],
-      "sameAs": ["https://twitter.com/ALUKAAO"],
       "hasOfferCatalog": {
         "@type": "OfferCatalog",
         "name": "Cursos de Trading",

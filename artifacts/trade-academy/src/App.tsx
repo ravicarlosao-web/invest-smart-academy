@@ -80,8 +80,12 @@ const App = () => (
             </Route>
           </Route>
 
-          {/* Compatibilidade com links antigos que usavam "/" como dashboard */}
-          <Route path="/index" element={<Navigate to="/dashboard" replace />} />
+          {/* Compatibilidade com links antigos */}
+          <Route path="/index"                    element={<Navigate to="/dashboard" replace />} />
+          {/* Redirects 301 para URLs antigas do domínio tradeacademy */}
+          <Route path="/tradeacademy"             element={<Navigate to="/" replace />} />
+          <Route path="/trade-academy"            element={<Navigate to="/" replace />} />
+          <Route path="/tradeacademy/*"           element={<Navigate to="/" replace />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

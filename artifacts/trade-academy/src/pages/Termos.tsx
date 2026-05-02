@@ -14,7 +14,7 @@ export default function Termos() {
       {/* Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/90 backdrop-blur-md border-b border-white/5">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" />
+          <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" loading="lazy" />
           <span className="font-bold text-white tracking-tight">ALUKA</span>
         </Link>
         <Link to="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">

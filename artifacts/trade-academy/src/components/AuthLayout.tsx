@@ -89,7 +89,7 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 mb-auto">
-            <img src="/logo-transparent.png" alt="ALUKA" className="w-9 h-9 object-contain" />
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-9 h-9 object-contain" loading="lazy" />
             <span className="font-bold text-lg tracking-tight">ALUKA</span>
           </Link>
 
@@ -152,7 +152,7 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 flex flex-col items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="ALUKA" className="w-10 h-10 object-contain" />
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-10 h-10 object-contain" loading="lazy" />
             <span className="font-bold text-xl tracking-tight">ALUKA</span>
           </Link>
         </div>

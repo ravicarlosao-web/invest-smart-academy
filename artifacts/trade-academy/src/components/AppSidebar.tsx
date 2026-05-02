@@ -62,7 +62,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-2 py-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
-            <img src="/logo-transparent.png" alt="ALUKA" className="w-9 h-9 object-contain" />
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-9 h-9 object-contain" loading="lazy" />
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">

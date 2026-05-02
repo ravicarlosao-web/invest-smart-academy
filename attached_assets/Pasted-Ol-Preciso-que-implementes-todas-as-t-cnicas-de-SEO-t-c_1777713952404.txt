@@ -1,0 +1,159 @@
+Olá,
+
+Preciso que implementes todas as técnicas de SEO técnico na plataforma ALUKA. O objectivo é atingir pontuação máxima no Google (100/100 no Lighthouse SEO) e rankear para o mercado lusófono e angolano. Abaixo tens tudo detalhado.
+
+---
+
+**1. META TAGS — todas as páginas**
+
+Cada página deve ter meta tags únicas e optimizadas. Nunca repetir a mesma meta description em páginas diferentes.
+
+Página principal:
+```html
+<title>ALUKA — Aprende Trading em Português | Grátis para Começar</title>
+<meta name="description" content="ALUKA é a plataforma de educação em trading 100% em português. Aulas estruturadas, simulador com dinheiro virtual e Coach IA. Nível Iniciante grátis para sempre.">
+<meta name="keywords" content="aprender trading português, trading Angola, simulador trading gratuito, educação financeira português, curso trading iniciantes, investir Angola, ALUKA trading">
+<meta name="robots" content="index, follow">
+<meta name="author" content="ALUKA">
+<link rel="canonical" href="https://aluka.app/">
+```
+
+---
+
+**2. OPEN GRAPH + TWITTER CARDS — todas as páginas**
+
+```html
+<meta property="og:type" content="website">
+<meta property="og:title" content="ALUKA — Aprende a investir sem arriscar dinheiro">
+<meta property="og:description" content="Plataforma de educação em trading 100% em português. Do zero ao avançado. Nível Iniciante sempre grátis.">
+<meta property="og:image" content="https://aluka.app/og-image.png">
+<meta property="og:url" content="https://aluka.app">
+<meta property="og:site_name" content="ALUKA">
+<meta property="og:locale" content="pt_AO">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ALUKA — Educação em Trading em Português">
+<meta name="twitter:description" content="Aprende trading do zero com aulas estruturadas, simulador real e Coach IA. Grátis para começar.">
+<meta name="twitter:image" content="https://aluka.app/og-image.png">
+```
+
+---
+
+**3. HREFLANG — targeting para mercado lusófono**
+
+```html
+<link rel="alternate" hreflang="pt-AO" href="https://aluka.app/">
+<link rel="alternate" hreflang="pt-BR" href="https://aluka.app/">
+<link rel="alternate" hreflang="pt-PT" href="https://aluka.app/">
+<link rel="alternate" hreflang="pt" href="https://aluka.app/">
+```
+
+---
+
+**4. SCHEMA MARKUP — structured data**
+
+Adicionar os seguintes schemas em JSON-LD no `<head>` da página principal:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "ALUKA",
+  "description": "Plataforma de educação em trading 100% em português",
+  "url": "https://aluka.app",
+  "logo": "https://aluka.app/logo.png",
+  "inLanguage": "pt",
+  "areaServed": ["AO", "BR", "PT"],
+  "sameAs": [
+    "https://instagram.com/aluka",
+    "https://twitter.com/aluka"
+  ]
+}
+```
+
+Adicionar schema `Course` para cada nível da trilha:
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "Trading do Zero — Nível Iniciante",
+  "description": "Aprende os conceitos básicos de trading de forma estruturada e gratuita.",
+  "provider": {
+    "@type": "Organization",
+    "name": "ALUKA"
+  },
+  "inLanguage": "pt",
+  "isAccessibleForFree": true
+}
+```
+
+Adicionar schema `FAQPage` na página principal (quando o FAQ for criado).
+
+---
+
+**5. PERFORMANCE — Core Web Vitals**
+
+Objectivos:
+- LCP (Largest Contentful Paint): abaixo de 2.5 segundos
+- INP (Interaction to Next Paint): abaixo de 200ms
+- CLS (Cumulative Layout Shift): abaixo de 0.1
+
+Implementar obrigatoriamente:
+- Converter todas as imagens para formato **WebP**
+- Adicionar **lazy loading** em todas as imagens (`loading="lazy"`)
+- Implementar **CDN** para servir assets estáticos (Cloudflare é gratuito e recomendado)
+- Activar **compresso Gzip ou Brotli** no servidor
+- Minificar CSS e JavaScript em produção
+- Adicionar cache headers nos assets estáticos (mínimo 1 ano para imagens e fonts)
+- Pré-carregar fontes críticas com `<link rel="preload">`
+- Remover JavaScript e CSS não utilizado (tree shaking)
+
+---
+
+**6. SITEMAP E ROBOTS**
+
+- Gerar `sitemap.xml` dinâmico com todas as páginas públicas
+- Submeter o sitemap no Google Search Console
+- Configurar `robots.txt` correctamente:
+```
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard/
+Sitemap: https://aluka.app/sitemap.xml
+```
+
+---
+
+**7. SEO TÉCNICO ADICIONAL**
+
+- Garantir que **todas as imagens** têm atributo `alt` descritivo
+- Garantir hierarquia correcta de headings: apenas **um H1 por página**, seguido de H2, H3
+- Todos os links internos devem ter texto descritivo (nunca "clica aqui")
+- Página 404 personalizada que redireciona o utilizador
+- Redirect **301** para qualquer URL antiga com "tradeacademy"
+- Garantir que a versão HTTPS está activa e que HTTP redireciona para HTTPS
+- Garantir que `www` redireciona para `non-www` (ou o contrário) — nunca os dois activos ao mesmo tempo
+
+---
+
+**8. MOBILE FIRST — prioritário para Angola**
+
+O público angolano acede maioritariamente por telemóvel. Verificar:
+- Meta viewport configurado: `<meta name="viewport" content="width=device-width, initial-scale=1">`
+- Todos os botões e links com área de toque mínima de 48x48px
+- Fontes legíveis sem zoom (mínimo 16px no body)
+- Teste no Google Mobile-Friendly Test deve passar a 100%
+
+---
+
+**Ferramenta de validação:**
+Após implementar, testar em:
+- **Google Lighthouse** (objectivo: 100 em SEO, acima de 90 em Performance)
+- **Google Search Console** (zero erros de indexação)
+- **Google Rich Results Test** (validar os schemas)
+- **PageSpeed Insights** (https://pagespeed.web.dev)
+
+Partilha os resultados do Lighthouse depois de implementar para vermos onde ainda há margem de melhoria.
+
+Qualquer dúvida, fala comigo.

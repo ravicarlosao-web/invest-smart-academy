@@ -2376,7 +2376,7 @@ function VideosTab() {
                         {/* Thumbnail */}
                         <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
                           {ytId ? (
-                            <img src={thumbnailUrl(ytId)} alt={v.title} className="h-full w-full object-cover" />
+                            <img src={thumbnailUrl(ytId)} alt={v.title} className="h-full w-full object-cover" loading="lazy" />
                           ) : (
                             <div className="flex h-full items-center justify-center">
                               <PlayCircle className="h-5 w-5 text-muted-foreground/30" />
@@ -3438,7 +3438,7 @@ export default function Admin() {
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden">
-            <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" />
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" loading="lazy" />
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
