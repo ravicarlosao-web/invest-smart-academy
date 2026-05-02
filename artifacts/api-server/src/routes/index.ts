@@ -10,7 +10,7 @@ import adminRouter         from "./admin.js";
 import subscriptionsRouter from "./subscriptions.js";
 import { requireAuth }     from "../middlewares/auth.js";
 import {
-  db, asc, desc, eq,
+  db, asc, desc, eq, and, gt, sql,
   glossaryTermsTable,
   strategiesTable,
   booksTable,
@@ -21,6 +21,8 @@ import {
   adminSettingsTable,
   usersTable,
   progressTable,
+  subscriptionsTable,
+  aiUsageTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -401,10 +403,76 @@ async function callGemini(apiKey: string, parts: unknown[]): Promise<string> {
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
+/* ── Aluka IA — helpers de limite de uso ──────────────────────────────── */
+
+const AI_FREE_LIMIT = 1; // usos totais gratuitos
+
+async function getUserAiUsage(userId: string) {
+  const [row] = await db.select().from(aiUsageTable).where(eq(aiUsageTable.userId, userId));
+  return row ?? null;
+}
+
+async function isUserPremium(userId: string): Promise<boolean> {
+  const now = Date.now();
+  const [sub] = await db.select().from(subscriptionsTable).where(
+    and(
+      eq(subscriptionsTable.userId, userId),
+      eq(subscriptionsTable.status, "active"),
+      gt(subscriptionsTable.expiresAt, now),
+    )
+  );
+  return !!sub;
+}
+
+async function checkAndIncrementAiUsage(userId: string): Promise<{ allowed: boolean; isPremium: boolean; usageCount: number }> {
+  const premium = await isUserPremium(userId);
+  if (premium) return { allowed: true, isPremium: true, usageCount: 0 };
+
+  const usage = await getUserAiUsage(userId);
+  const count = usage?.usageCount ?? 0;
+
+  if (count >= AI_FREE_LIMIT) {
+    return { allowed: false, isPremium: false, usageCount: count };
+  }
+
+  const now = Date.now();
+  if (!usage) {
+    await db.insert(aiUsageTable).values({ userId, usageCount: 1, lastUsedAt: now });
+  } else {
+    await db.update(aiUsageTable)
+      .set({ usageCount: count + 1, lastUsedAt: now })
+      .where(eq(aiUsageTable.userId, userId));
+  }
+  return { allowed: true, isPremium: false, usageCount: count + 1 };
+}
+
+/* ── GET /ai/usage — estado de uso do utilizador ─────────────────────── */
+
+router.get("/ai/usage", requireAuth, async (req: any, res: any) => {
+  try {
+    const userId  = req.user?.id;
+    const premium = await isUserPremium(userId);
+    const usage   = await getUserAiUsage(userId);
+    res.json({
+      isPremium:  premium,
+      usageCount: usage?.usageCount ?? 0,
+      freeLimit:  AI_FREE_LIMIT,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 /* ── Aluka IA — análise de gráfico ─────────────────────────────────────── */
 
 router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
   try {
+    const userId = req.user?.id;
+    const limit  = await checkAndIncrementAiUsage(userId);
+    if (!limit.allowed) {
+      return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
+    }
+
     const cfg = await getAiCfg();
     const { symbol, timeframe, chartType, currentPrice, lastCandles,
             showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue,
@@ -454,6 +522,12 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
 
 router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
   try {
+    const userId = req.user?.id;
+    const limit  = await checkAndIncrementAiUsage(userId);
+    if (!limit.allowed) {
+      return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
+    }
+
     const cfg = await getAiCfg();
     if (!cfg.geminiTextEnabled || !cfg.geminiTextKey) {
       return res.status(503).json({ error: "no_key" });

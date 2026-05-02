@@ -56930,11 +56930,11 @@ var Sql = class {
     return this.#closed !== void 0;
   }
 };
-function sqlToProto(owner, sql2) {
-  if (sql2 instanceof Sql) {
-    return { sqlId: sql2._getSqlId(owner) };
+function sqlToProto(owner, sql3) {
+  if (sql3 instanceof Sql) {
+    return { sqlId: sql3._getSqlId(owner) };
   } else {
-    return { sql: "" + sql2 };
+    return { sql: "" + sql3 };
   }
 }
 
@@ -56973,8 +56973,8 @@ var Stmt = class {
   /** @private */
   _namedArgs;
   /** Initialize the statement with given SQL text. */
-  constructor(sql2) {
-    this.sql = sql2;
+  constructor(sql3) {
+    this.sql = sql3;
     this._args = [];
     this._namedArgs = /* @__PURE__ */ new Map();
   }
@@ -57031,8 +57031,8 @@ function stmtToProto(sqlOwner, stmt, wantRows) {
   } else {
     inSql = stmt;
   }
-  const { sql: sql2, sqlId } = sqlToProto(sqlOwner, inSql);
-  return { sql: sql2, sqlId, args, namedArgs, wantRows };
+  const { sql: sql3, sqlId } = sqlToProto(sqlOwner, inSql);
+  return { sql: sql3, sqlId, args, namedArgs, wantRows };
 }
 
 // node_modules/.pnpm/@libsql+hrana-client@0.10.0/node_modules/@libsql/hrana-client/lib-esm/batch.js
@@ -58434,9 +58434,9 @@ var HttpStream = class extends Stream {
     return this;
   }
   /** Cache a SQL text on the server. */
-  storeSql(sql2) {
+  storeSql(sql3) {
     const sqlId = this.#sqlIdAlloc.alloc();
-    this.#sendStreamRequest({ type: "store_sql", sqlId, sql: sql2 }).then(() => void 0, (error40) => this._setClosed(error40));
+    this.#sendStreamRequest({ type: "store_sql", sqlId, sql: sql3 }).then(() => void 0, (error40) => this._setClosed(error40));
     return new Sql(this, sqlId);
   }
   /** @private */
@@ -59241,7 +59241,7 @@ var HranaTransaction = class {
       throw mapHranaError(e);
     }
   }
-  async executeMultiple(sql2) {
+  async executeMultiple(sql3) {
     const stream = this._getStream();
     if (stream.closed) {
       throw new LibsqlError("Cannot execute statements because the transaction is closed", "TRANSACTION_CLOSED");
@@ -59258,7 +59258,7 @@ var HranaTransaction = class {
       } else {
         await this.#started;
       }
-      await stream.sequence(sql2);
+      await stream.sequence(sql3);
     } catch (e) {
       throw mapHranaError(e);
     }
@@ -59358,17 +59358,17 @@ async function executeHranaBatch(mode, version4, batch, hranaStmts, disableForei
   return resultSets;
 }
 function stmtToHrana(stmt) {
-  let sql2;
+  let sql3;
   let args;
   if (Array.isArray(stmt)) {
-    [sql2, args] = stmt;
+    [sql3, args] = stmt;
   } else if (typeof stmt === "string") {
-    sql2 = stmt;
+    sql3 = stmt;
   } else {
-    sql2 = stmt.sql;
+    sql3 = stmt.sql;
     args = stmt.args;
   }
-  const hranaStmt = new Stmt(sql2);
+  const hranaStmt = new Stmt(sql3);
   if (args) {
     if (Array.isArray(args)) {
       hranaStmt.bindIndexes(args);
@@ -59634,13 +59634,13 @@ var HttpClient2 = class {
       }
     });
   }
-  async executeMultiple(sql2) {
+  async executeMultiple(sql3) {
     return this.limit(async () => {
       try {
         let promise2;
         const stream = this.#client.openStream();
         try {
-          promise2 = stream.sequence(sql2);
+          promise2 = stream.sequence(sql3);
         } finally {
           stream.closeGracefully();
         }
@@ -60311,10 +60311,10 @@ var PgEnumColumn = class extends PgColumn {
 // node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+client@0.17.3/node_modules/drizzle-orm/subquery.js
 var Subquery = class {
   static [entityKind] = "Subquery";
-  constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+  constructor(sql3, fields, alias, isWith = false, usedTables = []) {
     this._ = {
       brand: "Subquery",
-      sql: sql2,
+      sql: sql3,
       selectedFields: fields,
       alias,
       isWith,
@@ -60715,19 +60715,19 @@ function sql(strings, ...params) {
   }
   return new SQL(queryChunks);
 }
-((sql2) => {
+((sql22) => {
   function empty() {
     return new SQL([]);
   }
-  sql2.empty = empty;
+  sql22.empty = empty;
   function fromList(list) {
     return new SQL(list);
   }
-  sql2.fromList = fromList;
+  sql22.fromList = fromList;
   function raw(str) {
     return new SQL([new StringChunk(str)]);
   }
-  sql2.raw = raw;
+  sql22.raw = raw;
   function join(chunks, separator) {
     const result = [];
     for (const [i, chunk] of chunks.entries()) {
@@ -60738,24 +60738,24 @@ function sql(strings, ...params) {
     }
     return new SQL(result);
   }
-  sql2.join = join;
+  sql22.join = join;
   function identifier(value) {
     return new Name(value);
   }
-  sql2.identifier = identifier;
+  sql22.identifier = identifier;
   function placeholder2(name2) {
     return new Placeholder(name2);
   }
-  sql2.placeholder = placeholder2;
+  sql22.placeholder = placeholder2;
   function param2(value, encoder) {
     return new Param(value, encoder);
   }
-  sql2.param = param2;
+  sql22.param = param2;
 })(sql || (sql = {}));
 ((SQL2) => {
   class Aliased {
-    constructor(sql2, fieldAlias) {
-      this.sql = sql2;
+    constructor(sql22, fieldAlias) {
+      this.sql = sql22;
       this.fieldAlias = fieldAlias;
     }
     static [entityKind] = "SQL.Aliased";
@@ -62827,8 +62827,8 @@ var SQLiteDialect = class {
     const onConflictSql = onConflict?.length ? sql.join(onConflict) : void 0;
     return sql`${withSql}insert into ${table} ${insertOrder} ${valuesSql}${onConflictSql}${returningSql}`;
   }
-  sqlToQuery(sql2, invokeSource) {
-    return sql2.toQuery({
+  sqlToQuery(sql22, invokeSource) {
+    return sql22.toQuery({
       casing: this.casing,
       escapeName: this.escapeName,
       escapeParam: this.escapeParam,
@@ -64749,8 +64749,8 @@ var NoopCache = class extends Cache {
   async onMutate(_params) {
   }
 };
-async function hashQuery(sql2, params) {
-  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -64934,8 +64934,8 @@ var SQLiteSession = class {
   values(query) {
     return this.prepareOneTimeQuery(this.dialect.sqlToQuery(query), void 0, "run", false).values();
   }
-  async count(sql2) {
-    const result = await this.values(sql2);
+  async count(sql3) {
+    const result = await this.values(sql3);
     return result[0][0];
   }
   /** @internal */
@@ -65239,6 +65239,7 @@ function drizzle(...params) {
 var schema_exports = {};
 __export(schema_exports, {
   adminSettingsTable: () => adminSettingsTable,
+  aiUsageTable: () => aiUsageTable,
   booksTable: () => booksTable,
   curriculumLessonsTable: () => curriculumLessonsTable,
   curriculumLevelsTable: () => curriculumLevelsTable,
@@ -76925,6 +76926,13 @@ var emailVerificationsTable = sqliteTable("email_verifications", {
   createdAt: integer("created_at").notNull()
 });
 
+// lib/db/src/schema/aiUsage.ts
+var aiUsageTable = sqliteTable("ai_usage", {
+  userId: text("user_id").primaryKey(),
+  usageCount: integer("usage_count").notNull().default(0),
+  lastUsedAt: integer("last_used_at")
+});
+
 // lib/db/src/index.ts
 var rawUrl = process.env["TURSO_DATABASE_URL"];
 var tursoToken = process.env["TURSO_AUTH_TOKEN"];
@@ -79608,8 +79616,59 @@ async function callGemini(apiKey, parts) {
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
+var AI_FREE_LIMIT = 1;
+async function getUserAiUsage(userId) {
+  const [row] = await db.select().from(aiUsageTable).where(eq(aiUsageTable.userId, userId));
+  return row ?? null;
+}
+async function isUserPremium(userId) {
+  const now = Date.now();
+  const [sub] = await db.select().from(subscriptionsTable).where(
+    and(
+      eq(subscriptionsTable.userId, userId),
+      eq(subscriptionsTable.status, "active"),
+      gt(subscriptionsTable.expiresAt, now)
+    )
+  );
+  return !!sub;
+}
+async function checkAndIncrementAiUsage(userId) {
+  const premium = await isUserPremium(userId);
+  if (premium) return { allowed: true, isPremium: true, usageCount: 0 };
+  const usage = await getUserAiUsage(userId);
+  const count = usage?.usageCount ?? 0;
+  if (count >= AI_FREE_LIMIT) {
+    return { allowed: false, isPremium: false, usageCount: count };
+  }
+  const now = Date.now();
+  if (!usage) {
+    await db.insert(aiUsageTable).values({ userId, usageCount: 1, lastUsedAt: now });
+  } else {
+    await db.update(aiUsageTable).set({ usageCount: count + 1, lastUsedAt: now }).where(eq(aiUsageTable.userId, userId));
+  }
+  return { allowed: true, isPremium: false, usageCount: count + 1 };
+}
+router9.get("/ai/usage", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const premium = await isUserPremium(userId);
+    const usage = await getUserAiUsage(userId);
+    res.json({
+      isPremium: premium,
+      usageCount: usage?.usageCount ?? 0,
+      freeLimit: AI_FREE_LIMIT
+    });
+  } catch (err) {
+    res.status(500).json({ error: "internal" });
+  }
+});
 router9.post("/ai/chart-analysis", requireAuth, async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const limit = await checkAndIncrementAiUsage(userId);
+    if (!limit.allowed) {
+      return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
+    }
     const cfg = await getAiCfg();
     const {
       symbol: symbol2,
@@ -79656,6 +79715,11 @@ router9.post("/ai/chart-analysis", requireAuth, async (req, res) => {
 });
 router9.post("/ai/trade-feedback", requireAuth, async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const limit = await checkAndIncrementAiUsage(userId);
+    if (!limit.allowed) {
+      return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
+    }
     const cfg = await getAiCfg();
     if (!cfg.geminiTextEnabled || !cfg.geminiTextKey) {
       return res.status(503).json({ error: "no_key" });

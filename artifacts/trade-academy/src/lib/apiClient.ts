@@ -35,7 +35,12 @@ async function request<T>(
       } catch { /* ignorar */ }
     }
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
+    let body: Record<string, unknown> = {};
+    try { body = JSON.parse(text); } catch { /* not JSON */ }
+    const err = new Error(`API ${method} ${path} → ${res.status}: ${text}`) as Error & { status: number; body: Record<string, unknown> };
+    err.status = res.status;
+    err.body   = body;
+    throw err;
   }
   return res.json() as Promise<T>;
 }
@@ -128,6 +133,8 @@ export const api = {
       stop_loss?: number; resultado: string; racio_rr: string; saldo_atual: string;
     }) =>
       authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/trade-feedback", trade),
+    getUsage: () =>
+      authRequest<{ usageCount: number; isPremium: boolean; freeLimit: number }>("GET", "/ai/usage"),
   },
 
   /* ---------- Notifications ---------- */

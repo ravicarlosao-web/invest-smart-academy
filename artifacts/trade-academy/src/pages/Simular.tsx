@@ -593,7 +593,13 @@ export default function Simular() {
         saldo_atual: fmtUSD(eq),
       }).then((r) => {
         if (r.analysis) setExitAiAnalysis(r.analysis);
-      }).catch(() => { /* silent — AI é opcional */ });
+      }).catch((err: any) => {
+        const body = err?.responseBody ?? err?.body ?? {};
+        if (err?.status === 403 || body?.error === "ai_limit_exceeded" || (err?.message ?? "").includes("Limite gratuito")) {
+          setShowAiLimitModal(true);
+        }
+        /* outros erros — silent, AI é opcional */
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
@@ -617,6 +623,18 @@ export default function Simular() {
   const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
+
+  /* ── Aluka IA — limite de uso ─────────────────────────── */
+  const [showAiLimitModal, setShowAiLimitModal] = useState(false);
+
+  function handleAiLimitError(err: any) {
+    const body = err?.responseBody ?? err?.body ?? {};
+    if (err?.status === 403 || body?.error === "ai_limit_exceeded" || (err?.message ?? "").includes("ai_limit_exceeded") || (err?.message ?? "").includes("Limite gratuito")) {
+      setShowAiLimitModal(true);
+      return true;
+    }
+    return false;
+  }
 
   async function handleChartAnalysis() {
     setChartAnalyzing(true);
@@ -652,6 +670,7 @@ export default function Simular() {
       });
       setChartAnalysis(result.analysis);
     } catch (err: any) {
+      if (handleAiLimitError(err)) return;
       const msg: string = err?.message ?? "";
       if (msg.includes("quota") || msg.includes("Quota") || msg.includes("Limite de pedidos")) {
         toast.error("Limite de pedidos à IA atingido — tenta novamente em alguns segundos.");
@@ -1174,6 +1193,78 @@ export default function Simular() {
               <Download className="h-3.5 w-3.5" />
               Baixar imagem
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal: Limite Aluka IA ────────────────────────── */}
+    {showAiLimitModal && (
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="relative w-full max-w-sm rounded-2xl border border-primary/30 bg-background shadow-2xl animate-in zoom-in-95 fade-in duration-200">
+          {/* Fechar */}
+          <button
+            onClick={() => setShowAiLimitModal(false)}
+            className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors"
+            aria-label="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          {/* Conteúdo */}
+          <div className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+            {/* Ícone */}
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-4 ring-primary/20">
+              <Brain className="h-7 w-7 text-primary" />
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold tracking-tight">Limite do plano gratuito</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Já utilizaste o teu <span className="font-semibold text-foreground">1 uso gratuito</span> do Aluka IA.
+                Para acesso <span className="font-semibold text-primary">ilimitado</span> à análise de gráficos e feedback de trades, actualiza para o plano Premium.
+              </p>
+            </div>
+
+            {/* Benefícios Premium */}
+            <div className="w-full rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-left space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Plano Premium inclui</p>
+              {[
+                "Análise IA ilimitada de gráficos",
+                "Feedback IA após cada trade",
+                "Acesso ao nível Intermediário e Avançado",
+                "Duelos com outros traders",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-xs text-foreground/80">
+                  <Zap className="h-3 w-3 shrink-0 text-primary" />
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            {/* Preço */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-extrabold">5.000 AOA</span>
+              <span className="text-sm text-muted-foreground">/mês</span>
+            </div>
+
+            {/* CTA */}
+            <div className="flex w-full flex-col gap-2">
+              <a
+                href="/subscrever"
+                onClick={() => setShowAiLimitModal(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90 hover:shadow-lg active:scale-95"
+              >
+                <Zap className="h-4 w-4" />
+                Quero ser Premium
+              </a>
+              <button
+                onClick={() => setShowAiLimitModal(false)}
+                className="rounded-xl px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Talvez mais tarde
+              </button>
+            </div>
           </div>
         </div>
       </div>

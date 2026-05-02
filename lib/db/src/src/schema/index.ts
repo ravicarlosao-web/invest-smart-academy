@@ -13,3 +13,4 @@ export * from "./curriculum.js";
 export * from "./passwordResetTokens.js";
 export * from "./revokedTokens.js";
 export * from "./emailVerifications.js";
+export * from "./aiUsage.js";
