@@ -535,6 +535,25 @@ function AlukaIaTab() {
   }
 
   async function testAiKey(type: "text" | "image") {
+    const hasNewKey = type === "text" ? geminiTextKey.trim() : geminiImageKey.trim();
+    if (hasNewKey) {
+      setAiSaving(true);
+      try {
+        await api.admin.saveAiConfig({
+          geminiTextKey:     geminiTextKey.trim()  || undefined,
+          geminiTextEnabled,
+          geminiImageKey:    geminiImageKey.trim() || undefined,
+          geminiImageEnabled,
+        });
+        const updated = await api.admin.getAiConfig();
+        setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
+        toast.success("Chave guardada — a testar ligação…");
+      } catch {
+        toast.error("Falha ao guardar a chave");
+        setAiSaving(false);
+        return;
+      } finally { setAiSaving(false); }
+    }
     setAiTesting(type);
     if (type === "text") { setAiTextStatus("idle"); setAiTextMsg(""); }
     else { setAiImageStatus("idle"); setAiImageMsg(""); }
@@ -622,10 +641,9 @@ function AlukaIaTab() {
           )}
 
           <Button variant="outline" size="sm" onClick={() => testAiKey("text")}
-            disabled={aiTesting !== null || !aiCfg?.textConfigured}
-            title={!aiCfg?.textConfigured ? "Guarda primeiro uma chave" : ""}>
-            {aiTesting === "text" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
-            {aiTesting === "text" ? "A testar…" : "Testar ligação"}
+            disabled={aiTesting !== null || aiSaving || (!aiCfg?.textConfigured && !geminiTextKey.trim())}>
+            {aiTesting === "text" || aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
+            {aiTesting === "text" ? "A testar…" : aiSaving ? "A guardar…" : "Testar ligação"}
           </Button>
         </CardContent>
       </Card>
@@ -687,10 +705,9 @@ function AlukaIaTab() {
           )}
 
           <Button variant="outline" size="sm" onClick={() => testAiKey("image")}
-            disabled={aiTesting !== null || !aiCfg?.imageConfigured}
-            title={!aiCfg?.imageConfigured ? "Guarda primeiro uma chave" : ""}>
-            {aiTesting === "image" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
-            {aiTesting === "image" ? "A testar…" : "Testar ligação"}
+            disabled={aiTesting !== null || aiSaving || (!aiCfg?.imageConfigured && !geminiImageKey.trim())}>
+            {aiTesting === "image" || aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
+            {aiTesting === "image" ? "A testar…" : aiSaving ? "A guardar…" : "Testar ligação"}
           </Button>
         </CardContent>
       </Card>
