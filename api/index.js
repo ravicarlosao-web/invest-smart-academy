@@ -78851,12 +78851,14 @@ router7.get("/email-config", async (req, res) => {
     } catch {
       cfg = {};
     }
-    const envKey = process.env["SENDGRID_API_KEY"];
+    const envPass = process.env["GMAIL_APP_PASSWORD"];
+    const hasDbPass = !!cfg.gmailAppPassword;
+    const hasEnvPass = !!envPass;
     res.json({
-      configured: !!(cfg.apiKey || envKey),
-      keySource: cfg.apiKey ? "database" : envKey ? "environment" : "none",
-      fromEmail: cfg.fromEmail ?? "",
-      fromName: cfg.fromName ?? "TradeAcademy",
+      configured: hasDbPass || hasEnvPass,
+      keySource: hasDbPass ? "database" : hasEnvPass ? "environment" : "none",
+      gmailUser: cfg.gmailUser ?? "aluka.co.ao@gmail.com",
+      fromName: cfg.fromName ?? "ALUKA",
       adminEmail: cfg.adminEmail ?? ""
     });
   } catch (err) {
@@ -78866,7 +78868,7 @@ router7.get("/email-config", async (req, res) => {
 });
 router7.put("/email-config", async (req, res) => {
   try {
-    const { apiKey, fromEmail, fromName, adminEmail } = req.body ?? {};
+    const { gmailAppPassword, gmailUser, fromName, adminEmail } = req.body ?? {};
     const now = Date.now();
     const existing = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
     let current = {};
@@ -78876,9 +78878,9 @@ router7.put("/email-config", async (req, res) => {
       current = {};
     }
     const merged = {
-      apiKey: apiKey ?? current.apiKey ?? "",
-      fromEmail: fromEmail ?? current.fromEmail ?? "noreply@tradeacademy.ao",
-      fromName: fromName ?? current.fromName ?? "TradeAcademy",
+      gmailUser: gmailUser ?? current.gmailUser ?? "aluka.co.ao@gmail.com",
+      gmailAppPassword: gmailAppPassword ?? current.gmailAppPassword ?? "",
+      fromName: fromName ?? current.fromName ?? "ALUKA",
       adminEmail: adminEmail ?? current.adminEmail ?? ""
     };
     if (existing) {
@@ -78886,7 +78888,8 @@ router7.put("/email-config", async (req, res) => {
     } else {
       await db.insert(adminSettingsTable).values({ key: "email.config", value: JSON.stringify(merged), updatedAt: now });
     }
-    res.json({ ok: true, configured: !!merged.apiKey });
+    const envPass = process.env["GMAIL_APP_PASSWORD"];
+    res.json({ ok: true, configured: !!(merged.gmailAppPassword || envPass) });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

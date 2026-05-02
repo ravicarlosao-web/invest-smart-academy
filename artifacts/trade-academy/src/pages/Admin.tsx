@@ -2819,7 +2819,7 @@ function SubscriptionsTab() {
  * Email Config tab
  * ========================================================================= */
 function EmailConfigTab() {
-  const [cfg, setCfg]         = useState({ apiKey: "", fromEmail: "", fromName: "ALUKA", adminEmail: "" });
+  const [cfg, setCfg]         = useState({ gmailAppPassword: "", gmailUser: "aluka.co.ao@gmail.com", fromName: "ALUKA", adminEmail: "" });
   const [status, setStatus]   = useState<{ configured: boolean; keySource: string } | null>(null);
   const [saving, setSaving]   = useState(false);
   const [testing, setTesting] = useState(false);
@@ -2827,9 +2827,14 @@ function EmailConfigTab() {
 
   useEffect(() => {
     api.admin.getEmailConfig()
-      .then((r) => {
+      .then((r: any) => {
         setStatus({ configured: r.configured, keySource: r.keySource });
-        setCfg((prev) => ({ ...prev, fromEmail: r.fromEmail, fromName: r.fromName, adminEmail: r.adminEmail }));
+        setCfg((prev) => ({
+          ...prev,
+          gmailUser:  r.gmailUser  || "aluka.co.ao@gmail.com",
+          fromName:   r.fromName   || "ALUKA",
+          adminEmail: r.adminEmail || "",
+        }));
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -2839,15 +2844,15 @@ function EmailConfigTab() {
     setSaving(true);
     try {
       const payload: Record<string, string> = {
-        fromEmail: cfg.fromEmail,
-        fromName:  cfg.fromName,
-        adminEmail: cfg.adminEmail,
+        gmailUser:  cfg.gmailUser.trim(),
+        fromName:   cfg.fromName.trim(),
+        adminEmail: cfg.adminEmail.trim(),
       };
-      if (cfg.apiKey.trim()) payload.apiKey = cfg.apiKey.trim();
+      if (cfg.gmailAppPassword.trim()) payload.gmailAppPassword = cfg.gmailAppPassword.trim();
       const r = await api.admin.saveEmailConfig(payload);
-      setStatus((prev) => ({ ...prev!, configured: r.configured, keySource: r.configured ? "database" : "none" }));
-      setCfg((prev) => ({ ...prev, apiKey: "" }));
-      toast.success(r.configured ? "Configurações de email guardadas" : "Configurações guardadas (sem chave API)");
+      setStatus((prev) => ({ ...prev!, configured: r.configured, keySource: r.configured ? "database" : prev?.keySource ?? "none" }));
+      setCfg((prev) => ({ ...prev, gmailAppPassword: "" }));
+      toast.success(r.configured ? "Configurações Gmail guardadas com sucesso" : "Configurações guardadas (Gmail App Password não definida — a usar variável de ambiente)");
     } catch { toast.error("Erro ao guardar configurações"); }
     finally { setSaving(false); }
   }
@@ -2859,9 +2864,10 @@ function EmailConfigTab() {
       await api.admin.testEmailConfig(cfg.adminEmail.trim());
       toast.success(`Email de teste enviado para ${cfg.adminEmail}`);
     } catch (err: any) {
-      const reason = err?.message?.includes("sendgrid_not_configured")
-        ? "SendGrid não configurado. Guarda a API key primeiro."
-        : "Erro ao enviar email de teste. Verifica a chave API.";
+      const msg = err?.message ?? "";
+      const reason = msg.includes("gmail_not_configured")
+        ? "Gmail não configurado. Guarda a App Password ou define a variável de ambiente GMAIL_APP_PASSWORD."
+        : "Erro ao enviar email de teste. Verifica as credenciais Gmail.";
       toast.error(reason);
     } finally { setTesting(false); }
   }
@@ -2869,9 +2875,9 @@ function EmailConfigTab() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h2 className="text-lg font-semibold">Email / SendGrid</h2>
+        <h2 className="text-lg font-semibold">Email / Gmail SMTP</h2>
         <p className="text-sm text-muted-foreground">
-          Configura o SendGrid para envio automático de emails — recuperação de password, aprovação e rejeição de subscrições.
+          Envio de emails via Gmail SMTP com Nodemailer — verificação de email, recuperação de password, aprovação e rejeição de subscrições.
         </p>
       </div>
 
@@ -2884,69 +2890,97 @@ function EmailConfigTab() {
               : <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />}
             <div>
               <p className={cn("text-sm font-semibold", status?.configured ? "text-emerald-400" : "text-amber-400")}>
-                {status?.configured ? "SendGrid configurado" : "SendGrid não configurado"}
+                {status?.configured ? "Gmail SMTP activo" : "Gmail SMTP não configurado"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {status?.configured
-                  ? `Chave API activa (fonte: ${status.keySource === "database" ? "painel admin" : "variável de ambiente"}). Emails serão enviados automaticamente.`
-                  : "Sem chave API. Os emails de recuperação de password e subscrição não serão enviados."}
+                  ? `App Password activa (fonte: ${status.keySource === "database" ? "painel admin" : "variável de ambiente GMAIL_APP_PASSWORD"}). Emails serão enviados automaticamente.`
+                  : "App Password não definida. Os emails automáticos não serão enviados até configurares o Gmail SMTP."}
               </p>
             </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Como criar App Password */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-xs font-semibold text-primary uppercase tracking-wider">Como obter a Gmail App Password</p>
+          <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside leading-relaxed">
+            <li>Acede a <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-primary underline">myaccount.google.com/security</a></li>
+            <li>Activa a <strong className="text-foreground">Verificação em dois passos</strong> (obrigatório)</li>
+            <li>Pesquisa <strong className="text-foreground">"App passwords"</strong> nas definições da conta</li>
+            <li>Cria uma nova App Password para <strong className="text-foreground">Mail</strong> e copia os 16 caracteres</li>
+            <li>Cola abaixo sem espaços (são removidos automaticamente)</li>
+          </ol>
+        </CardContent>
+      </Card>
+
       {/* Config form */}
       <Card className="border-border/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Credenciais SendGrid</CardTitle>
+          <CardTitle className="text-base">Credenciais Gmail SMTP</CardTitle>
           <CardDescription className="text-xs">
-            Obtém a tua API Key em{" "}
-            <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noreferrer" className="text-primary underline">
-              app.sendgrid.com
-            </a>
-            . Precisas de permissão <strong>Mail Send</strong>.
+            Conta Gmail: <strong className="text-foreground">aluka.co.ao@gmail.com</strong> — SMTP: smtp.gmail.com:587 (STARTTLS)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <Label className="text-xs text-muted-foreground">
-              API Key SendGrid
-              {status?.configured && <span className="ml-2 text-emerald-500">(chave guardada — deixa vazio para manter)</span>}
+              Conta Gmail (remetente)
+            </Label>
+            <Input
+              type="email"
+              placeholder="aluka.co.ao@gmail.com"
+              value={cfg.gmailUser}
+              onChange={(e) => setCfg((p) => ({ ...p, gmailUser: e.target.value }))}
+              className="mt-1 font-mono text-xs"
+              autoComplete="off"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Conta Gmail que envia os emails. Deve ter 2FA activo e App Password gerada.
+            </p>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              Gmail App Password
+              {status?.configured && status.keySource === "database" && (
+                <span className="ml-2 text-emerald-500">(guardada — deixa vazio para manter)</span>
+              )}
+              {status?.configured && status.keySource === "environment" && (
+                <span className="ml-2 text-primary">(definida via variável de ambiente — não precisas de guardar aqui)</span>
+              )}
             </Label>
             <Input
               type="password"
-              placeholder={status?.configured ? "••••••••••••••••••••••••• (chave activa)" : "SG.xxxxxxxxxxxxxxxxxxxxxxxx"}
-              value={cfg.apiKey}
-              onChange={(e) => setCfg((p) => ({ ...p, apiKey: e.target.value }))}
+              placeholder={
+                status?.configured
+                  ? status.keySource === "environment"
+                    ? "Definida via GMAIL_APP_PASSWORD (env var)"
+                    : "•••• •••• •••• ••••  (activa — deixa vazio para manter)"
+                  : "xxxx xxxx xxxx xxxx  (16 caracteres)"
+              }
+              value={cfg.gmailAppPassword}
+              onChange={(e) => setCfg((p) => ({ ...p, gmailAppPassword: e.target.value }))}
               className="font-mono text-xs mt-1"
               autoComplete="off"
+              disabled={status?.configured && status.keySource === "environment"}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs text-muted-foreground">Email remetente</Label>
-              <Input
-                type="email"
-                placeholder="noreply@aluka.app"
-                value={cfg.fromEmail}
-                onChange={(e) => setCfg((p) => ({ ...p, fromEmail: e.target.value }))}
-                className="mt-1"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Deve estar verificado no SendGrid.</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Nome remetente</Label>
-              <Input
-                placeholder="ALUKA"
-                value={cfg.fromName}
-                onChange={(e) => setCfg((p) => ({ ...p, fromName: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              A variável de ambiente <code className="bg-surface-2 px-1 rounded">GMAIL_APP_PASSWORD</code> tem prioridade sobre este campo.
+            </p>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Email de administração (para testes)</Label>
+            <Label className="text-xs text-muted-foreground">Nome do remetente</Label>
+            <Input
+              placeholder="ALUKA"
+              value={cfg.fromName}
+              onChange={(e) => setCfg((p) => ({ ...p, fromName: e.target.value }))}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Email de destino para teste</Label>
             <Input
               type="email"
               placeholder="admin@exemplo.com"
@@ -2972,12 +3006,14 @@ function EmailConfigTab() {
       <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Emails automáticos</CardTitle>
+          <CardDescription className="text-xs">Todos enviados via smtp.gmail.com:587 (Nodemailer)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[
-              { icon: "✅", title: "Subscrição aprovada", desc: "Enviado ao aluno quando o admin aprova o comprovativo de pagamento." },
-              { icon: "❌", title: "Subscrição rejeitada", desc: "Enviado ao aluno quando o admin rejeita o pedido, com nota opcional." },
+              { icon: "📧", title: "Verificação de email (OTP)", desc: "Código de 6 dígitos enviado no registo. Obrigatório para activar a conta. Expira em 15 minutos." },
+              { icon: "✅", title: "Subscrição aprovada", desc: "Enviado ao aluno quando o admin aprova o comprovativo de pagamento (5.000 AOA/mês)." },
+              { icon: "❌", title: "Subscrição rejeitada", desc: "Enviado ao aluno quando o admin rejeita o pedido, com nota opcional explicativa." },
               { icon: "🔑", title: "Recuperação de password", desc: "Enviado quando o utilizador pede recuperação em /esqueci-senha. Link válido por 1 hora." },
             ].map((item) => (
               <div key={item.title} className="flex items-start gap-3 rounded-lg border border-border/50 bg-surface-1 p-3">

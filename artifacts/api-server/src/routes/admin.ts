@@ -1160,18 +1160,20 @@ router.post("/ai-config/test", async (req: any, res: any) => {
  * POST /api/admin/email-config/test
  * ========================================================================= */
 
-/** GET /api/admin/email-config — returns config status (never returns key) */
+/** GET /api/admin/email-config — returns config status (never returns passwords) */
 router.get("/email-config", async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
     let cfg: any = {};
     try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
-    const envKey = process.env["SENDGRID_API_KEY"];
+    const envPass = process.env["GMAIL_APP_PASSWORD"];
+    const hasDbPass = !!cfg.gmailAppPassword;
+    const hasEnvPass = !!envPass;
     res.json({
-      configured:     !!(cfg.apiKey || envKey),
-      keySource:      cfg.apiKey ? "database" : envKey ? "environment" : "none",
-      fromEmail:      cfg.fromEmail ?? "",
-      fromName:       cfg.fromName  ?? "TradeAcademy",
+      configured:     hasDbPass || hasEnvPass,
+      keySource:      hasDbPass ? "database" : hasEnvPass ? "environment" : "none",
+      gmailUser:      cfg.gmailUser  ?? "aluka.co.ao@gmail.com",
+      fromName:       cfg.fromName   ?? "ALUKA",
       adminEmail:     cfg.adminEmail ?? "",
     });
   } catch (err) {
@@ -1180,22 +1182,21 @@ router.get("/email-config", async (req: any, res: any) => {
   }
 });
 
-/** PUT /api/admin/email-config — saves config (apiKey may be empty to clear) */
+/** PUT /api/admin/email-config — saves Gmail SMTP config (gmailAppPassword may be empty to keep existing) */
 router.put("/email-config", async (req: any, res: any) => {
   try {
-    const { apiKey, fromEmail, fromName, adminEmail } = req.body ?? {};
+    const { gmailAppPassword, gmailUser, fromName, adminEmail } = req.body ?? {};
     const now = Date.now();
 
-    /* Load existing to preserve key if new one is empty */
     const existing = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
     let current: any = {};
     try { current = existing ? JSON.parse(existing.value) : {}; } catch { current = {}; }
 
     const merged = {
-      apiKey:     apiKey     ?? current.apiKey ?? "",
-      fromEmail:  fromEmail  ?? current.fromEmail  ?? "noreply@tradeacademy.ao",
-      fromName:   fromName   ?? current.fromName   ?? "TradeAcademy",
-      adminEmail: adminEmail ?? current.adminEmail ?? "",
+      gmailUser:        gmailUser        ?? current.gmailUser        ?? "aluka.co.ao@gmail.com",
+      gmailAppPassword: gmailAppPassword ?? current.gmailAppPassword ?? "",
+      fromName:         fromName         ?? current.fromName         ?? "ALUKA",
+      adminEmail:       adminEmail       ?? current.adminEmail       ?? "",
     };
 
     if (existing) {
@@ -1204,7 +1205,8 @@ router.put("/email-config", async (req: any, res: any) => {
       await db.insert(adminSettingsTable).values({ key: "email.config", value: JSON.stringify(merged), updatedAt: now });
     }
 
-    res.json({ ok: true, configured: !!merged.apiKey });
+    const envPass = process.env["GMAIL_APP_PASSWORD"];
+    res.json({ ok: true, configured: !!(merged.gmailAppPassword || envPass) });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
