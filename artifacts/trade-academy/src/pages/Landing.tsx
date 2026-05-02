@@ -7,7 +7,7 @@ import {
   Zap, GraduationCap, Brain, ChevronRight,
   Play, Video, Clock, LineChart,
   CheckCircle, Lock, ArrowRight, Star, Crown, Users,
-  Flame, Activity, Sparkles, Target, Award,
+  Flame, Activity, Sparkles, Target, Award, Swords, Library,
 } from "lucide-react";
 
 import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png";
@@ -104,8 +104,8 @@ const FEATURES = [
   },
   {
     icon: BarChart2,
-    title: "40+ aulas estruturadas",
-    desc: "Do básico ao avançado, com quizzes e revisão espaçada para fixares o conhecimento.",
+    title: "40 aulas em 13 módulos",
+    desc: "Do básico ao avançado — Conceitos, Tipos de Mercado, Leitura de Gráficos, Suporte & Resistência e muito mais.",
   },
   {
     icon: Activity,
@@ -118,22 +118,32 @@ const FEATURES = [
     desc: "Análise inteligente de cada operação: entrada, saída, risco e lições concretas para melhorares.",
   },
   {
+    icon: Swords,
+    title: "Duelos 1v1",
+    desc: "Desafia outros traders em duelos ao vivo: quem tiver melhor performance no simulador ganha XP extra.",
+  },
+  {
+    icon: Library,
+    title: "Biblioteca & Estratégias",
+    desc: "3 livros curados de trading, 10 estratégias detalhadas e um glossário com 122+ termos do mercado.",
+  },
+  {
     icon: Video,
     title: "Vídeo Aulas curadas",
     desc: "Os melhores vídeos de trading em português, com player personalizado e desbloqueio sequencial por XP.",
   },
   {
     icon: Award,
-    title: "XP, conquistas e missões",
-    desc: "Sistema de gamificação completo: XP por cada acção, conquistas desbloqueáveis e missões diárias.",
+    title: "XP, 54+ conquistas e missões",
+    desc: "Sistema de gamificação completo: XP por cada acção, 54 conquistas desbloqueáveis e missões diárias.",
   },
 ];
 
 const STATS = [
-  { value: "40+", label: "Aulas" },
-  { value: "5",   label: "Tipos de gráfico" },
-  { value: "6",   label: "Timeframes" },
-  { value: "PT",  label: "Em Português" },
+  { value: "40",   label: "Aulas" },
+  { value: "13",   label: "Módulos" },
+  { value: "122+", label: "Termos glossário" },
+  { value: "54+",  label: "Conquistas" },
 ];
 
 function buildPlans(priceAoa: number, planName: string) {
@@ -146,9 +156,9 @@ function buildPlans(priceAoa: number, planName: string) {
       features: [
         "Nível 1 completo (Conceitos Básicos)",
         "Simulador de trading ilimitado",
-        "Glossário e Recursos",
+        "Glossário com 122+ termos",
         "Perfil com ranking real",
-        "Missões diárias e conquistas",
+        "Missões diárias e 54+ conquistas",
       ],
       cta: "Começar grátis",
       to: "/cadastrar",
@@ -160,10 +170,10 @@ function buildPlans(priceAoa: number, planName: string) {
       highlight: true,
       features: [
         "Tudo do plano Iniciante",
-        "Níveis Intermediário e Avançado",
+        "Níveis Intermediário e Avançado (27 aulas)",
         "Vídeo Aulas curadas (desbloqueio sequencial)",
-        "Duelos contra outros traders",
-        "Biblioteca de livros e estratégias",
+        "Duelos 1v1 contra outros traders",
+        "Biblioteca: 3 livros + 10 estratégias detalhadas",
         "Suporte prioritário",
       ],
       cta: "Subscrever agora",
@@ -221,7 +231,7 @@ export default function Landing() {
 
   useSEO({
     title: "ALUKA — Curso de Trading em Português | Grátis",
-    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Aluka IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
+    description: "Aprende trading em Angola: 40 aulas em 13 módulos, simulador com 5 tipos de gráfico, duelos 1v1, Aluka IA por trade e biblioteca com 10 estratégias. Nível Iniciante 100% gratuito, tudo em português.",
     canonical: "/",
   });
 
@@ -269,8 +279,8 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
-            40 aulas estruturadas, simulador com 5 tipos de gráfico, Aluka IA por trade
-            e vídeo aulas curadas. Nível Iniciante totalmente grátis — tudo em português.
+            40 aulas em 13 módulos, simulador com 5 tipos de gráfico, Aluka IA por trade,
+            duelos 1v1 e biblioteca de estratégias. Nível Iniciante totalmente grátis — tudo em português.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
