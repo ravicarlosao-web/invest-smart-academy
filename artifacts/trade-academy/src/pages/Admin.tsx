@@ -2032,7 +2032,7 @@ function SimulatorTab() {
 const VIDEO_LEVELS: VideoLesson["level"][] = ["Iniciante", "Intermediário", "Avançado"];
 
 const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
-  creator: "", title: "", level: "Iniciante", youtubeUrl: "",
+  creator: "", title: "", level: "Iniciante", videoUrl: "",
   description: "", requiredXp: undefined, order: 99, duration: "",
 };
 
@@ -2046,7 +2046,14 @@ function VideosTab() {
 
   useEffect(() => {
     api.admin.getVideos()
-      .then((r) => { setVideos((r as VideoLesson[]).sort((a, b) => a.order - b.order)); setLoaded(true); })
+      .then((r) => {
+        const migrated = (r as any[]).map((v) => ({
+          ...v,
+          videoUrl: v.videoUrl ?? v.youtubeUrl ?? "",
+        })) as VideoLesson[];
+        setVideos(migrated.sort((a, b) => a.order - b.order));
+        setLoaded(true);
+      })
       .catch(() => { toast.error("Erro ao carregar vídeos"); setLoaded(true); });
   }, []);
 
@@ -2095,7 +2102,7 @@ function VideosTab() {
     save(reordered);
   }
 
-  const editYtId = editing?.youtubeUrl ? extractYouTubeId(editing.youtubeUrl) : null;
+  const editYtId = editing?.videoUrl ? extractYouTubeId(editing.videoUrl) : null;
 
   return (
     <div className="space-y-4">
@@ -2103,7 +2110,7 @@ function VideosTab() {
         <div>
           <h2 className="text-lg font-semibold">Vídeo Aulas</h2>
           <p className="text-sm text-muted-foreground">
-            {videos.length} vídeo{videos.length !== 1 ? "s" : ""} · Adiciona aulas do YouTube para os alunos
+            {videos.length} vídeo{videos.length !== 1 ? "s" : ""} · Adiciona aulas de qualquer plataforma (YouTube, Vimeo, etc.)
           </p>
         </div>
         <Button onClick={openNew}>
@@ -2117,7 +2124,7 @@ function VideosTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{isNew ? "Novo vídeo" : `Editar: ${editing.title}`}</CardTitle>
             <CardDescription>
-              Cole a URL do YouTube — o player será incorporado internamente na plataforma.
+              Cola o link do vídeo — YouTube, Vimeo, ou qualquer outra plataforma. O player será incorporado internamente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2145,30 +2152,32 @@ function VideosTab() {
                   onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs text-muted-foreground">URL do vídeo no YouTube</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Link do vídeo <span className="text-muted-foreground/60">(YouTube, Vimeo, Facebook, TikTok, etc.)</span>
+                </Label>
                 <div className="flex gap-2">
-                  <Input value={editing.youtubeUrl} placeholder="https://www.youtube.com/watch?v=..."
-                    onChange={(e) => setEditing({ ...editing, youtubeUrl: e.target.value })} className="flex-1" />
-                  <Button variant="outline" size="sm" onClick={() => setPreview(editYtId)}
-                    disabled={!editYtId}>
+                  <Input value={editing.videoUrl} placeholder="https://www.youtube.com/watch?v=... ou qualquer outro link"
+                    onChange={(e) => setEditing({ ...editing, videoUrl: e.target.value })} className="flex-1" />
+                  <Button variant="outline" size="sm" onClick={() => setPreview("show")}
+                    disabled={!editing.videoUrl.trim()}>
                     Pré-visualizar
                   </Button>
                 </div>
-                {editing.youtubeUrl && !editYtId && (
-                  <p className="text-[11px] text-destructive mt-1">URL inválido — verifique o formato do link YouTube.</p>
-                )}
                 {editYtId && (
-                  <p className="text-[11px] text-bull mt-1">ID detectado: <span className="font-mono">{editYtId}</span></p>
+                  <p className="text-[11px] text-bull mt-1">YouTube detectado — ID: <span className="font-mono">{editYtId}</span></p>
+                )}
+                {editing.videoUrl && !editYtId && (
+                  <p className="text-[11px] text-muted-foreground mt-1">Link externo — será incorporado via iframe.</p>
                 )}
               </div>
 
               {/* Preview */}
-              {preview && editYtId && (
+              {preview && editing.videoUrl && (
                 <div className="md:col-span-2">
                   <Label className="text-xs text-muted-foreground mb-1 block">Pré-visualização</Label>
                   <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: "16/9", maxWidth: 480 }}>
                     <iframe
-                      src={`https://www.youtube.com/embed/${editYtId}?rel=0`}
+                      src={editYtId ? `https://www.youtube.com/embed/${editYtId}?rel=0` : editing.videoUrl}
                       title="preview"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -2208,14 +2217,14 @@ function VideosTab() {
 
             <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
               <p className="text-[11px] text-muted-foreground">
-                <strong className="text-foreground">Aviso:</strong> Ao adicionar um vídeo do YouTube, o conteúdo
+                <strong className="text-foreground">Aviso:</strong> Ao adicionar um vídeo, o conteúdo
                 pertence ao criador original. O sistema apresenta uma nota automática de autoria aos alunos.
                 Certifica-te de que tens permissão ou que o vídeo é de acesso público.
               </p>
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleCommit} disabled={saving || !editing.title || !editing.creator || !editYtId}>
+              <Button onClick={handleCommit} disabled={saving || !editing.title || !editing.creator || !editing.videoUrl.trim()}>
                 <Save className="mr-1.5 h-3.5 w-3.5" />
                 {saving ? "Salvando..." : isNew ? "Adicionar vídeo" : "Guardar alterações"}
               </Button>
@@ -2232,7 +2241,7 @@ function VideosTab() {
             <PlayCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
             <p className="font-medium text-sm">Nenhum vídeo aula adicionado</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-              Adiciona vídeos do YouTube para os alunos assistirem directamente na plataforma com o player interno.
+              Adiciona vídeos de qualquer plataforma para os alunos assistirem directamente na plataforma.
             </p>
           </CardContent>
         </Card>
@@ -2242,7 +2251,7 @@ function VideosTab() {
       {loaded && videos.length > 0 && (
         <div className="space-y-2">
           {videos.map((v, i) => {
-            const ytId = extractYouTubeId(v.youtubeUrl);
+            const ytId = extractYouTubeId(v.videoUrl);
             return (
               <Card key={v.id} className="border-border/60">
                 <CardContent className="flex items-center gap-3 p-3">

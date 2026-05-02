@@ -16,6 +16,7 @@ import {
   type VideoLesson,
   extractYouTubeId,
   thumbnailUrl,
+  getVideoEmbedUrl,
   LEVEL_COLORS,
 } from "@/data/videos";
 
@@ -356,7 +357,13 @@ function useVideos() {
   useEffect(() => {
     api.videos
       .list()
-      .then((raw) => setVideos((raw as VideoLesson[]).sort((a, b) => a.order - b.order)))
+      .then((raw) => {
+        const migrated = (raw as any[]).map((v) => ({
+          ...v,
+          videoUrl: v.videoUrl ?? v.youtubeUrl ?? "",
+        })) as VideoLesson[];
+        setVideos(migrated.sort((a, b) => a.order - b.order));
+      })
       .catch(() => setVideos([]))
       .finally(() => setLoading(false));
   }, []);
@@ -438,7 +445,7 @@ function GalleryView({ videos, loading }: { videos: VideoLesson[]; loading: bool
               const globalIdx = videos.indexOf(v);
               const unlocked  = isUnlocked(v, globalIdx, videos, userXp, watchedVideos);
               const watched   = watchedVideos.includes(v.id);
-              const videoId   = extractYouTubeId(v.youtubeUrl);
+              const videoId   = extractYouTubeId(v.videoUrl);
 
               return (
                 <button
@@ -531,7 +538,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
 
   const video   = videos.find((v) => v.id === vid);
   const idx     = video ? videos.indexOf(video) : -1;
-  const ytId    = video ? extractYouTubeId(video.youtubeUrl) : null;
+  const ytId    = video ? extractYouTubeId(video.videoUrl) : null;
   const prevVid = idx > 0 ? videos[idx - 1] : null;
   const nextVid = idx < videos.length - 1 ? videos[idx + 1] : null;
 
@@ -553,7 +560,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
 
   function goTo(v: VideoLesson) { navigate(`/video-aulas/${v.id}`); }
 
-  if (!video || !ytId) {
+  if (!video || !video.videoUrl) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <AlertCircle className="h-8 w-8 text-destructive" />
@@ -565,7 +572,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
     );
   }
 
-  const thumb = thumbnailUrl(ytId).replace("mqdefault", "hqdefault");
+  const thumb = ytId ? thumbnailUrl(ytId).replace("mqdefault", "hqdefault") : "";
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
@@ -579,13 +586,25 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
           <ArrowLeft className="h-3.5 w-3.5" /> Voltar à galeria
         </Link>
 
-        {/* ── Player personalizado ──────────────────────────────────── */}
-        <CustomYTPlayer
-          videoId={ytId}
-          title={video.title}
-          thumbnail={thumb}
-          onEnded={handleMarkDone}
-        />
+        {/* ── Player ────────────────────────────────────────────────── */}
+        {ytId ? (
+          <CustomYTPlayer
+            videoId={ytId}
+            title={video.title}
+            thumbnail={thumb}
+            onEnded={handleMarkDone}
+          />
+        ) : (
+          <div className="relative w-full overflow-hidden rounded-xl bg-black" style={{ aspectRatio: "16/9" }}>
+            <iframe
+              src={getVideoEmbedUrl(video.videoUrl) ?? video.videoUrl}
+              title={video.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+            />
+          </div>
+        )}
 
         {/* Navegação */}
         <div className="flex items-center justify-between gap-2">
@@ -632,7 +651,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
           <div className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 p-3">
             <AlertCircle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
             <p className="text-[11px] text-muted-foreground">
-              Este vídeo não é de nossa autoria. O conteúdo pertence ao criador original no YouTube e pode ser
+              Este vídeo não é de nossa autoria. O conteúdo pertence ao criador original e pode ser
               removido a qualquer momento. Curámos este material por considerar de excelente qualidade para o tema.
             </p>
           </div>
@@ -647,7 +666,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
             const unlocked    = isUnlocked(v, i, videos, userXp, watchedVideos);
             const isActive    = v.id === vid;
             const isWatched2  = watchedVideos.includes(v.id);
-            const vYtId       = extractYouTubeId(v.youtubeUrl);
+            const vYtId       = extractYouTubeId(v.videoUrl);
 
             return (
               <button
