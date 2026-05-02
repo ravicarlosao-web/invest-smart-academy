@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Fallback font metrics (reduz CLS causado por troca de fontes) ────────── */
+@font-face {
+  font-family: "Inter";
+  src: local("BlinkMacSystemFont"), local("Segoe UI"), local("Helvetica Neue");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
 /* ============================================
    ALUKA — Design System
    Light / Dark mode via next-themes (.dark class on <html>).
