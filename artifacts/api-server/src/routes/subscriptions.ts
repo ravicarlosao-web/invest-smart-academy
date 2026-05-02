@@ -204,7 +204,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req: a
       id,
       userId: String(req.params.userId),
       status:           "pending",
-      amount:           5000,
+      amount:           15000,
       paymentReference: paymentReference ?? null,
       receiptData:      receiptData ?? null,
       receiptMimeType:  receiptMimeType ?? null,

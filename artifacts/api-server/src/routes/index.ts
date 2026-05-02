@@ -211,9 +211,9 @@ router.get("/plan-config", async (_req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
     const cfg = row ? (() => { try { return JSON.parse(row.value); } catch { return {}; } })() : {};
-    res.json({ priceAoa: cfg.priceAoa ?? 5000, planName: cfg.planName ?? "Plano Mensal" });
+    res.json({ priceAoa: cfg.priceAoa ?? 15000, planName: cfg.planName ?? "Plano Mensal" });
   } catch {
-    res.json({ priceAoa: 5000, planName: "Plano Mensal" });
+    res.json({ priceAoa: 15000, planName: "Plano Mensal" });
   }
 });
 
@@ -276,7 +276,7 @@ const SEO_DEFAULTS = {
   description:   "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
   twitterHandle: "@TradeAcademyAO",
   themeColor:    "#06b6d4",
-  priceAoa:      5000,
+  priceAoa:      15000,
   geo:           "AO",
   geoCity:       "Luanda, Angola",
 };

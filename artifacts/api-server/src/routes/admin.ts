@@ -783,7 +783,7 @@ router.put("/videos", async (req: any, res: any) => {
 });
 
 /* ---------------------------------------------------------------------------
- * Subscrições — gestão manual de pagamentos (5.000 AOA/mês)
+ * Subscrições — gestão manual de pagamentos (15.000 AOA/mês)
  * ------------------------------------------------------------------------- */
 
 /** GET /api/admin/subscriptions  — lista todas as subscrições com info do utilizador */
@@ -970,7 +970,7 @@ router.get("/plan-config", async (req: any, res: any) => {
   try {
     const cfg = await getSetting<{ priceAoa: number; planName: string }>(
       "plan.config",
-      { priceAoa: 5000, planName: "Plano Mensal" },
+      { priceAoa: 15000, planName: "Plano Mensal" },
     );
     res.json(cfg);
   } catch (err) {
@@ -987,7 +987,7 @@ router.put("/plan-config", async (req: any, res: any) => {
     }
     const current = await getSetting<{ priceAoa: number; planName: string }>(
       "plan.config",
-      { priceAoa: 5000, planName: "Plano Mensal" },
+      { priceAoa: 15000, planName: "Plano Mensal" },
     );
     await setSetting("plan.config", {
       priceAoa: priceAoa ?? current.priceAoa,
@@ -1008,7 +1008,7 @@ router.get("/finance", async (req: any, res: any) => {
   try {
     const cfg = await getSetting<{ priceAoa: number; planName: string }>(
       "plan.config",
-      { priceAoa: 5000, planName: "Plano Mensal" },
+      { priceAoa: 15000, planName: "Plano Mensal" },
     );
 
     const subs = await db.select({
@@ -1253,7 +1253,7 @@ const SEO_DEFAULTS = {
   description:   "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
   twitterHandle: "@TradeAcademyAO",
   themeColor:    "#06b6d4",
-  priceAoa:      5000,
+  priceAoa:      15000,
   geo:           "AO",
   geoCity:       "Luanda, Angola",
 };

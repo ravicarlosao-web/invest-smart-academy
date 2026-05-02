@@ -78716,7 +78716,7 @@ router7.get("/plan-config", async (req, res) => {
   try {
     const cfg = await getSetting(
       "plan.config",
-      { priceAoa: 5e3, planName: "Plano Mensal" }
+      { priceAoa: 15e3, planName: "Plano Mensal" }
     );
     res.json(cfg);
   } catch (err) {
@@ -78732,7 +78732,7 @@ router7.put("/plan-config", async (req, res) => {
     }
     const current = await getSetting(
       "plan.config",
-      { priceAoa: 5e3, planName: "Plano Mensal" }
+      { priceAoa: 15e3, planName: "Plano Mensal" }
     );
     await setSetting("plan.config", {
       priceAoa: priceAoa ?? current.priceAoa,
@@ -78748,7 +78748,7 @@ router7.get("/finance", async (req, res) => {
   try {
     const cfg = await getSetting(
       "plan.config",
-      { priceAoa: 5e3, planName: "Plano Mensal" }
+      { priceAoa: 15e3, planName: "Plano Mensal" }
     );
     const subs = await db.select({
       id: subscriptionsTable.id,
@@ -78949,7 +78949,7 @@ var SEO_DEFAULTS = {
   description: "A primeira plataforma angolana de educa\xE7\xE3o em trading. Aulas gratuitas de Forex, ac\xE7\xF5es e cripto, simulador com $10.000 demo, estrat\xE9gias profissionais. 100% em portugu\xEAs.",
   twitterHandle: "@TradeAcademyAO",
   themeColor: "#06b6d4",
-  priceAoa: 5e3,
+  priceAoa: 15e3,
   geo: "AO",
   geoCity: "Luanda, Angola"
 };
@@ -79270,7 +79270,7 @@ router8.post("/:userId/request", validate(SubscriptionRequestBody), async (req, 
       id,
       userId: String(req.params.userId),
       status: "pending",
-      amount: 5e3,
+      amount: 15e3,
       paymentReference: paymentReference ?? null,
       receiptData: receiptData ?? null,
       receiptMimeType: receiptMimeType ?? null,
@@ -79478,9 +79478,9 @@ router9.get("/plan-config", async (_req, res) => {
         return {};
       }
     })() : {};
-    res.json({ priceAoa: cfg.priceAoa ?? 5e3, planName: cfg.planName ?? "Plano Mensal" });
+    res.json({ priceAoa: cfg.priceAoa ?? 15e3, planName: cfg.planName ?? "Plano Mensal" });
   } catch {
-    res.json({ priceAoa: 5e3, planName: "Plano Mensal" });
+    res.json({ priceAoa: 15e3, planName: "Plano Mensal" });
   }
 });
 router9.get("/leaderboard", async (_req, res) => {
@@ -79533,7 +79533,7 @@ var SEO_DEFAULTS2 = {
   description: "A primeira plataforma angolana de educa\xE7\xE3o em trading. Aulas gratuitas de Forex, ac\xE7\xF5es e cripto, simulador com $10.000 demo, estrat\xE9gias profissionais. 100% em portugu\xEAs.",
   twitterHandle: "@TradeAcademyAO",
   themeColor: "#06b6d4",
-  priceAoa: 5e3,
+  priceAoa: 15e3,
   geo: "AO",
   geoCity: "Luanda, Angola"
 };

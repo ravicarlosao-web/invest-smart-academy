@@ -216,7 +216,7 @@ function Nav() {
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-  const [priceAoa, setPriceAoa] = useState(5000);
+  const [priceAoa, setPriceAoa] = useState(15000);
   const [planName, setPlanName] = useState("Plano Mensal");
 
   useSEO({
@@ -439,7 +439,7 @@ export default function Landing() {
           </h2>
           <p className="text-gray-400 max-w-xl mx-auto">
             Nível Iniciante sem custos. Quando quiseres avançar para Intermediário ou Avançado,
-            subscreveres por 5.000 AOA/mês — pagamento manual via transferência bancária.
+            subscreveres por {priceAoa.toLocaleString("pt-AO")} AOA/mês — pagamento manual via transferência bancária.
           </p>
         </div>
 

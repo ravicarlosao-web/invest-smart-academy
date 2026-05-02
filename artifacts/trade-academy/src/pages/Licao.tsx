@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ type Phase = "content" | "quiz" | "result";
 const PREMIUM_DIFFICULTIES = ["intermediario", "avancado"];
 
 export default function Licao() {
+  const { priceAoa } = usePlanConfig();
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
   const completeLesson = useAppStore((s) => s.completeLesson);
@@ -73,7 +75,7 @@ export default function Licao() {
           <h2 className="text-xl font-bold">Conteúdo Premium</h2>
           <p className="text-muted-foreground text-sm">
             Esta aula faz parte do nível <strong>{found.level.title}</strong> que requer uma subscrição ativa.
-            Subscreve por 5.000 AOA/mês para ter acesso total.
+            Subscreve por {priceAoa.toLocaleString("pt-AO")} AOA/mês para ter acesso total.
           </p>
           <div className="flex gap-3 justify-center">
             <Button asChild variant="outline">

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useSEO } from "@/hooks/useSEO";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { fmtUSD } from "@/lib/market";
 
 export default function Dashboard() {
   useSEO({ title: "Dashboard — ALUKA", noindex: true });
+  const { priceAoa } = usePlanConfig();
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
   const user = useAuthStore((s) => s.user);
@@ -113,7 +115,7 @@ export default function Dashboard() {
         <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-foreground">
             <Crown className="h-4 w-4 shrink-0 text-primary" />
-            <span>Nível Iniciante é <strong>gratuito</strong>. Subscreve por 5.000 AOA/mês para aceder ao conteúdo Intermédio e Avançado.</span>
+            <span>Nível Iniciante é <strong>gratuito</strong>. Subscreve por {priceAoa.toLocaleString("pt-AO")} AOA/mês para aceder ao conteúdo Intermédio e Avançado.</span>
           </div>
           <Button asChild size="sm" className="shrink-0">
             <Link to="/financeiro">Subscrever</Link>

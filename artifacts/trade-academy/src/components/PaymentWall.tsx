@@ -6,15 +6,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 
 const BANK_DETAILS = {
-  banco:       "Banco BFA",
-  conta:       "1234 5678 9012 3456",
-  titular:     "ALUKA, Lda.",
-  iban:        "AO06 0040 0000 0123 4567 8901 2",
-  descricao:   "Mensalidade ALUKA",
-  valor:       "5.000,00 AOA",
-};
+  banco:     "Banco BFA",
+  conta:     "1234 5678 9012 3456",
+  titular:   "ALUKA, Lda.",
+  iban:      "AO06 0040 0000 0123 4567 8901 2",
+  descricao: "Mensalidade ALUKA",
+} as const;
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_SIZE_MB = 5;
@@ -30,6 +30,7 @@ interface Props {
 }
 
 export function PaymentWall({ onClose }: Props) {
+  const { priceAoa } = usePlanConfig();
   const user         = useAuthStore((s) => s.user);
   const { subscription, requestPayment, updateReference, loading } = useSubscriptionStore();
 
@@ -287,7 +288,7 @@ export function PaymentWall({ onClose }: Props) {
           <p className="text-xs text-muted-foreground">Acesso a Intermediário e Avançado</p>
         </div>
         <div className="ml-auto text-right">
-          <p className="text-lg font-bold text-primary">5.000 AOA</p>
+          <p className="text-lg font-bold text-primary">{priceAoa.toLocaleString("pt-AO")} AOA</p>
           <p className="text-xs text-muted-foreground">/mês</p>
         </div>
       </div>

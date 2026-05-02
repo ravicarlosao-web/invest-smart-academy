@@ -2678,7 +2678,7 @@ function SubscriptionsTab() {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold">Subscrições</h2>
-        <p className="text-sm text-muted-foreground">Gestão manual de pagamentos — 5.000 AOA/mês</p>
+        <p className="text-sm text-muted-foreground">Gestão manual de pagamentos — 15.000 AOA/mês</p>
       </div>
 
       {/* Stats */}
@@ -3092,7 +3092,7 @@ function EmailConfigTab() {
           <div className="space-y-3">
             {[
               { icon: "📧", title: "Verificação de email (OTP)", desc: "Código de 6 dígitos enviado no registo. Obrigatório para activar a conta. Expira em 15 minutos." },
-              { icon: "✅", title: "Subscrição aprovada", desc: "Enviado ao aluno quando o admin aprova o comprovativo de pagamento (5.000 AOA/mês)." },
+              { icon: "✅", title: "Subscrição aprovada", desc: "Enviado ao aluno quando o admin aprova o comprovativo de pagamento (15.000 AOA/mês)." },
               { icon: "❌", title: "Subscrição rejeitada", desc: "Enviado ao aluno quando o admin rejeita o pedido, com nota opcional explicativa." },
               { icon: "🔑", title: "Recuperação de password", desc: "Enviado quando o utilizador pede recuperação em /esqueci-senha. Link válido por 1 hora." },
             ].map((item) => (
@@ -3117,7 +3117,7 @@ function EmailConfigTab() {
 const SEO_EMPTY: SeoConfig = {
   siteName: "ALUKA", shortName: "ALUKA", domain: "",
   description: "A primeira plataforma angolana de educação em trading.",
-  twitterHandle: "@ALUKAAO", themeColor: "#06b6d4", priceAoa: 5000,
+  twitterHandle: "@ALUKAAO", themeColor: "#06b6d4", priceAoa: 15000,
   geo: "AO", geoCity: "Luanda, Angola",
 };
 

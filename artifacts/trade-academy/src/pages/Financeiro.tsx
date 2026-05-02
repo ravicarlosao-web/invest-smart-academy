@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ const statusInfo = (status: string) => {
 };
 
 export default function Financeiro() {
+  const { priceAoa } = usePlanConfig();
   const user = useAuthStore((s) => s.user);
   const {
     subscription,
@@ -124,7 +126,7 @@ export default function Financeiro() {
               <div>
                 <p className="font-medium">Sem subscrição ativa</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Subscreve por <strong>5.000 AOA/mês</strong> para aceder aos níveis Intermediário e Avançado.
+                  Subscreve por <strong>{priceAoa.toLocaleString("pt-AO")} AOA/mês</strong> para aceder aos níveis Intermediário e Avançado.
                 </p>
               </div>
               <Button onClick={() => setShowPaywall(true)}>Subscrever agora</Button>
@@ -274,7 +276,7 @@ export default function Financeiro() {
         <ol className="space-y-2 text-sm text-muted-foreground">
           <li className="flex gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">1</span>
-            Efetua uma transferência de <strong className="text-foreground">5.000 AOA</strong> para a conta BFA indicada no modal de pagamento.
+            Efetua uma transferência de <strong className="text-foreground">{priceAoa.toLocaleString("pt-AO")} AOA</strong> para a conta BFA indicada no modal de pagamento.
           </li>
           <li className="flex gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">2</span>

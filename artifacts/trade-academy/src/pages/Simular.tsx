@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { useSEO } from "@/hooks/useSEO";
 import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -382,6 +383,7 @@ function AlukaAiFormatted({ text }: { text: string }) {
 
 export default function Simular() {
   useSEO({ title: "Simulador de Trading — ALUKA", noindex: true });
+  const { priceAoa } = usePlanConfig();
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];
@@ -1297,7 +1299,7 @@ export default function Simular() {
 
             {/* Preço */}
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold">5.000 AOA</span>
+              <span className="text-2xl font-extrabold">{priceAoa.toLocaleString("pt-AO")} AOA</span>
               <span className="text-sm text-muted-foreground">/mês</span>
             </div>
 

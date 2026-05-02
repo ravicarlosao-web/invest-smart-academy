@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ const PREMIUM_DIFFICULTIES: string[] = ["intermediario", "avancado"];
 const EMPTY: string[] = [];
 
 export default function Aprender() {
+  const { priceAoa } = usePlanConfig();
   const completed   = useAppStore((s) => s.progress.completedLessons);
   const reviewQueue = useAppStore((s) => s.progress.reviewQueue ?? EMPTY);
   const removeFromReview = useAppStore((s) => s.removeFromReview);
@@ -211,7 +213,7 @@ export default function Aprender() {
                     className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
                     onClick={() => setShowPaywall(true)}
                   >
-                    Subscrever — 5.000 AOA/mês
+                    Subscrever — {priceAoa.toLocaleString("pt-AO")} AOA/mês
                   </Button>
                 ) : (
                   <div className="text-right">
