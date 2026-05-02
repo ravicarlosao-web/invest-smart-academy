@@ -103,7 +103,10 @@ function StepBar({ current }: { current: number }) {
 }
 
 /** 6-box OTP input */
-function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+function OtpInput({ value, onChange, disabled, firstInputRef }: {
+  value: string; onChange: (v: string) => void; disabled?: boolean;
+  firstInputRef?: React.MutableRefObject<HTMLInputElement | null>;
+}) {
   const boxes = 6;
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -136,7 +139,7 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: 
       {digits.map((d, i) => (
         <input
           key={i}
-          ref={(el) => { inputRefs.current[i] = el; }}
+          ref={(el) => { inputRefs.current[i] = el; if (i === 0 && firstInputRef) firstInputRef.current = el; }}
           type="text"
           inputMode="numeric"
           maxLength={1}
@@ -179,6 +182,7 @@ export default function Cadastrar() {
   const [verifying,   setVerifying]   = useState(false);
   const [resending,   setResending]   = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const firstOtpRef = useRef<HTMLInputElement | null>(null);
 
   const handleGoogleSignUp = () => {
     window.location.href = "/api/auth/google";
@@ -192,6 +196,13 @@ export default function Cadastrar() {
     password.length >= 12 ? 4 : password.length >= 10 ? 3 : password.length >= 8 ? 2 : 1;
   const strengthColor = ["bg-white/10","bg-red-500","bg-yellow-500","bg-emerald-400","bg-emerald-500"][pwStrength];
   const strengthLabel = ["","Fraca","Média","Boa","Forte"][pwStrength];
+
+  // Auto-focus first OTP box when entering verification step
+  useEffect(() => {
+    if (step === 1) {
+      setTimeout(() => firstOtpRef.current?.focus(), 100);
+    }
+  }, [step]);
 
   async function handleCreateAccount(e: React.FormEvent) {
     e.preventDefault();
@@ -246,15 +257,12 @@ export default function Cadastrar() {
       toast.success("Novo código enviado para " + email);
       setOtp("");
       startResendCooldown(60);
+      setTimeout(() => firstOtpRef.current?.focus(), 100);
     } catch {
       toast.error("Não foi possível enviar o código. Tenta novamente.");
     } finally {
       setResending(false);
     }
-  }
-
-  function handleSkipVerification() {
-    setStep(2);
   }
 
   function handleFinish() {
@@ -432,7 +440,7 @@ export default function Cadastrar() {
           <p className="text-gray-600 text-xs mb-7">Verifica também a pasta de spam.</p>
 
           <form onSubmit={handleVerifyEmail} className="w-full flex flex-col items-center gap-5">
-            <OtpInput value={otp} onChange={setOtp} disabled={verifying} />
+            <OtpInput value={otp} onChange={setOtp} disabled={verifying} firstInputRef={firstOtpRef} />
 
             <Button
               type="submit"
@@ -461,13 +469,6 @@ export default function Cadastrar() {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSkipVerification}
-            className="mt-5 text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
-          >
-            Verificar mais tarde
-          </button>
         </div>
       )}
 
