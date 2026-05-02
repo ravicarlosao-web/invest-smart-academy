@@ -58,6 +58,22 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("lightweight-charts")) return "chunk-charts";
+          if (id.includes("react-dom"))          return "chunk-react-dom";
+          if (id.includes("react-router"))        return "chunk-router";
+          if (id.includes("react"))               return "chunk-react";
+          if (id.includes("@tanstack"))           return "chunk-query";
+          if (id.includes("lucide-react"))        return "chunk-icons";
+          if (id.includes("@radix-ui"))           return "chunk-radix";
+          return "chunk-vendor";
+        },
+      },
+    },
   },
   server: {
     port,

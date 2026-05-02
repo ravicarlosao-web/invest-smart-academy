@@ -73,13 +73,14 @@
     <meta name="twitter:description" content="Aprende trading do zero com aulas estruturadas, simulador real e Coach IA. Grátis para começar." />
     <meta name="twitter:image" content="https://aluka.app/opengraph.jpg" />
 
-    <!-- ── Performance: preload hero image (melhora LCP) ─────────────────── -->
-    <link rel="preload" as="image" href="/src/assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png" fetchpriority="high" />
-
-    <!-- ── Fonts ──────────────────────────────────────────────────────────── -->
+    <!-- ── Fonts — carregamento não-bloqueante ────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    </noscript>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          STRUCTURED DATA JSON-LD

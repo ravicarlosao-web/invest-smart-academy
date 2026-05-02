@@ -3438,7 +3438,7 @@ export default function Admin() {
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden">
-            <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" loading="lazy" />
+            <img src="/logo-transparent.webp" alt="ALUKA" className="w-8 h-8 object-contain" loading="lazy" />
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
