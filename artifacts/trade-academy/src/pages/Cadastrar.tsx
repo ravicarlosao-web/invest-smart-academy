@@ -110,7 +110,7 @@ function OtpInput({ value, onChange, disabled, firstInputRef }: {
   const boxes = 6;
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const digits = value.padEnd(boxes, "").slice(0, boxes).split("");
+  const digits = Array.from({ length: boxes }, (_, i) => value[i] ?? "");
 
   function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace") {
