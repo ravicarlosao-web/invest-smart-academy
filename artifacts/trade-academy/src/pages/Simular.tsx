@@ -9,6 +9,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { PriceChart, type ChartType, type PriceChartHandle } from "@/components/PriceChart";
+import { rsi as calcRsi, macd as calcMacd } from "@/lib/indicators";
+import { api } from "@/lib/apiClient";
 import {
   useAppStore,
   calcUnrealizedPnL,
@@ -25,7 +27,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Camera, Download } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Camera, Download, Loader2 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -355,6 +357,8 @@ export default function Simular() {
   const [macdSignal, setMacdSignal] = useState(9);
 
   const [chartPreview, setChartPreview] = useState<string | null>(null);
+  const [chartAnalysis, setChartAnalysis] = useState<string | null>(null);
+  const [chartAnalyzing, setChartAnalyzing] = useState(false);
 
   const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
     { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
@@ -596,6 +600,42 @@ export default function Simular() {
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
 
+  async function handleChartAnalysis() {
+    setChartAnalyzing(true);
+    setChartAnalysis(null);
+    try {
+      let rsiValue: number | undefined;
+      if (showRsi && candles.length > 0) {
+        const rsiVals = calcRsi(candles, rsiPeriod).filter((v): v is { time: number; value: number } => v != null);
+        if (rsiVals.length > 0) rsiValue = rsiVals[rsiVals.length - 1].value;
+      }
+      let macdValue: number | undefined;
+      let signalValue: number | undefined;
+      if (showMacd && candles.length > 0) {
+        const macdVals = calcMacd(candles, macdFast, macdSlow, macdSignal)
+          .filter((v): v is { time: number; macd: number; signal: number; hist: number } => v != null);
+        if (macdVals.length > 0) {
+          macdValue   = macdVals[macdVals.length - 1].macd;
+          signalValue = macdVals[macdVals.length - 1].signal;
+        }
+      }
+      const result = await api.ai.analyzeChart({
+        symbol,
+        timeframe:    tf.label,
+        chartType,
+        currentPrice: candles[candles.length - 1]?.close ?? 0,
+        lastCandles:  candles.slice(-20),
+        showRsi,  rsiValue,  rsiPeriod,
+        showMacd, macdValue, signalValue,
+      });
+      setChartAnalysis(result.analysis);
+    } catch {
+      toast.error("Erro ao obter análise do Coach IA");
+    } finally {
+      setChartAnalyzing(false);
+    }
+  }
+
   return (
     <>
     <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4">
@@ -747,7 +787,7 @@ export default function Simular() {
                 <button
                   onClick={() => {
                     const url = chartRef.current?.takeScreenshot();
-                    if (url) setChartPreview(url);
+                    if (url) { setChartPreview(url); setChartAnalysis(null); }
                   }}
                   title="Capturar gráfico"
                   className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
@@ -1062,8 +1102,46 @@ export default function Simular() {
             src={chartPreview}
             alt="Gráfico capturado"
             className="w-full rounded-lg border border-border/30 object-contain"
-            style={{ maxHeight: "65vh" }}
+            style={{ maxHeight: "55vh" }}
           />
+
+          {/* ── Análise Coach IA ── */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            {chartAnalysis ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs font-semibold text-primary">Análise Coach IA</span>
+                </div>
+                <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{chartAnalysis}</p>
+                <button
+                  onClick={handleChartAnalysis}
+                  disabled={chartAnalyzing}
+                  className="text-[10px] text-primary hover:underline disabled:opacity-50"
+                >
+                  Analisar novamente
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleChartAnalysis}
+                disabled={chartAnalyzing}
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+              >
+                {chartAnalyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A analisar o gráfico...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Analisar com Coach IA
+                  </>
+                )}
+              </button>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2">
             <button

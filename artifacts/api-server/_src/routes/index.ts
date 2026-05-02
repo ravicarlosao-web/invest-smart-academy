@@ -361,4 +361,68 @@ router.get("/manifest", async (_req: any, res: any) => {
   }
 });
 
+/* ── Coach IA — análise de gráfico ─────────────────────────────────────── */
+
+router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
+  try {
+    const rows = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "ai.config"));
+    const cfg = rows[0]?.value
+      ? JSON.parse(rows[0].value) as { openaiKey: string; model: string }
+      : { openaiKey: "", model: "gpt-4o-mini" };
+
+    if (!cfg.openaiKey) {
+      return res.status(503).json({ error: "no_key", message: "Coach IA não configurado pelo administrador." });
+    }
+
+    const { symbol, timeframe, chartType, currentPrice, lastCandles, showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue } = req.body as any;
+
+    const candleSummary = Array.isArray(lastCandles) && lastCandles.length > 0
+      ? lastCandles.slice(-5).map((c: any) =>
+          `O:${Number(c.open).toFixed(4)} H:${Number(c.high).toFixed(4)} L:${Number(c.low).toFixed(4)} C:${Number(c.close).toFixed(4)}`
+        ).join(" | ")
+      : "N/A";
+
+    const systemPrompt = `És o Coach IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado fornecidos e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar ou ter cuidado agora.`;
+
+    const lines = [
+      `Instrumento: ${symbol ?? "N/A"}`,
+      `Timeframe: ${timeframe ?? "N/A"}`,
+      `Tipo de gráfico: ${chartType ?? "N/A"}`,
+      `Preço atual: ${currentPrice ?? "N/A"}`,
+      `Últimas 5 velas (O H L C): ${candleSummary}`,
+      showRsi  ? `RSI(${rsiPeriod ?? 14}): ${rsiValue   != null ? Number(rsiValue).toFixed(2)   : "N/A"}` : null,
+      showMacd ? `MACD: ${macdValue != null ? Number(macdValue).toFixed(5) : "N/A"}, Sinal: ${signalValue != null ? Number(signalValue).toFixed(5) : "N/A"}` : null,
+    ].filter(Boolean).join("\n");
+
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization:  `Bearer ${cfg.openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: cfg.model ?? "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user",   content: lines },
+        ],
+        max_tokens:  300,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!openaiRes.ok) {
+      const err = await openaiRes.json().catch(() => ({})) as any;
+      return res.status(502).json({ error: "openai_error", message: err?.error?.message ?? "Erro ao contactar a OpenAI." });
+    }
+
+    const data = await openaiRes.json() as any;
+    const analysis = data.choices?.[0]?.message?.content ?? "";
+    res.json({ ok: true, analysis });
+  } catch (err) {
+    req.log?.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 export default router;

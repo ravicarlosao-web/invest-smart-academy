@@ -109,6 +109,17 @@ export const api = {
       authRequest<{ ok: boolean }>("DELETE", `/trades/${userId}`),
   },
 
+  /* ---------- AI / Coach IA ---------- */
+  ai: {
+    analyzeChart: (ctx: {
+      symbol: string; timeframe: string; chartType: string; currentPrice: number;
+      lastCandles: { open: number; high: number; low: number; close: number; time: number }[];
+      showRsi: boolean; rsiValue?: number; rsiPeriod?: number;
+      showMacd: boolean; macdValue?: number; signalValue?: number;
+    }) =>
+      authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/chart-analysis", ctx),
+  },
+
   /* ---------- Notifications ---------- */
   notifications: {
     list:    (userId: string) =>
