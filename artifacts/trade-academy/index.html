@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="format-detection" content="telephone=no" />
 
+    <!-- ── Content Security Policy ────────────────────────────────────────── -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' https://www.youtube.com https://s.ytimg.com;
+      style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src    'self' https://fonts.gstatic.com;
+      img-src     'self' data: blob:
+                  https://img.youtube.com
+                  https://i.ytimg.com
+                  https://*.ytimg.com
+                  https://aluka.app;
+      frame-src   https://www.youtube.com https://www.youtube-nocookie.com;
+      connect-src 'self';
+      object-src  'none';
+      base-uri    'self';
+      form-action 'self';
+    " />
+
     <!-- ── Título e Descrição Principal ───────────────────────────────────── -->
     <title>ALUKA — Aprende Trading em Português | Grátis para Começar</title>
     <meta name="description" content="ALUKA é a plataforma de educação em trading 100% em português. Aprende do zero ao avançado com aulas estruturadas, simulador com dinheiro virtual e Coach IA. Nível Iniciante grátis para sempre." />
@@ -73,14 +91,12 @@
     <meta name="twitter:description" content="Aprende trading do zero com aulas estruturadas, simulador real e Coach IA. Grátis para começar." />
     <meta name="twitter:image" content="https://aluka.app/opengraph.jpg" />
 
-    <!-- ── Fonts — carregamento não-bloqueante ────────────────────────────── -->
+    <!-- ── Fonts — preconnect + stylesheet sem inline handlers (CSP-safe) ── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" as="style" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-          rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    </noscript>
+          rel="stylesheet" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          STRUCTURED DATA JSON-LD

@@ -18,7 +18,15 @@ app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: false,
+    // API server only returns JSON — strict policy, no HTML resources needed
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc:     ["'none'"],
+        frameAncestors: ["'none'"],   // prevent clickjacking of API endpoints
+        objectSrc:      ["'none'"],
+        baseUri:        ["'self'"],
+      },
+    },
   }),
 );
 
@@ -65,8 +73,8 @@ app.use(
       if (!origin) return cb(null, true);
       // Check explicit allow-list
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      // Allow any Vercel preview deployment for this project
-      if (/^https:\/\/invest-smart-academy(-[a-z0-9]+)*\.vercel\.app$/.test(origin)) return cb(null, true);
+      // Allow any Vercel preview deployment for this project (startsWith avoids ReDoS)
+      if (origin.startsWith("https://invest-smart-academy") && origin.endsWith(".vercel.app")) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
