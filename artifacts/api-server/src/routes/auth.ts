@@ -6,7 +6,7 @@ import {
   db, usersTable, passwordResetTokensTable, emailVerificationsTable, adminSettingsTable, eq,
 } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
-import { signToken, revokeToken } from "../middlewares/auth.js";
+import { signToken, revokeToken, requireAuth } from "../middlewares/auth.js";
 import jwt from "jsonwebtoken";
 import type { JwtPayload } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
@@ -86,9 +86,10 @@ router.post("/register", validate(RegisterBody), async (req: any, res: any) => {
       createdAt: now,
     });
 
-    sendEmailVerificationCode({ to: email, name, code })
-      .then((r) => { if (!r.ok) req.log.warn({ reason: r.reason }, "verification email failed"); })
-      .catch(() => {});
+    const emailResult = await sendEmailVerificationCode({ to: email, name, code });
+    if (!emailResult.ok) {
+      req.log.warn({ reason: emailResult.reason }, "verification email failed");
+    }
 
     const token = signToken({ userId: id, email });
 
@@ -97,6 +98,7 @@ router.post("/register", validate(RegisterBody), async (req: any, res: any) => {
       token,
       user:          { id, name, email },
       emailVerified: false,
+      emailSent:     emailResult.ok,
     });
   } catch (err) {
     req.log.error(err);
@@ -213,7 +215,7 @@ router.post("/reset-password", async (req: any, res: any) => {
  * Body: { code: string }
  * Requires auth token (JWT)
  */
-router.post("/verify-email", async (req: any, res: any) => {
+router.post("/verify-email", requireAuth, async (req: any, res: any) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "unauthorized" });
@@ -250,7 +252,7 @@ router.post("/verify-email", async (req: any, res: any) => {
  * POST /api/auth/resend-verification
  * Resend a new 6-digit code to the authenticated user's email
  */
-router.post("/resend-verification", async (req: any, res: any) => {
+router.post("/resend-verification", requireAuth, async (req: any, res: any) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "unauthorized" });

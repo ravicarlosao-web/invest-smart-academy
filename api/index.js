@@ -77259,16 +77259,17 @@ router2.post("/register", validate(RegisterBody), async (req, res) => {
       used: 0,
       createdAt: now
     });
-    sendEmailVerificationCode({ to: email3, name, code }).then((r) => {
-      if (!r.ok) req.log.warn({ reason: r.reason }, "verification email failed");
-    }).catch(() => {
-    });
+    const emailResult = await sendEmailVerificationCode({ to: email3, name, code });
+    if (!emailResult.ok) {
+      req.log.warn({ reason: emailResult.reason }, "verification email failed");
+    }
     const token = signToken({ userId: id, email: email3 });
     return res.status(201).json({
       ok: true,
       token,
       user: { id, name, email: email3 },
-      emailVerified: false
+      emailVerified: false,
+      emailSent: emailResult.ok
     });
   } catch (err) {
     req.log.error(err);
@@ -77343,7 +77344,7 @@ router2.post("/reset-password", async (req, res) => {
     return res.status(500).json({ error: "internal" });
   }
 });
-router2.post("/verify-email", async (req, res) => {
+router2.post("/verify-email", requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "unauthorized" });
@@ -77364,7 +77365,7 @@ router2.post("/verify-email", async (req, res) => {
     return res.status(500).json({ error: "internal" });
   }
 });
-router2.post("/resend-verification", async (req, res) => {
+router2.post("/resend-verification", requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "unauthorized" });

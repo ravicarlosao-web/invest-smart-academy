@@ -86,7 +86,7 @@ export const api = {
   /* ---------- Auth ---------- */
   auth: {
     register: (data: { id: string; name: string; email: string; password: string }) =>
-      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
+      request<{ ok: boolean; token: string; user: { id: string; name: string; email: string }; emailSent: boolean }>(
         "POST", "/auth/register", data,
       ),
     login: (data: { email: string; password: string }) =>

@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const result = await api.auth.register({ id, name, email, password });
           set({ user: result.user, token: result.token, emailVerified: false });
-          return { ok: true };
+          return { ok: true, emailSent: result.emailSent };
         } catch (err: unknown) {
           const text = err instanceof Error ? err.message : "";
           const msg = text.includes("409")

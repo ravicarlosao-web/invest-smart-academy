@@ -218,7 +218,11 @@ export default function Cadastrar() {
     setLoading(false);
     if (result.ok) {
       setStep(1);
-      startResendCooldown();
+      if (result.emailSent === false) {
+        toast.warning("Conta criada! O email de verificação não foi entregue — usa 'Reenviar código' para tentar novamente.", { duration: 8000 });
+      } else {
+        startResendCooldown();
+      }
     } else {
       toast.error(result.error ?? "Erro ao criar conta.");
     }
