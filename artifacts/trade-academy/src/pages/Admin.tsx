@@ -11,6 +11,7 @@ import {
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
   Mail, Send, CheckCircle, Globe, Plug, Copy, ToggleLeft, ToggleRight,
+  Building2, ArrowLeftRight, Video,
 } from "lucide-react";
 import type { SubscriptionWithUser, SeoConfig } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import { LEVELS } from "@/data/curriculum";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
 import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
-import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES, CATEGORY_ICONS } from "@/data/videos";
+import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
 
 /* =========================================================================
  * Login screen
@@ -2029,6 +2030,24 @@ function SimulatorTab() {
 /* =========================================================================
  * Videos admin tab
  * ========================================================================= */
+const CAT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Análise Técnica":       TrendingUp,
+  "Análise de Velas":      BarChart3,
+  "Price Action":          Activity,
+  "Gestão de Risco":       Shield,
+  "Psicologia de Trading": Brain,
+  "Macroeconomia":         Globe,
+  "Forex":                 ArrowLeftRight,
+  "Criptomoedas":          Coins,
+  "Acções & Índices":      Building2,
+  "Fundamentos":           BookOpen,
+  "Geral":                 Video,
+};
+function CatIcon({ cat, className }: { cat: string; className?: string }) {
+  const Icon = (CAT_ICONS[cat] ?? Video) as React.ComponentType<{ className?: string }>;
+  return <Icon className={cn("h-4 w-4 shrink-0", className)} />;
+}
+
 const VIDEO_LEVELS: VideoLesson["level"][] = ["Iniciante", "Intermediário", "Avançado"];
 
 const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
@@ -2161,7 +2180,11 @@ function VideosTab() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {VIDEO_CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>{CATEGORY_ICONS[c] ?? "🎬"} {c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        <span className="flex items-center gap-1.5">
+                          <CatIcon cat={c} className="h-3.5 w-3.5" />{c}
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -2292,7 +2315,11 @@ function VideosTab() {
             <SelectContent>
               <SelectItem value="Todas">Todas as categorias</SelectItem>
               {Array.from(new Set(videos.map((v) => v.category || "Geral"))).sort().map((cat) => (
-                <SelectItem key={cat} value={cat}>{CATEGORY_ICONS[cat] ?? "🎬"} {cat}</SelectItem>
+                <SelectItem key={cat} value={cat}>
+                  <span className="flex items-center gap-1.5">
+                    <CatIcon cat={cat} className="h-3.5 w-3.5" />{cat}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -2336,7 +2363,7 @@ function VideosTab() {
             {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, catVideos]) => (
               <div key={cat} className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-border/40">
-                  <span className="text-base">{CATEGORY_ICONS[cat] ?? "🎬"}</span>
+                  <CatIcon cat={cat} className="h-4 w-4 text-muted-foreground" />
                   <h3 className="font-medium text-sm">{cat}</h3>
                   <Badge variant="outline" className="text-[10px] ml-auto">{catVideos.length} vídeo{catVideos.length !== 1 ? "s" : ""}</Badge>
                 </div>

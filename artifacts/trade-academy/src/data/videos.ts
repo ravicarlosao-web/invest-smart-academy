@@ -14,18 +14,19 @@ export const VIDEO_CATEGORIES = [
 
 export type VideoCategory = (typeof VIDEO_CATEGORIES)[number] | string;
 
-export const CATEGORY_ICONS: Record<string, string> = {
-  "Análise Técnica":       "📈",
-  "Análise de Velas":      "🕯️",
-  "Price Action":          "📊",
-  "Gestão de Risco":       "🛡️",
-  "Psicologia de Trading": "🧠",
-  "Macroeconomia":         "🌍",
-  "Forex":                 "💱",
-  "Criptomoedas":          "₿",
-  "Acções & Índices":      "🏦",
-  "Fundamentos":           "📚",
-  "Geral":                 "🎬",
+/** Icon keys for each category — mapped to Lucide icon names in the UI layer */
+export const CATEGORY_ICON_KEY: Record<string, string> = {
+  "Análise Técnica":       "TrendingUp",
+  "Análise de Velas":      "BarChart3",
+  "Price Action":          "Activity",
+  "Gestão de Risco":       "Shield",
+  "Psicologia de Trading": "Brain",
+  "Macroeconomia":         "Globe",
+  "Forex":                 "ArrowLeftRight",
+  "Criptomoedas":          "Coins",
+  "Acções & Índices":      "Building2",
+  "Fundamentos":           "BookOpen",
+  "Geral":                 "Video",
 };
 
 export interface VideoLesson {
