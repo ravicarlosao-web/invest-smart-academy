@@ -3,6 +3,9 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
 import { seedContent } from "./seed.js";
+import { startSubscriptionExpiryJob } from "./lib/subscriptionExpiry.js";
+import { startReceiptPurgeJob } from "./lib/receiptPurge.js";
+import { startTokenCleanupJob } from "./lib/tokenCleanup.js";
 
 const rawPort = process.env["PORT"];
 
@@ -33,6 +36,15 @@ try {
 } catch (err) {
   logger.warn({ err }, "Content seeding encountered an error (non-fatal)");
 }
+
+/* Start background job — expires overdue active subscriptions every 5 min */
+startSubscriptionExpiryJob();
+
+/* Start background job — purges receipt data 2 business days after decision */
+startReceiptPurgeJob();
+
+/* Start background job — deletes expired rows from the JWT blocklist every hour */
+startTokenCleanupJob();
 
 app.listen(port, (err: any) => {
   if (err) {

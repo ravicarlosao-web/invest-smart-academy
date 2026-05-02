@@ -10,3 +10,5 @@ export * from "./strategies.js";
 export * from "./books.js";
 export * from "./resources.js";
 export * from "./curriculum.js";
+export * from "./passwordResetTokens.js";
+export * from "./revokedTokens.js";

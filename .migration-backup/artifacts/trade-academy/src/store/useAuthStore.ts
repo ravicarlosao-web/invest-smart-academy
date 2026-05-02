@@ -17,9 +17,10 @@ interface AuthState {
   user:  AuthUser | null;
   token: string | null;
 
-  register: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  login:    (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
-  logout:   () => void;
+  register:     (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login:        (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
+  setFromOAuth: (user: AuthUser, token: string)                 => void;
+  logout:       () => void;
   isAuthenticated: () => boolean;
 }
 
@@ -70,7 +71,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => set({ user: null, token: null }),
+      setFromOAuth: (user, token) => set({ user, token }),
+
+      logout: () => {
+        // Fire-and-forget: revoke token server-side before clearing local state
+        api.auth.logout().catch(() => {});
+        set({ user: null, token: null });
+      },
 
       isAuthenticated: () => get().user !== null && get().token !== null,
     }),

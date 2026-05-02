@@ -82,7 +82,7 @@ export default function OnboardingOverlay() {
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary mx-auto mb-4 shadow-glow">
                 <TrendingUp className="h-8 w-8 text-primary-foreground" strokeWidth={2.5} />
               </div>
-              <h2 className="text-xl font-bold mb-2">Bem-vindo ao TradeAcademy</h2>
+              <h2 className="text-xl font-bold mb-2">Bem-vindo ao ALUKA</h2>
               <p className="text-sm text-muted-foreground mb-1">
                 A plataforma de educação em trading mais completa em português.
               </p>

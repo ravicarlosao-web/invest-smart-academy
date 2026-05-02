@@ -4,13 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc --build"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "zod": "catalog:"

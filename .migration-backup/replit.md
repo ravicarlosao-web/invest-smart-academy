@@ -18,7 +18,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-- **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language.
+- **trade-academy** (`artifacts/trade-academy/`) — ALUKA frontend app (formerly TradeAcademy). A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language. Target market: Angola and Portuguese-speaking countries.
 - **api-server** (`artifacts/api-server/`) — Express 5 backend with full API: auth, progress, trades, notifications, duelos, subscriptions, admin.
 
 ## Content Management (Dedicated DB Tables)
@@ -65,6 +65,80 @@ Manual payment system (5.000 AOA/month) for Angola:
 ## API Base Path
 
 The frontend (`trade-academy`) calls `/api` by default. This is routed to the `api-server` artifact by the shared proxy. If you move the api-server to a different path, set the `VITE_API_BASE_URL` environment variable in the trade-academy artifact to the new prefix (e.g. `/api`).
+
+## Authentication
+
+### Email/Password (default)
+- Register via `POST /api/auth/register` → bcrypt hash, JWT returned
+- Login via `POST /api/auth/login`
+- Password reset via `/api/auth/forgot-password` → email link → `/api/auth/reset-password`
+
+### Google OAuth 2.0
+- Admin configures Google credentials at `/ta-painel-gestao` → "Integrações" tab
+- Stored in `admin_settings` table under key `"auth.google"` as `{clientId, clientSecret, enabled}`
+- Flow: `GET /api/auth/google` → Google → `GET /api/auth/google/callback` → redirect to `/auth/google/resultado?token=...&isNew=...`
+- `GoogleAuthResultado.tsx` reads URL params, stores JWT via `useAuthStore.setFromOAuth()`, redirects
+- Public status endpoint: `GET /api/auth/google/status` → `{enabled, configured, callbackUrl}`
+- CSRF protection via short-lived in-memory state tokens (10-min TTL)
+- Account linking: if email already exists → links Google ID to existing account; new email → creates account
+- Button behaviour: if `enabled=false` → friendly toast (no technical errors shown)
+- `users.google_id` column added via idempotent `ALTER TABLE` in `initDb()`
+
+## Video Section (VideoAulas)
+
+Videos stored as JSON blob in `admin_settings` key `"content.videos"` via GET/PUT `/api/admin/videos`. No dedicated DB table — backward-compatible with existing data.
+
+**`VideoLesson` interface** (`artifacts/trade-academy/src/data/videos.ts`):
+- `id`, `creator`, `title`, `level`, `videoUrl`, `description`, `requiredXp`, `order`, `duration`
+- `category: string` — one of `VIDEO_CATEGORIES` (11 predefined: Análise Técnica, Análise de Velas, Price Action, Gestão de Risco, Psicologia de Trading, Macroeconomia, Forex, Criptomoedas, Acções & Índices, Fundamentos, Geral)
+- `tags?: string[]` — optional free-form tags
+
+**Admin panel** (`/ta-painel-gestao` → Vídeos tab):
+- Form fields: Criador, Título, Nível, Ordem, **Categoria** (Select), **Tags** (comma-separated Input), URL, Descrição
+- Filter bar above list: search input + category dropdown ("Todas as categorias")
+- Video list grouped by category with Lucide icon headers
+
+**Student gallery** (`/video-aulas`):
+- Stats row: total videos / categories / creators
+- Search bar (filters by title, creator, description, tags)
+- Horizontal category pill tabs (scrollable, with Lucide icons)
+- Creator chips (shown when ≥2 creators in current view)
+- Grouped display: by category (default) → by creator within category → by creator → flat search results
+- Video cards show level badge + category badge + tags
+
+**Migration**: on load, existing videos without `category`/`tags` get defaults: `category: "Geral"`, `tags: []`.
+
+## Social Media Links
+
+Stored in `adminSettingsTable` under key `"social.config"` as JSON `{ youtube, instagram, tiktok, x, facebook }` (all URL strings).
+
+**Admin panel** (`/ta-painel-gestao` → "Redes Sociais" tab):
+- Form with one URL field per platform (YouTube, Instagram, TikTok, X/Twitter, Facebook)
+- Each field has the platform's branded icon + external link preview
+- Status card shows how many networks are active
+- Only platforms with a filled URL appear in the public footer
+
+**API endpoints**:
+- `GET /api/admin/social-config` — admin-protected read
+- `PUT /api/admin/social-config` — admin-protected write
+- `GET /api/social-config` — **public** read (no auth, used by frontend)
+
+**Frontend `Landing.tsx`**:
+- `SocialIcons` component fetches from `/api/social-config` on mount
+- Renders only icons where the URL is set; each is an `<a>` that opens in a new tab
+- Icons use inline SVG brand paths (YouTube, Instagram, TikTok, X, Facebook)
+- Footer shows nothing in the social area if no links are configured
+
+## Required Secrets
+
+All secrets must be set in Replit Secrets before the api-server will start:
+
+| Secret | Description |
+|---|---|
+| `TURSO_DATABASE_URL` | libsql:// URL from turso.tech |
+| `TURSO_AUTH_TOKEN` | Turso auth token |
+| `JWT_SECRET` | Secret used to sign user login tokens |
+| `ADMIN_PASSWORD` | Password for the admin panel (required — server will not start without it) |
 
 ## Database (Turso)
 

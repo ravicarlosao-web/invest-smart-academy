@@ -173,7 +173,7 @@ router.get("/curriculum", async (_req: any, res: any) => {
     /* Load admin overrides (title / xp / summary / hidden per lesson ID) */
     const overrideRow = await db.select().from(adminSettingsTable)
       .where(eq(adminSettingsTable.key, "curriculum.override")).get();
-    const overrides: Record<string, { title?: string; xp?: number; summary?: string; hidden?: boolean }> =
+    const overrides: Record<string, { title?: string; xp?: number; summary?: string; hidden?: boolean; audioUrl?: string; audioEnabled?: boolean }> =
       overrideRow ? (() => { try { return (JSON.parse(overrideRow.value) as any).lessons ?? {}; } catch { return {}; } })() : {};
 
     const result = levels.map((lv: any) => ({
@@ -187,12 +187,14 @@ router.get("/curriculum", async (_req: any, res: any) => {
         .map((ls: any) => {
           const ov = overrides[ls.id] ?? {};
           return {
-            id:        ls.id,
-            title:     ov.title   ?? ls.title,
-            summary:   ov.summary ?? ls.summary,
-            xp:        ov.xp      ?? ls.xp,
-            content:   jsonParse(ls.content, []),
-            questions: jsonParse(ls.questions, []),
+            id:           ls.id,
+            title:        ov.title        ?? ls.title,
+            summary:      ov.summary      ?? ls.summary,
+            xp:           ov.xp           ?? ls.xp,
+            content:      jsonParse(ls.content, []),
+            questions:    jsonParse(ls.questions, []),
+            audioUrl:     ov.audioUrl     ?? null,
+            audioEnabled: ov.audioEnabled ?? false,
           };
         }),
     }));
@@ -250,5 +252,223 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
     return fallback;
   }
 }
+
+/* ── Social media links — public read ────────────────────────────────── */
+router.get("/social-config", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "social.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const defaults = { youtube: "", instagram: "", tiktok: "", x: "", facebook: "" };
+    res.json({ ...defaults, ...cfg });
+  } catch {
+    res.json({ youtube: "", instagram: "", tiktok: "", x: "", facebook: "" });
+  }
+});
+
+/* ── SEO / Site Config — public read ──────────────────────────────────── */
+const SEO_DEFAULTS = {
+  siteName:      "TradeAcademy Angola",
+  shortName:     "TradeAcademy",
+  domain:        "",
+  description:   "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
+  twitterHandle: "@TradeAcademyAO",
+  themeColor:    "#06b6d4",
+  priceAoa:      5000,
+  geo:           "AO",
+  geoCity:       "Luanda, Angola",
+};
+
+router.get("/site-config", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    res.json({ ...SEO_DEFAULTS, ...cfg });
+  } catch {
+    res.json(SEO_DEFAULTS);
+  }
+});
+
+/* ── Dynamic PWA manifest — always reflects latest seo.config ─────────── */
+router.get("/manifest", async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const c = { ...SEO_DEFAULTS, ...cfg };
+
+    const baseUrl = c.domain ? `https://${c.domain}` : (process.env.APP_URL ?? "");
+
+    const manifest = {
+      name:             c.siteName,
+      short_name:       c.shortName,
+      description:      c.description,
+      start_url:        "/",
+      id:               baseUrl ? `${baseUrl}/` : "/",
+      scope:            "/",
+      display:          "standalone",
+      display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
+      orientation:      "portrait-primary",
+      background_color: "#060b17",
+      theme_color:      c.themeColor,
+      lang:             "pt-AO",
+      dir:              "ltr",
+      categories:       ["education", "finance"],
+      icons: [
+        { src: "/pwa-icon-72.png",  sizes: "72x72",   type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-96.png",  sizes: "96x96",   type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-128.png", sizes: "128x128", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-144.png", sizes: "144x144", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-152.png", sizes: "152x152", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "/pwa-icon-384.png", sizes: "384x384", type: "image/png", purpose: "any" },
+        { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+      ],
+      screenshots: [
+        {
+          src: "/opengraph.jpg",
+          sizes: "1200x630",
+          type: "image/jpeg",
+          form_factor: "wide",
+          label: `${c.siteName} — Aprenda Trading`,
+        },
+      ],
+      shortcuts: [
+        {
+          name: "Aprender",
+          short_name: "Aulas",
+          description: "Continua de onde paraste",
+          url: "/aprender",
+          icons: [{ src: "/pwa-icon-96.png", sizes: "96x96" }],
+        },
+        {
+          name: "Simulador",
+          short_name: "Simular",
+          description: "Pratica no simulador",
+          url: "/simular",
+          icons: [{ src: "/pwa-icon-96.png", sizes: "96x96" }],
+        },
+      ],
+      prefer_related_applications: false,
+    };
+
+    res.setHeader("Content-Type", "application/manifest+json");
+    res.setHeader("Cache-Control", "no-cache, max-age=0");
+    res.json(manifest);
+  } catch {
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ── Aluka IA — helpers ─────────────────────────────────────────────────── */
+
+type AiCfgI = {
+  geminiTextKey: string;  geminiTextEnabled: boolean;
+  geminiImageKey: string; geminiImageEnabled: boolean;
+};
+const AI_DEFAULTS: AiCfgI = {
+  geminiTextKey: "", geminiTextEnabled: false,
+  geminiImageKey: "", geminiImageEnabled: false,
+};
+
+async function getAiCfg(): Promise<AiCfgI> {
+  const rows = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "ai.config"));
+  return rows[0]?.value ? { ...AI_DEFAULTS, ...(JSON.parse(rows[0].value) as Partial<AiCfgI>) } : AI_DEFAULTS;
+}
+
+async function callGemini(apiKey: string, parts: unknown[]): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as any;
+    const msg: string = body?.error?.message ?? "Erro ao contactar o Gemini.";
+    const err = new Error(msg) as any;
+    err.status = res.status;
+    err.isQuotaError = res.status === 429 || msg.includes("quota") || msg.includes("Quota") || msg.includes("RESOURCE_EXHAUSTED");
+    throw err;
+  }
+  const data = await res.json() as any;
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
+/* ── Aluka IA — análise de gráfico ─────────────────────────────────────── */
+
+router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
+  try {
+    const cfg = await getAiCfg();
+    const { symbol, timeframe, chartType, currentPrice, lastCandles,
+            showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue,
+            imageBase64 } = req.body as any;
+
+    const hasImage = !!imageBase64 && cfg.geminiImageEnabled && !!cfg.geminiImageKey;
+    const hasText  = cfg.geminiTextEnabled && !!cfg.geminiTextKey;
+
+    if (!hasImage && !hasText) {
+      return res.status(503).json({ error: "no_key", message: "Aluka IA não configurado pelo administrador." });
+    }
+
+    const apiKey = hasImage ? cfg.geminiImageKey : cfg.geminiTextKey;
+
+    const candleSummary = Array.isArray(lastCandles) && lastCandles.length > 0
+      ? lastCandles.slice(-5).map((c: any) =>
+          `O:${Number(c.open).toFixed(4)} H:${Number(c.high).toFixed(4)} L:${Number(c.low).toFixed(4)} C:${Number(c.close).toFixed(4)}`
+        ).join(" | ")
+      : "N/A";
+
+    const textContent = [
+      `És o Aluka IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar agora.`,
+      "",
+      `Instrumento: ${symbol ?? "N/A"}`,
+      `Timeframe: ${timeframe ?? "N/A"}`,
+      `Tipo de gráfico: ${chartType ?? "N/A"}`,
+      `Preço atual: ${currentPrice ?? "N/A"}`,
+      `Últimas 5 velas (O H L C): ${candleSummary}`,
+      showRsi  ? `RSI(${rsiPeriod ?? 14}): ${rsiValue   != null ? Number(rsiValue).toFixed(2)   : "N/A"}` : null,
+      showMacd ? `MACD: ${macdValue != null ? Number(macdValue).toFixed(5) : "N/A"}, Sinal: ${signalValue != null ? Number(signalValue).toFixed(5) : "N/A"}` : null,
+    ].filter(Boolean).join("\n");
+
+    const parts: unknown[] = hasImage
+      ? [{ inline_data: { mime_type: "image/png", data: imageBase64 } }, { text: textContent }]
+      : [{ text: textContent }];
+
+    const analysis = await callGemini(apiKey, parts);
+    res.json({ ok: true, analysis });
+  } catch (err: any) {
+    req.log?.error(err);
+    if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
+    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
+  }
+});
+
+/* ── Aluka IA — feedback de trade ──────────────────────────────────────── */
+
+router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
+  try {
+    const cfg = await getAiCfg();
+    if (!cfg.geminiTextEnabled || !cfg.geminiTextKey) {
+      return res.status(503).json({ error: "no_key" });
+    }
+
+    const trade = req.body as any;
+    const prompt = `És o Aluka IA, um coach de trading experiente que ajuda iniciantes a aprender. Analisa este trade e dá feedback construtivo em português de Angola. Sê directo mas encorajador. Avalia: (1) qualidade da entrada, (2) gestão de risco e stop loss, (3) saída — saiu cedo ou tarde demais, (4) uma lição concreta para melhorar. Máximo 4 pontos curtos.\n\nDados do trade:\n${JSON.stringify(trade, null, 2)}`;
+
+    const analysis = await callGemini(cfg.geminiTextKey, [{ text: prompt }]);
+    res.json({ ok: true, analysis });
+  } catch (err: any) {
+    req.log?.error(err);
+    if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
+    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
+  }
+});
 
 export default router;

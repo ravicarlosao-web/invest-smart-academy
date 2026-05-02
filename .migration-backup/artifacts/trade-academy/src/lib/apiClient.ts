@@ -81,6 +81,14 @@ export const api = {
       request<{ ok: boolean; token: string; user: { id: string; name: string; email: string } }>(
         "POST", "/auth/login", data,
       ),
+    logout: () =>
+      authRequest<{ ok: boolean }>("POST", "/auth/logout"),
+    forgotPassword: (email: string) =>
+      request<{ ok: boolean }>("POST", "/auth/forgot-password", { email }),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ ok: boolean }>("POST", "/auth/reset-password", { token, newPassword }),
+    googleStatus: () =>
+      request<{ enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/auth/google/status"),
   },
 
   /* ---------- Progress ---------- */
@@ -99,6 +107,23 @@ export const api = {
       authRequest<{ ok: boolean; inserted: number }>("POST", `/trades/${userId}`, trades),
     clear: (userId: string) =>
       authRequest<{ ok: boolean }>("DELETE", `/trades/${userId}`),
+  },
+
+  /* ---------- AI / Aluka IA ---------- */
+  ai: {
+    analyzeChart: (ctx: {
+      symbol: string; timeframe: string; chartType: string; currentPrice: number;
+      lastCandles: { open: number; high: number; low: number; close: number; time: number }[];
+      showRsi: boolean; rsiValue?: number; rsiPeriod?: number;
+      showMacd: boolean; macdValue?: number; signalValue?: number;
+      imageBase64?: string;
+    }) =>
+      authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/chart-analysis", ctx),
+    tradeFeedback: (trade: {
+      ativo: string; tipo: string; entrada: number; saida: number;
+      stop_loss?: number; resultado: string; racio_rr: string; saldo_atual: string;
+    }) =>
+      authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/trade-feedback", trade),
   },
 
   /* ---------- Notifications ---------- */
@@ -125,6 +150,19 @@ export const api = {
       authRequest<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
       authRequest<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
+    /** Join a duelo as the opponent — sets opponent_user_id on the creator's DB row */
+    joinByCode: (code: string) =>
+      authRequest<{ ok: boolean; duelo: Record<string, unknown> }>("POST", `/duelos/join`, { code }),
+    /** Returns duelos where the current user is the opponent (joined duelos) */
+    joined: () =>
+      authRequest<unknown[]>("GET", `/duelos/joined`),
+    /** Returns live equity for both participants (for polling) */
+    live: (code: string) =>
+      authRequest<{
+        accepted: boolean;
+        creator:  { name: string; equity: number } | null;
+        opponent: { name: string; equity: number } | null;
+      }>("GET", `/duelos/live/${code}`),
   },
 
   /* ---------- Admin ---------- */
@@ -183,11 +221,56 @@ export const api = {
       adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
 
     getAiConfig: () =>
-      adminRequest<{ configured: boolean; keyPreview: string; model: string }>("GET", "/admin/ai-config"),
-    saveAiConfig: (cfg: { openaiKey?: string; model?: string }) =>
+      adminRequest<{
+        textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
+        imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
+      }>("GET", "/admin/ai-config"),
+    saveAiConfig: (cfg: {
+      geminiTextKey?: string; geminiTextEnabled?: boolean;
+      geminiImageKey?: string; geminiImageEnabled?: boolean;
+    }) =>
       adminRequest<{ ok: boolean }>("PUT", "/admin/ai-config", cfg),
-    testAiConfig: () =>
-      adminRequest<{ ok: boolean; model: string }>("POST", "/admin/ai-config/test"),
+    testAiConfig: (type: "text" | "image" = "text") =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/ai-config/test", { type }),
+
+    getEmailConfig: () =>
+      adminRequest<{ configured: boolean; keySource: string; fromEmail: string; fromName: string; adminEmail: string }>("GET", "/admin/email-config"),
+    saveEmailConfig: (cfg: { apiKey?: string; fromEmail?: string; fromName?: string; adminEmail?: string }) =>
+      adminRequest<{ ok: boolean; configured: boolean }>("PUT", "/admin/email-config", cfg),
+    testEmailConfig: (to: string) =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/email-config/test", { to }),
+
+    getSeoConfig: () =>
+      adminRequest<SeoConfig>("GET", "/admin/seo-config"),
+    saveSeoConfig: (cfg: Partial<SeoConfig>) =>
+      adminRequest<{ ok: boolean; config: SeoConfig }>("PUT", "/admin/seo-config", cfg),
+
+    getSocialConfig: () =>
+      adminRequest<SocialConfig>("GET", "/admin/social-config"),
+    saveSocialConfig: (cfg: Partial<SocialConfig>) =>
+      adminRequest<{ ok: boolean; config: SocialConfig }>("PUT", "/admin/social-config", cfg),
+
+    getGoogleOAuth: () =>
+      adminRequest<{ clientId: string; clientSecretPreview: string; enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/admin/google-oauth"),
+    saveGoogleOAuth: (cfg: { clientId?: string; clientSecret?: string; enabled?: boolean }) =>
+      adminRequest<{ ok: boolean; configured: boolean; enabled: boolean }>("PUT", "/admin/google-oauth", cfg),
+    testGoogleOAuth: () =>
+      adminRequest<{ ok: boolean; message?: string }>("POST", "/admin/google-oauth/test", {}),
+
+    getCurriculumDb: () =>
+      adminRequest<unknown[]>("GET", "/admin/curriculum-db"),
+    createCurriculumLevel: (body: { title: string; subtitle: string; difficulty: string }) =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/curriculum-db/levels", body),
+    updateCurriculumLevel: (id: number, body: { title?: string; subtitle?: string; difficulty?: string; sortOrder?: number }) =>
+      adminRequest<{ ok: boolean }>("PUT", `/admin/curriculum-db/levels/${id}`, body),
+    deleteCurriculumLevel: (id: number) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/curriculum-db/levels/${id}`),
+    createCurriculumLesson: (body: { levelId: number; title: string; summary: string; xp: number; content: unknown[]; questions: unknown[] }) =>
+      adminRequest<{ ok: boolean; id: string }>("POST", "/admin/curriculum-db/lessons", body),
+    updateCurriculumLesson: (id: string, body: { title?: string; summary?: string; xp?: number; content?: unknown[]; questions?: unknown[]; sortOrder?: number }) =>
+      adminRequest<{ ok: boolean }>("PUT", `/admin/curriculum-db/lessons/${id}`, body),
+    deleteCurriculumLesson: (id: string) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/curriculum-db/lessons/${id}`),
 
     finance: () =>
       adminRequest<{
@@ -264,3 +347,33 @@ export type SubscriptionData = {
 export type SubscriptionWithUser = SubscriptionData & {
   user: { id: string; name: string; email: string };
 };
+
+export type SeoConfig = {
+  siteName:      string;
+  shortName:     string;
+  domain:        string;
+  description:   string;
+  twitterHandle: string;
+  themeColor:    string;
+  priceAoa:      number;
+  geo:           string;
+  geoCity:       string;
+};
+
+export type SocialConfig = {
+  youtube:   string;
+  instagram: string;
+  tiktok:    string;
+  x:         string;
+  facebook:  string;
+};
+
+/** Public — no auth needed */
+export function getSiteConfig(): Promise<SeoConfig> {
+  return request<SeoConfig>("GET", "/site-config");
+}
+
+/** Public — returns social media links configured in the admin panel */
+export function getSocialConfig(): Promise<SocialConfig> {
+  return request<SocialConfig>("GET", "/social-config");
+}

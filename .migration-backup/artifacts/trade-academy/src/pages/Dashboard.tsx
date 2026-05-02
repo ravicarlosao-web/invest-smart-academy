@@ -15,7 +15,7 @@ import { LEVELS, TOTAL_LESSONS } from "@/data/curriculum";
 import { fmtUSD } from "@/lib/market";
 
 export default function Dashboard() {
-  useSEO({ title: "Dashboard — TradeAcademy", noindex: true });
+  useSEO({ title: "Dashboard — ALUKA", noindex: true });
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);
   const user = useAuthStore((s) => s.user);

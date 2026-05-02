@@ -10,9 +10,9 @@ import { useAuthStore } from "@/store/useAuthStore";
 const BANK_DETAILS = {
   banco:       "Banco BFA",
   conta:       "1234 5678 9012 3456",
-  titular:     "TradeAcademy Angola, Lda.",
+  titular:     "ALUKA, Lda.",
   iban:        "AO06 0040 0000 0123 4567 8901 2",
-  descricao:   "Mensalidade TradeAcademy",
+  descricao:   "Mensalidade ALUKA",
   valor:       "5.000,00 AOA",
 };
 

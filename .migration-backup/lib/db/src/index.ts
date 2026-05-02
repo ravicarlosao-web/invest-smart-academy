@@ -188,6 +188,12 @@ export async function initDb(): Promise<void> {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS revoked_tokens (
+      jti        TEXT PRIMARY KEY,
+      expires_at INTEGER NOT NULL,
+      revoked_at INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
@@ -196,9 +202,13 @@ export async function initDb(): Promise<void> {
 
   // Add new columns to existing tables (idempotent — errors ignored if column already exists)
   const alterStatements = [
+    `ALTER TABLE duelos ADD COLUMN opponent_user_id TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_data TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_mime_type TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_filename TEXT`,
+    `ALTER TABLE subscriptions ADD COLUMN receipt_purge_at INTEGER`,
+    `ALTER TABLE users ADD COLUMN google_id TEXT`,
+    `ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)`,
   ];
   for (const stmt of alterStatements) {
     try {
@@ -212,4 +222,4 @@ export async function initDb(): Promise<void> {
 export * from "./schema/index.js";
 
 /* Re-export drizzle-orm query helpers so consumers don't need their own copy */
-export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+export { eq, and, or, not, desc, asc, sql, inArray, isNull, isNotNull, lt, lte, gt, gte } from "drizzle-orm";

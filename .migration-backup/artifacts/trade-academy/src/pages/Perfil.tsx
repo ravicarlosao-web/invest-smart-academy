@@ -50,7 +50,7 @@ const CATEGORY_LABELS = {
 type Tab = "conquistas" | "missoes" | "leaderboard";
 
 export default function Perfil() {
-  useSEO({ title: "Perfil — TradeAcademy", noindex: true });
+  useSEO({ title: "Perfil — ALUKA", noindex: true });
   const [tab, setTab] = useState<Tab>("conquistas");
   const progress = useAppStore((s) => s.progress);
   const sim = useAppStore((s) => s.sim);

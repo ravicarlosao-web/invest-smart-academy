@@ -4,8 +4,8 @@ import { useSEO } from "@/hooks/useSEO";
 
 export default function Privacidade() {
   useSEO({
-    title: "Política de Privacidade — TradeAcademy Angola",
-    description: "Política de privacidade e protecção de dados da plataforma TradeAcademy Angola — como recolhemos, usamos e protegemos os seus dados.",
+    title: "Política de Privacidade — ALUKA",
+    description: "Política de privacidade e protecção de dados da plataforma ALUKA — como recolhemos, usamos e protegemos os seus dados.",
     canonical: "/privacidade",
   });
 
@@ -14,8 +14,8 @@ export default function Privacidade() {
       {/* Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/90 backdrop-blur-md border-b border-white/5">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
-          <span className="font-bold text-white tracking-tight">TradeAcademy</span>
+          <img src="/logo-transparent.webp" alt="ALUKA" width="32" height="32" className="w-8 h-8 object-contain" loading="lazy" />
+          <span className="font-bold text-white tracking-tight">ALUKA</span>
         </Link>
         <Link to="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Voltar
@@ -31,7 +31,7 @@ export default function Privacidade() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">1. Introdução</h2>
             <p>
-              A TradeAcademy respeita a tua privacidade e está comprometida com a protecção dos teus dados
+              A ALUKA respeita a tua privacidade e está comprometida com a protecção dos teus dados
               pessoais. Esta Política de Privacidade descreve como recolhemos, utilizamos e protegemos as
               informações que nos forneces ao utilizar a Plataforma.
             </p>
@@ -71,7 +71,7 @@ export default function Privacidade() {
             <ul className="list-disc list-inside space-y-2 mt-3">
               <li>Com fornecedores de serviços técnicos (base de dados, alojamento) vinculados por acordos de confidencialidade.</li>
               <li>Quando exigido por lei ou por autoridade competente.</li>
-              <li>Para proteger os direitos, segurança ou propriedade da TradeAcademy ou dos utilizadores.</li>
+              <li>Para proteger os direitos, segurança ou propriedade da ALUKA ou dos utilizadores.</li>
             </ul>
           </section>
 

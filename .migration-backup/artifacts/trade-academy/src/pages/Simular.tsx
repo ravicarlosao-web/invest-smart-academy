@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { PriceChart, type ChartType } from "@/components/PriceChart";
+import { PriceChart, type ChartType, type PriceChartHandle } from "@/components/PriceChart";
+import { rsi as calcRsi, macd as calcMacd } from "@/lib/indicators";
+import { api } from "@/lib/apiClient";
 import {
   useAppStore,
   calcUnrealizedPnL,
@@ -25,7 +27,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Camera, Download, Loader2 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -326,7 +328,7 @@ function CandleCountdown({ intervalSec }: { intervalSec: number }) {
 }
 
 export default function Simular() {
-  useSEO({ title: "Simulador de Trading — TradeAcademy", noindex: true });
+  useSEO({ title: "Simulador de Trading — ALUKA", noindex: true });
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];
@@ -344,6 +346,8 @@ export default function Simular() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const chartRef = useRef<PriceChartHandle>(null);
+
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [showRsi, setShowRsi] = useState(false);
   const [rsiPeriod, setRsiPeriod] = useState(14);
@@ -351,6 +355,11 @@ export default function Simular() {
   const [macdFast, setMacdFast] = useState(12);
   const [macdSlow, setMacdSlow] = useState(26);
   const [macdSignal, setMacdSignal] = useState(9);
+
+  const [chartPreview, setChartPreview] = useState<string | null>(null);
+  const [chartAnalysis, setChartAnalysis] = useState<string | null>(null);
+  const [chartAnalyzing, setChartAnalyzing] = useState(false);
+  const [exitAiAnalysis, setExitAiAnalysis] = useState<string | null>(null);
 
   const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
     { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
@@ -501,15 +510,16 @@ export default function Simular() {
   const placePendingOrder = useAppStore((s) => s.placePendingOrder);
   const cancelPendingOrder = useAppStore((s) => s.cancelPendingOrder);
   const startChallenge = useAppStore((s) => s.startChallenge);
-  const resetSim      = useAppStore((s) => s.resetSim);
-  const simZeroedAt   = useAppStore((s) => s.simZeroedAt);
+  const resetSim          = useAppStore((s) => s.resetSim);
+  const simZeroedAt       = useAppStore((s) => s.simZeroedAt);
+  const simCooldownUntil  = useAppStore((s) => s.simCooldownUntil);
+  const simCooldownReason = useAppStore((s) => s.simCooldownReason);
+  const setSimCooldown    = useAppStore((s) => s.setSimCooldown);
 
   const upnl = calcUnrealizedPnL(positions, priceMap);
 
   /* ── Cooldown (Anti-Impulso) ─────────────────────────── */
-  const [cooldownUntil, setCooldownUntil]   = useState<number | null>(null);
-  const [cooldownReason, setCooldownReason] = useState("");
-  const [tickNow, setTickNow]               = useState(Date.now());
+  const [tickNow, setTickNow] = useState(Date.now());
   // Initialize to -1 so the first effect run (which may fire AFTER Zustand
   // rehydrates from localStorage, causing history.length to jump from 0→N)
   // is always treated as a "baseline snapshot" and never shows stale feedback.
@@ -539,41 +549,58 @@ export default function Simular() {
 
     // Liquidation → 15 min
     if (latest.reason === "liquidation") {
-      setCooldownUntil(Date.now() + 15 * 60_000);
-      setCooldownReason("liquidação — respira 15 minutos antes de continuar");
+      setSimCooldown(Date.now() + 15 * 60_000, "liquidação — respira 15 minutos antes de continuar");
       toast.error("Liquidação! Cooldown de 15 min activado.");
       return;
     }
     // Single loss > 10% of equity → 10 min
     const eq = cash + positions.reduce((s, p) => s + positionMargin(p), 0);
     if (latest.pnl < 0 && eq > 0 && Math.abs(latest.pnl) / eq > 0.1) {
-      setCooldownUntil(Date.now() + 10 * 60_000);
-      setCooldownReason("perda grave (>10% do patrimônio) — respira 10 minutos");
+      setSimCooldown(Date.now() + 10 * 60_000, "perda grave (>10% do patrimônio) — respira 10 minutos");
       toast.error("Perda grave! Cooldown de 10 min activado.");
       return;
     }
     // 2 consecutive losses → 5 min
     const last2 = history.slice(0, 2);
     if (last2.length === 2 && last2.every((t) => t.pnl <= 0)) {
-      setCooldownUntil(Date.now() + 5 * 60_000);
-      setCooldownReason("2 perdas seguidas — respira 5 minutos");
+      setSimCooldown(Date.now() + 5 * 60_000, "2 perdas seguidas — respira 5 minutos");
       toast.warning("Cooldown de 5 min activado — 2 perdas seguidas.");
     }
 
     // Feedback inteligente de saída
     if (feedbackEnabled) {
-      const fb = analyzeExit(latest, cash + positions.reduce((s, p) => s + positionMargin(p), 0) + upnl);
+      const eq = cash + positions.reduce((s, p) => s + positionMargin(p), 0) + upnl;
+      const fb = analyzeExit(latest, eq);
       if (fb.length > 0) {
         setExitFeedback(fb);
-        if (exitFeedbackTimer.current) window.clearTimeout(exitFeedbackTimer.current);
-        exitFeedbackTimer.current = window.setTimeout(() => setExitFeedback(null), 14_000);
+        setExitAiAnalysis(null);
       }
+      // Fire AI analysis in background (non-blocking, silently ignored if not configured)
+      const rrNum = (() => {
+        if (!latest.stopLoss) return null;
+        const risk   = Math.abs(latest.entryPrice - latest.stopLoss);
+        const reward = Math.abs(latest.exitPrice  - latest.entryPrice);
+        return risk > 0 ? reward / risk : null;
+      })();
+      api.ai.tradeFeedback({
+        ativo:      latest.symbol,
+        tipo:       latest.side === "buy" ? "COMPRA" : "VENDA",
+        entrada:    latest.entryPrice,
+        saida:      latest.exitPrice,
+        stop_loss:  latest.stopLoss,
+        resultado:  (latest.pnl >= 0 ? "+" : "") + fmtUSD(latest.pnl),
+        racio_rr:   rrNum != null ? `1:${rrNum.toFixed(1)}` : "N/A",
+        saldo_atual: fmtUSD(eq),
+      }).then((r) => {
+        if (r.analysis) setExitAiAnalysis(r.analysis);
+      }).catch(() => { /* silent — AI é opcional */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
 
-  const cooldownActive   = cooldownUntil != null && tickNow < cooldownUntil;
-  const cooldownSecsLeft = cooldownActive ? Math.ceil((cooldownUntil! - tickNow) / 1000) : 0;
+  const cooldownActive   = simCooldownUntil != null && tickNow < simCooldownUntil;
+  const cooldownSecsLeft = cooldownActive ? Math.ceil((simCooldownUntil! - tickNow) / 1000) : 0;
+  const cooldownReason   = simCooldownReason;
 
   /* ── Quarentena de Conta Zerada (30 dias) ────────────── */
   const bustCooldownEnd  = simZeroedAt != null ? simZeroedAt + COOLDOWN_MS : null;
@@ -587,12 +614,57 @@ export default function Simular() {
   /* ── Feedback Inteligente ────────────────────────────── */
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
   const [exitFeedback, setExitFeedback]       = useState<TradeFeedback[] | null>(null);
-  const exitFeedbackTimer = useRef<number | null>(null);
   const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
 
+  async function handleChartAnalysis() {
+    setChartAnalyzing(true);
+    setChartAnalysis(null);
+    try {
+      let rsiValue: number | undefined;
+      if (showRsi && candles.length > 0) {
+        const rsiVals = calcRsi(candles, rsiPeriod).filter((v): v is { time: number; value: number } => v != null);
+        if (rsiVals.length > 0) rsiValue = rsiVals[rsiVals.length - 1].value;
+      }
+      let macdValue: number | undefined;
+      let signalValue: number | undefined;
+      if (showMacd && candles.length > 0) {
+        const macdVals = calcMacd(candles, macdFast, macdSlow, macdSignal)
+          .filter((v): v is { time: number; macd: number; signal: number; hist: number } => v != null);
+        if (macdVals.length > 0) {
+          macdValue   = macdVals[macdVals.length - 1].macd;
+          signalValue = macdVals[macdVals.length - 1].signal;
+        }
+      }
+      const imageBase64 = chartPreview
+        ? chartPreview.replace(/^data:image\/\w+;base64,/, "")
+        : undefined;
+      const result = await api.ai.analyzeChart({
+        symbol,
+        timeframe:    tf.label,
+        chartType,
+        currentPrice: candles[candles.length - 1]?.close ?? 0,
+        lastCandles:  candles.slice(-20),
+        showRsi,  rsiValue,  rsiPeriod,
+        showMacd, macdValue, signalValue,
+        imageBase64,
+      });
+      setChartAnalysis(result.analysis);
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (msg.includes("quota") || msg.includes("Quota") || msg.includes("Limite de pedidos")) {
+        toast.error("Limite de pedidos à IA atingido — tenta novamente em alguns segundos.");
+      } else {
+        toast.error("Erro ao obter análise do Aluka IA");
+      }
+    } finally {
+      setChartAnalyzing(false);
+    }
+  }
+
   return (
+    <>
     <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4">
       {/* Cabeçalho — row 1: símbolo + preço */}
       <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -630,23 +702,6 @@ export default function Simular() {
       {/* Desafios ativos */}
       <ActiveChallengeBanner challenges={challenges} equityVal={equityVal} historyCount={history.length} />
 
-      {/* Feedback de saída de trade */}
-      {exitFeedback && exitFeedback.length > 0 && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary shrink-0" />
-              <p className="text-xs font-bold text-primary uppercase tracking-wider">Análise do teu trade</p>
-            </div>
-            <button onClick={() => setExitFeedback(null)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          {exitFeedback.map((fb, i) => (
-            <FeedbackCard key={i} item={fb} />
-          ))}
-        </div>
-      )}
 
       {/* Conta zerada — banner de quarentena */}
       {isBusted && (
@@ -737,7 +792,21 @@ export default function Simular() {
                   onClick={() => setShowMacd((v) => !v)}
                   className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${showMacd ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"}`}
                 >MACD</button>
-                {/* ── Botão Coach IA ── */}
+
+                <div className="h-4 w-px bg-border/40" />
+                <button
+                  onClick={() => {
+                    const url = chartRef.current?.takeScreenshot();
+                    if (url) { setChartPreview(url); setChartAnalysis(null); }
+                  }}
+                  title="Capturar gráfico"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  <Camera className="h-3 w-3" />
+                  <span className="hidden sm:inline">Print</span>
+                </button>
+
+                {/* ── Botão Aluka IA ── */}
                 <button
                   onClick={() => setFeedbackEnabled((v) => !v)}
                   title={feedbackEnabled ? "Desactivar análise de trades" : "Activar análise de trades"}
@@ -748,7 +817,7 @@ export default function Simular() {
                   }`}
                 >
                   <Brain className="h-3 w-3" />
-                  <span className="hidden sm:inline">Coach IA</span>
+                  <span className="hidden sm:inline">Aluka IA</span>
                   {feedbackEnabled && (
                     <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-primary-foreground/80 animate-pulse" />
                   )}
@@ -853,6 +922,7 @@ export default function Simular() {
                 : (showRsi && showMacd ? 720 : showRsi || showMacd ? 620 : 500)
             }}>
               <PriceChart
+                ref={chartRef}
                 candles={candles}
                 precision={meta.precision}
                 chartType={chartType}
@@ -945,7 +1015,6 @@ export default function Simular() {
           cooldownReason={cooldownReason}
           bustCooldownEnd={bustCooldownEnd}
           now={tickNow}
-          onClearCooldown={() => setCooldownUntil(null)}
           feedbackEnabled={feedbackEnabled}
           candles={candles}
           equity={equityVal}
@@ -1014,6 +1083,158 @@ export default function Simular() {
         </div>
       </div>
     </div>
+
+    {/* ── Modal de pré-visualização do gráfico ── */}
+    {chartPreview && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+        onClick={() => setChartPreview(null)}
+      >
+        <div
+          className="relative flex flex-col gap-3 rounded-xl border border-border/60 bg-[#0d0f12] p-4 shadow-2xl max-w-4xl w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Pré-visualização do gráfico</span>
+            </div>
+            <button
+              onClick={() => setChartPreview(null)}
+              className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <img
+            src={chartPreview}
+            alt="Gráfico capturado"
+            className="w-full rounded-lg border border-border/30 object-contain"
+            style={{ maxHeight: "55vh" }}
+          />
+
+          {/* ── Análise Aluka IA ── */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            {chartAnalysis ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs font-semibold text-primary">Análise Aluka IA</span>
+                </div>
+                <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{chartAnalysis}</p>
+                <button
+                  onClick={handleChartAnalysis}
+                  disabled={chartAnalyzing}
+                  className="text-[10px] text-primary hover:underline disabled:opacity-50"
+                >
+                  Analisar novamente
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleChartAnalysis}
+                disabled={chartAnalyzing}
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+              >
+                {chartAnalyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A analisar o gráfico...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Analisar com Aluka IA
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setChartPreview(null)}
+              className="rounded-lg border border-border/50 px-4 py-1.5 text-sm text-muted-foreground hover:bg-surface-2 transition-colors"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={() => {
+                const now = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                const ts  = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+                const link = document.createElement("a");
+                link.download = `aluka-grafico-${ts}.png`;
+                link.href = chartPreview;
+                link.click();
+              }}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Baixar imagem
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Popup flutuante Aluka IA ─────────────────────── */}
+    {((exitFeedback && exitFeedback.length > 0) || exitAiAnalysis) && (
+      <div
+        className="fixed bottom-4 right-4 z-[9999] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-primary/40 bg-background shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300"
+        style={{ maxHeight: "70vh" }}
+      >
+        {/* Cabeçalho */}
+        <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-primary tracking-wide">Aluka IA</span>
+          </div>
+          <button
+            onClick={() => { setExitFeedback(null); setExitAiAnalysis(null); }}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+            aria-label="Fechar análise"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Conteúdo com scroll */}
+        <div className="overflow-y-auto p-4 space-y-3">
+          {exitFeedback && exitFeedback.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Análise do teu trade
+              </p>
+              {exitFeedback.map((fb, i) => (
+                <FeedbackCard key={i} item={fb} />
+              ))}
+            </div>
+          )}
+
+          {exitAiAnalysis && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 space-y-1.5">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                <Brain className="h-3 w-3" />
+                Análise aprofundada
+              </p>
+              <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">
+                {exitAiAnalysis}
+              </p>
+            </div>
+          )}
+
+          {!exitAiAnalysis && exitFeedback && exitFeedback.length > 0 && (
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              A gerar análise aprofundada…
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -1564,7 +1785,7 @@ const LEVERAGE_OPTIONS = [1, 2, 5, 10, 25, 50, 100] as const;
 function OrderPanel({
   symbol, lastPrice, precision, cash, category,
   spreadEnabled, commissionEnabled,
-  cooldownActive, cooldownSecsLeft, cooldownReason, onClearCooldown,
+  cooldownActive, cooldownSecsLeft, cooldownReason,
   bustCooldownEnd, now,
   onSubmitMarket, onSubmitPending, onReset,
   feedbackEnabled, candles, equity,
@@ -1579,7 +1800,6 @@ function OrderPanel({
   cooldownActive: boolean;
   cooldownSecsLeft: number;
   cooldownReason: string;
-  onClearCooldown: () => void;
   bustCooldownEnd: number | null;
   now: number;
   onSubmitMarket: (o: OrderInput) => void;
@@ -1710,12 +1930,6 @@ function OrderPanel({
             :{(cooldownSecsLeft % 60).toString().padStart(2, "0")}
           </div>
           <p className="text-[10px] text-muted-foreground">Respira. Revê o teu plano de trading.</p>
-          <button
-            onClick={onClearCooldown}
-            className="text-[10px] text-muted-foreground underline hover:text-foreground mt-1"
-          >
-            Ignorar cooldown (não recomendado)
-          </button>
         </div>
       )}
 

@@ -62,11 +62,11 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-2 py-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-9 h-9 object-contain" />
+            <img src="/logo-transparent.webp" alt="ALUKA" width="36" height="36" className="w-9 h-9 object-contain" loading="lazy" />
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold tracking-tight">TradeAcademy</span>
+              <span className="text-sm font-bold tracking-tight">ALUKA</span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Aprenda • Simule
               </span>

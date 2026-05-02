@@ -1,3 +1,3 @@
 export * from "./generated/api";
-export * from "./schemas";
+export * from "./generated/types";
 //# sourceMappingURL=index.d.ts.map

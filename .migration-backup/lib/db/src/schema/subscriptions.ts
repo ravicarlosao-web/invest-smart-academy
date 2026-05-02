@@ -20,6 +20,7 @@ export const subscriptionsTable = sqliteTable("subscriptions", {
   createdAt:        integer("created_at").notNull(),      // Unix ms — quando o aluno pediu
   expiresAt:        integer("expires_at"),                // Unix ms — data de expiração (30 dias após aprovação)
   approvedAt:       integer("approved_at"),               // Unix ms — quando o admin aprovou
+  receiptPurgeAt:   integer("receipt_purge_at"),          // Unix ms — quando o comprovativo deve ser apagado (2 dias úteis após decisão)
   updatedAt:        integer("updated_at").notNull(),
 });
 

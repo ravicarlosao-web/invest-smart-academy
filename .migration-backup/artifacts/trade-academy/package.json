@@ -74,6 +74,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "html-to-image": "^1.11.13",
     "lightweight-charts": "^5.2.0",
     "mammoth": "^1.12.0",

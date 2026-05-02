@@ -1,15 +1,99 @@
 import { useState, useEffect } from "react";
-import { api } from "@/lib/apiClient";
+import { api, getSocialConfig, type SocialConfig } from "@/lib/apiClient";
 import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 import {
   BookOpen, Trophy, BarChart2, Shield,
-  Zap, GraduationCap, Brain, ChevronRight, Twitter,
-  MessageSquare, Send, Play, Video, Clock, LineChart,
+  Zap, GraduationCap, Brain, ChevronRight,
+  Play, Video, Clock, LineChart,
   CheckCircle, Lock, ArrowRight, Star, Crown, Users,
   Flame, Activity, Sparkles, Target, Award,
 } from "lucide-react";
+
 import heroImage from "@assets/ChatGPT_Image_29_04_2026,_16_25_06_1777476333705.png";
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.98a8.27 8.27 0 004.84 1.54V7.04a4.85 4.85 0 01-1.07-.35z" />
+    </svg>
+  );
+}
+
+type SocialEntry = { url: string; icon: React.ReactNode; label: string };
+
+function SocialIcons() {
+  const [links, setLinks] = useState<SocialConfig | null>(null);
+
+  useEffect(() => {
+    getSocialConfig().then(setLinks).catch(() => {});
+  }, []);
+
+  if (!links) return null;
+
+  const entries: SocialEntry[] = [
+    {
+      url: links.youtube,
+      label: "YouTube",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+        </svg>
+      ),
+    },
+    {
+      url: links.instagram,
+      label: "Instagram",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+        </svg>
+      ),
+    },
+    {
+      url: links.tiktok,
+      label: "TikTok",
+      icon: <TikTokIcon className="w-3.5 h-3.5" />,
+    },
+    {
+      url: links.x,
+      label: "X / Twitter",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ),
+    },
+    {
+      url: links.facebook,
+      label: "Facebook",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+        </svg>
+      ),
+    },
+  ].filter((e) => !!e.url);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {entries.map((e) => (
+        <a
+          key={e.label}
+          href={e.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={e.label}
+          className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/30 transition-colors"
+        >
+          {e.icon}
+        </a>
+      ))}
+    </div>
+  );
+}
 
 /* ─── Data ──────────────────────────────────────────────── */
 const FEATURES = [
@@ -30,7 +114,7 @@ const FEATURES = [
   },
   {
     icon: Brain,
-    title: "Coach IA por trade",
+    title: "Aluka IA por trade",
     desc: "Análise inteligente de cada operação: entrada, saída, risco e lições concretas para melhorares.",
   },
   {
@@ -102,8 +186,8 @@ function Nav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/80 backdrop-blur-md border-b border-white/5">
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
-        <span className="font-bold text-white tracking-tight">TradeAcademy</span>
+        <img src="/logo-transparent.webp" alt="ALUKA" width="32" height="32" className="w-8 h-8 object-contain" loading="eager" />
+        <span className="font-bold text-white tracking-tight">ALUKA</span>
       </Link>
 
       <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -136,8 +220,8 @@ export default function Landing() {
   const [planName, setPlanName] = useState("Plano Mensal");
 
   useSEO({
-    title: "TradeAcademy Angola — Curso de Trading em Português | Grátis",
-    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Coach IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
+    title: "ALUKA — Curso de Trading em Português | Grátis",
+    description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Aluka IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
     canonical: "/",
   });
 
@@ -164,6 +248,10 @@ export default function Landing() {
           src={heroImage}
           alt=""
           aria-hidden
+          fetchPriority="high"
+          decoding="async"
+          width="1280"
+          height="720"
           className="absolute inset-0 w-full h-full object-cover object-center opacity-80 pointer-events-none select-none"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#060709]/60 via-transparent to-[#060709]" />
@@ -181,7 +269,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
-            40 aulas estruturadas, simulador com 5 tipos de gráfico, Coach IA por trade
+            40 aulas estruturadas, simulador com 5 tipos de gráfico, Aluka IA por trade
             e vídeo aulas curadas. Nível Iniciante totalmente grátis — tudo em português.
           </p>
 
@@ -212,7 +300,7 @@ export default function Landing() {
             <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
             <div className="w-3 h-3 rounded-full bg-green-500/50" />
             <div className="flex-1 mx-4 bg-white/5 rounded px-3 py-0.5 text-xs text-gray-600">
-              tradeacademy.app/simulador
+              aluka.app/simulador
             </div>
           </div>
 
@@ -312,7 +400,7 @@ export default function Landing() {
             <span className="text-cyan-400">de trading em português.</span>
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed">
-            A TradeAcademy transforma a forma como os traders aprendem —
+            A ALUKA transforma a forma como os traders aprendem —
             com conteúdo estruturado, vídeos curados e prática real sem riscos financeiros.
           </p>
         </div>
@@ -586,14 +674,14 @@ export default function Landing() {
             <p className="text-gray-400 leading-relaxed mb-6">
               Escolhe entre 5 tipos de gráfico, 6 timeframes com velas que fecham
               no segundo exacto — exactamente como o TradingView e o MetaTrader.
-              O Coach IA analisa cada trade e dá-te feedback imediato.
+              O Aluka IA analisa cada trade e dá-te feedback imediato.
             </p>
             <ul className="space-y-2 mb-8">
               {[
                 "5 tipos: Velas · Heikin-Ashi · Barras · Linha · Área",
                 "6 timeframes: 1S · 1m · 5m · 1h · 4h · 1D",
                 "Countdown ao fecho de cada vela, em tempo real",
-                "Coach IA com análise de risco por operação",
+                "Aluka IA com análise de risco por operação",
                 "Indicadores: RSI, MACD, Média Móvel 20",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
@@ -618,14 +706,14 @@ export default function Landing() {
           <div>
             <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-4 py-1.5 text-xs font-medium text-cyan-400 mb-5">
               <Brain className="w-3.5 h-3.5" />
-              Coach IA · Novo
+              Aluka IA · Novo
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
               Feedback inteligente<br />
               <span className="text-cyan-400">em cada operação.</span>
             </h2>
             <p className="text-gray-400 leading-relaxed mb-6">
-              Após cada trade no simulador, o Coach IA analisa automaticamente
+              Após cada trade no simulador, o Aluka IA analisa automaticamente
               a tua entrada, saída, gestão de risco e disciplina — e dá-te
               lições concretas para evoluíres mais rápido.
             </p>
@@ -648,17 +736,17 @@ export default function Landing() {
               to="/cadastrar"
               className="inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-[#060709] font-bold px-6 py-3 rounded-full text-sm transition-colors"
             >
-              Activar Coach IA <ArrowRight className="w-4 h-4" />
+              Activar Aluka IA <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Coach IA mockup card */}
+          {/* Aluka IA mockup card */}
           <div className="rounded-2xl border border-white/10 bg-[#0d0f18] p-5 shadow-2xl shadow-black/40">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
                 <Brain className="w-3.5 h-3.5 text-cyan-400" />
               </div>
-              <span className="text-sm font-semibold text-white">Coach IA</span>
+              <span className="text-sm font-semibold text-white">Aluka IA</span>
               <span className="ml-auto text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">Novo trade</span>
             </div>
 
@@ -781,23 +869,14 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-7 h-7 object-contain" />
-            <span className="font-bold text-white tracking-tight text-sm">TradeAcademy</span>
+            <img src="/logo-transparent.webp" alt="ALUKA" width="28" height="28" className="w-7 h-7 object-contain" loading="lazy" />
+            <span className="font-bold text-white tracking-tight text-sm">ALUKA</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {[Twitter, MessageSquare, Send].map((Icon, i) => (
-              <button
-                key={i}
-                className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/30 transition-colors"
-              >
-                <Icon className="w-3.5 h-3.5" />
-              </button>
-            ))}
-          </div>
+          <SocialIcons />
 
           <p className="text-xs text-gray-600 text-center md:text-right">
-            © {new Date().getFullYear()} TradeAcademy ·{" "}
+            © {new Date().getFullYear()} ALUKA ·{" "}
             <Link to="/termos" className="hover:text-gray-400 transition-colors">Termos de Serviço</Link>
             {" · "}
             <Link to="/privacidade" className="hover:text-gray-400 transition-colors">Política de Privacidade</Link>

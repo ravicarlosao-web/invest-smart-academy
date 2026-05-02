@@ -9,7 +9,7 @@ import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
-import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen, Crown } from "lucide-react";
+import { ArrowLeft, Check, X, Trophy, ChevronRight, Lightbulb, BookOpen, Crown, Headphones, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { ChartMarkExercise, evaluateMarks, type MarkLine } from "@/components/ChartMarkExercise";
 
@@ -48,6 +48,7 @@ export default function Licao() {
   const [phase, setPhase] = useState<Phase>("content");
   const [contentIdx, setContentIdx] = useState(0);
   const [qIdx, setQIdx] = useState(0);
+  const [audioOpen, setAudioOpen] = useState(false);
   const [selected, setSelected] = useState<Answer | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
@@ -136,6 +137,37 @@ export default function Licao() {
       </div>
 
       <Progress value={stepProgress} className="mb-6 h-1.5" />
+
+      {/* Audio player card — only when admin has enabled audio for this lesson */}
+      {lesson.audioUrl && lesson.audioEnabled && (
+        <Card className="mb-4 overflow-hidden border-primary/20 bg-primary/5">
+          <button
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/10"
+            onClick={() => setAudioOpen((o) => !o)}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+              <Headphones className="h-4 w-4 text-primary" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">Áudio da lição</p>
+              <p className="text-xs text-muted-foreground">
+                {audioOpen ? "Clica para fechar o player" : "Ouve enquanto lês o conteúdo"}
+              </p>
+            </div>
+            <Volume2 className={`h-4 w-4 transition-colors ${audioOpen ? "text-primary" : "text-muted-foreground"}`} />
+          </button>
+          {audioOpen && (
+            <div className="border-t border-primary/10 px-4 py-3">
+              <audio
+                src={lesson.audioUrl}
+                controls
+                className="w-full"
+                style={{ height: 40 }}
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
       {phase === "content" && (
         <ContentStep

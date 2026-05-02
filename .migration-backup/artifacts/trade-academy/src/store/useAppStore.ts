@@ -160,6 +160,8 @@ export interface DueloEntry {
   startEquity: number;
   accepted: boolean;
   code: string;
+  /** true when this user is the opponent (joined someone else's duelo) */
+  isJoiner?: boolean;
 }
 
 interface AppState {
@@ -179,6 +181,13 @@ interface AppState {
 
   /** Timestamp (ms) when the account balance first hit $0. Null = never busted. */
   simZeroedAt: number | null;
+
+  /** Anti-impulse cooldown — timestamp (ms) until trading is blocked. Null = no cooldown. */
+  simCooldownUntil: number | null;
+  /** Human-readable reason shown in the cooldown banner. */
+  simCooldownReason: string;
+  /** Activate an anti-impulse cooldown. Cannot be cleared by the user. */
+  setSimCooldown: (until: number, reason: string) => void;
 
   // full reset (called on logout to clear active user state)
   resetAll: () => void;
@@ -420,6 +429,10 @@ export const useAppStore = create<AppState>()(
       booksProgress: {},
       watchedVideos: [],
       simZeroedAt: null,
+      simCooldownUntil: null,
+      simCooldownReason: "",
+
+      setSimCooldown: (until, reason) => set({ simCooldownUntil: until, simCooldownReason: reason }),
 
       /* -------- Full reset (called on logout) -------- */
       resetAll: () =>
@@ -813,6 +826,8 @@ export const useAppStore = create<AppState>()(
             equityHistory: [{ time: Date.now(), equity: 10_000 }],
           },
           simZeroedAt: null,
+          simCooldownUntil: null,
+          simCooldownReason: "",
         });
       },
 
@@ -862,7 +877,9 @@ export const useAppStore = create<AppState>()(
             if (!existing.accepted) {
               set((s) => ({
                 duelos: s.duelos.map((d) =>
-                  d.id === existing.id ? { ...d, accepted: true, startEquity: currentEquity } : d
+                  d.id === existing.id
+                    ? { ...d, accepted: true, startEquity: currentEquity, isJoiner: true }
+                    : d
                 ),
               }));
             }
@@ -874,6 +891,7 @@ export const useAppStore = create<AppState>()(
             createdAt: Date.now(),
             accepted: true,
             startEquity: currentEquity,
+            isJoiner: true,
           };
           set((s) => ({ duelos: [entry, ...s.duelos] }));
           return true;
