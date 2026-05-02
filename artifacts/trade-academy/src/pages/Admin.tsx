@@ -375,32 +375,10 @@ function SettingsTab() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* ── AI Config state (Gemini) ── */
-  type GeminiCfg = {
-    textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
-    imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
-  };
-  const [aiCfg, setAiCfg]                   = useState<GeminiCfg | null>(null);
-  const [geminiTextKey, setGeminiTextKey]    = useState("");
-  const [geminiImageKey, setGeminiImageKey]  = useState("");
-  const [geminiTextEnabled,  setGeminiTextEnabled]  = useState(false);
-  const [geminiImageEnabled, setGeminiImageEnabled] = useState(false);
-  const [showTextKey,  setShowTextKey]  = useState(false);
-  const [showImageKey, setShowImageKey] = useState(false);
-  const [aiSaving,  setAiSaving]  = useState(false);
-  const [aiTesting, setAiTesting] = useState<"text" | "image" | null>(null);
-  const [aiTextStatus,  setAiTextStatus]  = useState<"idle" | "ok" | "error">("idle");
-  const [aiImageStatus, setAiImageStatus] = useState<"idle" | "ok" | "error">("idle");
-  const [aiTextMsg,  setAiTextMsg]  = useState("");
-  const [aiImageMsg, setAiImageMsg] = useState("");
-
   useEffect(() => {
     api.admin.getPlanConfig()
       .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
       .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
-    api.admin.getAiConfig()
-      .then((c) => { setAiCfg(c); setGeminiTextEnabled(c.textEnabled); setGeminiImageEnabled(c.imageEnabled); })
-      .catch(() => {});
   }, []);
 
   async function save() {
@@ -416,37 +394,6 @@ function SettingsTab() {
   }
 
   const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
-
-  async function saveAi() {
-    setAiSaving(true);
-    try {
-      await api.admin.saveAiConfig({
-        geminiTextKey:     geminiTextKey.trim()  || undefined,
-        geminiTextEnabled,
-        geminiImageKey:    geminiImageKey.trim() || undefined,
-        geminiImageEnabled,
-      });
-      const updated = await api.admin.getAiConfig();
-      setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
-      toast.success("Configurações do Aluka IA guardadas");
-    } catch { toast.error("Falha ao guardar"); }
-    finally { setAiSaving(false); }
-  }
-
-  async function testAiKey(type: "text" | "image") {
-    setAiTesting(type);
-    if (type === "text") { setAiTextStatus("idle"); setAiTextMsg(""); }
-    else { setAiImageStatus("idle"); setAiImageMsg(""); }
-    try {
-      await api.admin.testAiConfig(type);
-      if (type === "text") { setAiTextStatus("ok");    setAiTextMsg("Ligação bem-sucedida — chave válida."); }
-      else                 { setAiImageStatus("ok");   setAiImageMsg("Ligação bem-sucedida — chave válida."); }
-    } catch (err: any) {
-      const msg = err?.message ?? "Chave inválida ou sem permissões.";
-      if (type === "text") { setAiTextStatus("error"); setAiTextMsg(msg); }
-      else                 { setAiImageStatus("error");setAiImageMsg(msg); }
-    } finally { setAiTesting(null); }
-  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -539,18 +486,82 @@ function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* ── Aluka IA — Inteligência Artificial ── */}
-      <div className="pt-2">
+    </div>
+  );
+}
+
+/* =========================================================================
+ * Aluka IA tab — Google Gemini dual-model config
+ * ========================================================================= */
+function AlukaIaTab() {
+  type GeminiCfg = {
+    textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
+    imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
+  };
+  const [aiCfg, setAiCfg]                   = useState<GeminiCfg | null>(null);
+  const [geminiTextKey, setGeminiTextKey]    = useState("");
+  const [geminiImageKey, setGeminiImageKey]  = useState("");
+  const [geminiTextEnabled,  setGeminiTextEnabled]  = useState(false);
+  const [geminiImageEnabled, setGeminiImageEnabled] = useState(false);
+  const [showTextKey,  setShowTextKey]  = useState(false);
+  const [showImageKey, setShowImageKey] = useState(false);
+  const [aiSaving,  setAiSaving]  = useState(false);
+  const [aiTesting, setAiTesting] = useState<"text" | "image" | null>(null);
+  const [aiTextStatus,  setAiTextStatus]  = useState<"idle" | "ok" | "error">("idle");
+  const [aiImageStatus, setAiImageStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [aiTextMsg,  setAiTextMsg]  = useState("");
+  const [aiImageMsg, setAiImageMsg] = useState("");
+
+  useEffect(() => {
+    api.admin.getAiConfig()
+      .then((c) => { setAiCfg(c); setGeminiTextEnabled(c.textEnabled); setGeminiImageEnabled(c.imageEnabled); })
+      .catch(() => {});
+  }, []);
+
+  async function saveAi() {
+    setAiSaving(true);
+    try {
+      await api.admin.saveAiConfig({
+        geminiTextKey:     geminiTextKey.trim()  || undefined,
+        geminiTextEnabled,
+        geminiImageKey:    geminiImageKey.trim() || undefined,
+        geminiImageEnabled,
+      });
+      const updated = await api.admin.getAiConfig();
+      setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
+      toast.success("Configurações do Aluka IA guardadas");
+    } catch { toast.error("Falha ao guardar"); }
+    finally { setAiSaving(false); }
+  }
+
+  async function testAiKey(type: "text" | "image") {
+    setAiTesting(type);
+    if (type === "text") { setAiTextStatus("idle"); setAiTextMsg(""); }
+    else { setAiImageStatus("idle"); setAiImageMsg(""); }
+    try {
+      await api.admin.testAiConfig(type);
+      if (type === "text") { setAiTextStatus("ok");    setAiTextMsg("Ligação bem-sucedida — chave válida."); }
+      else                 { setAiImageStatus("ok");   setAiImageMsg("Ligação bem-sucedida — chave válida."); }
+    } catch (err: any) {
+      const msg = err?.message ?? "Chave inválida ou sem permissões.";
+      if (type === "text") { setAiTextStatus("error"); setAiTextMsg(msg); }
+      else                 { setAiImageStatus("error");setAiImageMsg(msg); }
+    } finally { setAiTesting(null); }
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" /> Aluka IA
         </h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Configura os modelos Google Gemini para activar análise de trades e gráficos.
+          Configura os modelos Google Gemini para activar análise inteligente de trades e gráficos.
           Obtém a chave gratuitamente em{" "}
           <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
             className="underline underline-offset-2 text-primary hover:opacity-80">
             aistudio.google.com
-          </a>{" "}(1500 req/dia grátis).
+          </a>{" "}— 1 500 requests/dia grátis.
         </p>
       </div>
 
@@ -568,7 +579,7 @@ function SettingsTab() {
             )}
           </CardTitle>
           <CardDescription>
-            Usado pelo Aluka IA para analisar os dados do trade: entrada, saída, resultado, duração e gestão de risco.
+            Analisa os dados de cada trade após ser fechado: entrada, saída, resultado e gestão de risco.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -633,7 +644,7 @@ function SettingsTab() {
             )}
           </CardTitle>
           <CardDescription>
-            Usado pelo Aluka IA quando o aluno captura um screenshot do gráfico. Identifica padrões, suportes, resistências e avalia a qualidade da entrada.
+            Analisa o screenshot do gráfico capturado pelo aluno. Identifica padrões, suportes e resistências.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -684,7 +695,7 @@ function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Guardar ambos */}
+      {/* Guardar */}
       <div className="flex items-center gap-3">
         <Button onClick={saveAi} disabled={aiSaving}>
           {aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
@@ -702,7 +713,7 @@ function SettingsTab() {
               "Analisa o gráfico visualmente a partir do screenshot do aluno (modelo de imagem)",
               "Os dois modelos são independentes — podes activar um sem o outro",
               "Funciona 100% no servidor — as chaves nunca são enviadas ao browser",
-              "Tier gratuito do Gemini: 1500 requests/dia — suficiente para começar",
+              "Tier gratuito do Gemini: 1 500 requests/dia — suficiente para começar",
             ].map((item) => (
               <li key={item} className="flex items-start gap-1.5">
                 <Brain className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
@@ -3608,6 +3619,7 @@ const NAV_ITEMS = [
   { id: "seo",            label: "SEO & Domínio",         icon: Globe,          group: "negocio" },
   { id: "social",         label: "Redes Sociais",         icon: Share2,         group: "negocio" },
   { id: "integracoes",    label: "Integrações",           icon: Plug,           group: "negocio" },
+  { id: "aluka-ia",       label: "Aluka IA",              icon: Brain,          group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
   { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
   { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
@@ -3641,6 +3653,7 @@ export default function Admin() {
     seo:           <SeoSettingsTab />,
     social:        <SocialTab />,
     integracoes:   <IntegracoesTb />,
+    "aluka-ia":    <AlukaIaTab />,
     settings:      <SettingsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,
