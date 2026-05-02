@@ -12,7 +12,6 @@ import { Input }  from "@/components/ui/input";
 import { Label }  from "@/components/ui/label";
 import { useAuthStore }  from "@/store/useAuthStore";
 import { useAppStore }   from "@/store/useAppStore";
-import { api }           from "@/lib/apiClient";
 import { toast }         from "sonner";
 import AuthLayout from "@/components/AuthLayout";
 
@@ -117,24 +116,11 @@ export default function Cadastrar() {
   const [confirm,   setConfirm]   = useState("");
   const [showPw,    setShowPw]    = useState(false);
   const [loading,   setLoading]   = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [level,     setLevel]     = useState<string | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
 
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-    try {
-      const status = await api.auth.googleStatus();
-      if (!status.enabled) {
-        toast.info("De momento o registo com Google não está disponível. Por favor cria a tua conta com e-mail e password.");
-        setGoogleLoading(false);
-        return;
-      }
-      window.location.href = "/api-server/api/auth/google";
-    } catch {
-      toast.info("De momento o registo com Google não está disponível. Por favor cria a tua conta com e-mail e password.");
-      setGoogleLoading(false);
-    }
+  const handleGoogleSignUp = () => {
+    navigate("/auth/google");
   };
 
   function toggleInterest(id: string) {
@@ -198,10 +184,9 @@ export default function Cadastrar() {
           <button
             type="button"
             onClick={handleGoogleSignUp}
-            disabled={googleLoading}
-            className="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-sm text-gray-300 hover:text-white transition-all font-medium mb-5 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-sm text-gray-300 hover:text-white transition-all font-medium mb-5"
           >
-            {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
+            <GoogleIcon />
             Registar com Google
           </button>
 

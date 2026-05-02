@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/useAuthStore";
-import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 import AuthLayout from "@/components/AuthLayout";
 
@@ -34,7 +33,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw,   setShowPw]   = useState(false);
   const [loading,  setLoading]  = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,20 +47,8 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const status = await api.auth.googleStatus();
-      if (!status.enabled) {
-        toast.info("De momento o registo com Google não está disponível. Por favor cria a tua conta com e-mail e password.");
-        setGoogleLoading(false);
-        return;
-      }
-      window.location.href = "/api-server/api/auth/google";
-    } catch {
-      toast.info("De momento o registo com Google não está disponível. Por favor cria a tua conta com e-mail e password.");
-      setGoogleLoading(false);
-    }
+  const handleGoogleSignIn = () => {
+    navigate("/auth/google");
   };
 
   return (
@@ -80,10 +66,9 @@ export default function Login() {
       <button
         type="button"
         onClick={handleGoogleSignIn}
-        disabled={googleLoading}
-        className="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-sm text-gray-300 hover:text-white transition-all font-medium mb-5 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-sm text-gray-300 hover:text-white transition-all font-medium mb-5"
       >
-        {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
+        <GoogleIcon />
         Continuar com Google
       </button>
 

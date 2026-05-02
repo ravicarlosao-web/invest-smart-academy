@@ -20,6 +20,7 @@ const Privacidade    = lazy(() => import("./pages/Privacidade"));
 const EsqueciSenha   = lazy(() => import("./pages/EsqueciSenha"));
 const RedefinirSenha       = lazy(() => import("./pages/RedefinirSenha"));
 const GoogleAuthResultado  = lazy(() => import("./pages/GoogleAuthResultado"));
+const GoogleAuth           = lazy(() => import("./pages/GoogleAuth"));
 const NotFound             = lazy(() => import("./pages/NotFound"));
 
 // Painel admin — lazy
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/privacidade"      element={<Privacidade />} />
             <Route path="/esqueci-senha"    element={<EsqueciSenha />} />
             <Route path="/redefinir-senha"       element={<RedefinirSenha />} />
+            <Route path="/auth/google"           element={<GoogleAuth />} />
             <Route path="/auth/google/resultado" element={<GoogleAuthResultado />} />
 
             {/* ── Gestão interna (protegida por senha) ── */}
