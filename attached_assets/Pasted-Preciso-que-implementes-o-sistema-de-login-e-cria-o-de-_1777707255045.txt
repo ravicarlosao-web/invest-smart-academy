@@ -1,0 +1,63 @@
+Preciso que implementes o sistema de login e criação de conta com Google na plataforma.
+
+---
+
+**FUNCIONALIDADE: Autenticação com Google (OAuth 2.0)**
+
+**1. Painel de Administrador — Configuração das Chaves API**
+
+- Criar uma secção dedicada no painel de administração chamada "Integrações" ou "Configurações de API"
+
+- Nessa secção deve existir uma área específica para o Google OAuth com dois campos de texto para o administrador introduzir manualmente:
+
+  - `Google Client ID`
+
+  - `Google Client Secret`
+
+- Adicionar um toggle para activar ou desactivar o botão "Entrar com Google" na plataforma — mesmo que as chaves estejam configuradas, se o toggle estiver desligado o botão não aparece para o utilizador
+
+- As chaves devem ser guardadas de forma segura (encriptadas) na base de dados
+
+**2. Comportamento quando as chaves NÃO estão configuradas**
+
+- O botão "Entrar com Google" deve aparecer normalmente no ecrã de login/registo (para a plataforma já estar visualmente pronta)
+
+- Porém, se o utilizador clicar no botão e as chaves ainda não estiverem configuradas no painel, deve aparecer um pop-up com a mensagem:
+
+  > "De momento o registo com Google não está disponível. Por favor cria a tua conta com email e password."
+
+- Nunca deve dar erro técnico — apenas o pop-up informativo
+
+**3. Configuração Base (quando as chaves forem adicionadas)**
+
+- Implementar o fluxo OAuth 2.0 com Google no backend usando as chaves configuradas no painel
+
+- O botão de login deve seguir as diretrizes visuais oficiais do Google
+
+**4. Base de Dados**
+
+- Adicionar campo `google_id` na tabela de utilizadores para guardar o identificador único do Google
+
+- O campo `password` deve passar a ser opcional — utilizadores que entram pelo Google não têm password
+
+**5. Casos que devem ser tratados obrigatoriamente**
+
+- Email já existe com password normal → perguntar ao utilizador se quer ligar a conta Google à conta existente
+
+- Primeira vez com Google → criar conta automaticamente
+
+- Google não partilha o email → pedir ao utilizador para introduzir manualmente
+
+- Utilizador revoga o acesso no Google → redirecionar para o login normal com mensagem clara
+
+**6. Fluxo após criação de conta via Google**
+
+- Atribuir plano gratuito por defeito, igual a qualquer outro registo
+
+- Pedir confirmação de país (Angola, Brasil, Portugal)
+
+- Mostrar o onboarding normalmente — é a primeira vez do utilizador na plataforma independentemente do método de registo
+
+---
+
+**Objectivo:** Que a plataforma já esteja estruturalmente pronta para o Google desde o início, mas que eu controle quando essa funcionalidade fica activa — sem precisar de deploy a cada activação.
