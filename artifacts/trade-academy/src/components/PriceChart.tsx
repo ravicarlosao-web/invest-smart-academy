@@ -16,7 +16,7 @@ import { rsi as calcRsi, macd as calcMacd } from "@/lib/indicators";
 export type ChartType = "candlestick" | "bar" | "line" | "area" | "heikin-ashi";
 
 export interface PriceChartHandle {
-  takeScreenshot: () => void;
+  takeScreenshot: () => string | null;
 }
 
 interface Props {
@@ -115,14 +115,14 @@ export const PriceChart = forwardRef<PriceChartHandle, Props>(function PriceChar
 
   /* ── Expose screenshot API ── */
   useImperativeHandle(ref, () => ({
-    takeScreenshot() {
+    takeScreenshot(): string | null {
       const activeCharts = [
         mainChart.current,
         rsiChart.current,
         macdChart.current,
       ].filter(Boolean) as IChartApi[];
 
-      if (activeCharts.length === 0) return;
+      if (activeCharts.length === 0) return null;
 
       const canvasEls = activeCharts.map((c) => c.takeScreenshot());
       const width  = canvasEls[0].width;
@@ -141,13 +141,7 @@ export const PriceChart = forwardRef<PriceChartHandle, Props>(function PriceChar
         y += c.height;
       }
 
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const ts  = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-      const link = document.createElement("a");
-      link.download = `aluka-grafico-${ts}.png`;
-      link.href = combined.toDataURL("image/png");
-      link.click();
+      return combined.toDataURL("image/png");
     },
   }));
 

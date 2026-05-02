@@ -25,7 +25,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Download } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Camera, Download } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -354,6 +354,8 @@ export default function Simular() {
   const [macdSlow, setMacdSlow] = useState(26);
   const [macdSignal, setMacdSignal] = useState(9);
 
+  const [chartPreview, setChartPreview] = useState<string | null>(null);
+
   const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
     { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
     { id: "heikin-ashi",  label: "Heikin-Ashi",     short: "H.Ashi", Icon: Activity   },
@@ -595,6 +597,7 @@ export default function Simular() {
   const equityVal = cash + usedMargin + upnl;
 
   return (
+    <>
     <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4">
       {/* Cabeçalho — row 1: símbolo + preço */}
       <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -742,11 +745,14 @@ export default function Simular() {
 
                 <div className="h-4 w-px bg-border/40" />
                 <button
-                  onClick={() => chartRef.current?.takeScreenshot()}
-                  title="Guardar gráfico como imagem"
+                  onClick={() => {
+                    const url = chartRef.current?.takeScreenshot();
+                    if (url) setChartPreview(url);
+                  }}
+                  title="Capturar gráfico"
                   className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
                 >
-                  <Download className="h-3 w-3" />
+                  <Camera className="h-3 w-3" />
                   <span className="hidden sm:inline">Print</span>
                 </button>
 
@@ -1028,6 +1034,64 @@ export default function Simular() {
         </div>
       </div>
     </div>
+
+    {/* ── Modal de pré-visualização do gráfico ── */}
+    {chartPreview && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+        onClick={() => setChartPreview(null)}
+      >
+        <div
+          className="relative flex flex-col gap-3 rounded-xl border border-border/60 bg-[#0d0f12] p-4 shadow-2xl max-w-4xl w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Pré-visualização do gráfico</span>
+            </div>
+            <button
+              onClick={() => setChartPreview(null)}
+              className="rounded p-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <img
+            src={chartPreview}
+            alt="Gráfico capturado"
+            className="w-full rounded-lg border border-border/30 object-contain"
+            style={{ maxHeight: "65vh" }}
+          />
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setChartPreview(null)}
+              className="rounded-lg border border-border/50 px-4 py-1.5 text-sm text-muted-foreground hover:bg-surface-2 transition-colors"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={() => {
+                const now = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                const ts  = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+                const link = document.createElement("a");
+                link.download = `aluka-grafico-${ts}.png`;
+                link.href = chartPreview;
+                link.click();
+              }}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Baixar imagem
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
