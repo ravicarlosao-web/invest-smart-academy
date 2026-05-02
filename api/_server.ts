@@ -7,7 +7,7 @@
  * that Express expects (app.use("/api", router)).
  */
 import type { IncomingMessage, ServerResponse } from "http";
-import app from "../artifacts/api-server/_src/app";
+import app from "../artifacts/api-server/src/app";
 
 export default function handler(req: IncomingMessage, res: ServerResponse) {
   // Ensure the URL always starts with /api so Express routes match correctly.
