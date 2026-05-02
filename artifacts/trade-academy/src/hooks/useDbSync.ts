@@ -86,17 +86,18 @@ export function useDbSync(userId: string | null) {
 
     async function load() {
       try {
-        const [progressRes, tradesRes, notifsRes, duelosRes] = await Promise.allSettled([
+        const [progressRes, tradesRes, notifsRes, duelosRes, joinedDuelosRes] = await Promise.allSettled([
           api.progress.get(userId!),
           api.trades.list(userId!),
           api.notifications.list(userId!),
           api.duelos.list(userId!),
+          api.duelos.joined(),
         ]);
 
         if (cancelled) return;
 
         /* ── Auto-logout if any request returned 401 ─────── */
-        const any401 = [progressRes, tradesRes, notifsRes, duelosRes].some(
+        const any401 = [progressRes, tradesRes, notifsRes, duelosRes, joinedDuelosRes].some(
           (r) => r.status === "rejected" && isUnauthorized(r.reason),
         );
         if (any401) {
@@ -184,20 +185,35 @@ export function useDbSync(userId: string | null) {
 
         /* ── Apply duelos ────────────────────────────────── */
         if (duelosRes.status === "fulfilled") {
-          const dbDuelos = duelosRes.value as Array<Record<string, unknown>>;
-          const mapped: DueloEntry[] = dbDuelos.map((d) => ({
-            id:             d.id             as string,
-            title:          d.title          as string,
-            targetEquity:   d.targetEquity   as number,
-            startBalance:   d.startBalance   as number,
-            maxDrawdownPct: d.maxDrawdownPct as number,
-            maxTrades:      d.maxTrades      as number,
-            expiresAt:      d.expiresAt      as number,
-            createdAt:      d.createdAt      as number,
-            startEquity:    d.startEquity    as number,
-            accepted:       d.accepted === 1 || d.accepted === true,
-            code:           d.code           as string,
-          }));
+          function mapDuelo(d: Record<string, unknown>, isJoiner = false): DueloEntry {
+            return {
+              id:             d.id             as string,
+              title:          d.title          as string,
+              targetEquity:   d.targetEquity   as number,
+              startBalance:   d.startBalance   as number,
+              maxDrawdownPct: d.maxDrawdownPct as number,
+              maxTrades:      d.maxTrades      as number,
+              expiresAt:      d.expiresAt      as number,
+              createdAt:      d.createdAt      as number,
+              startEquity:    d.startEquity    as number,
+              accepted:       d.accepted === 1 || d.accepted === true,
+              code:           d.code           as string,
+              isJoiner,
+            };
+          }
+
+          const creatorDuelos = (duelosRes.value as Array<Record<string, unknown>>)
+            .map((d) => mapDuelo(d, false));
+
+          /* Joined duelos (where this user is the opponent) */
+          const joinedDuelos: DueloEntry[] =
+            joinedDuelosRes.status === "fulfilled"
+              ? (joinedDuelosRes.value as Array<Record<string, unknown>>)
+                  .filter((d) => !creatorDuelos.some((c) => c.id === (d.id as string)))
+                  .map((d) => mapDuelo(d, true))
+              : [];
+
+          const mapped = [...creatorDuelos, ...joinedDuelos];
           store.setState({ duelos: mapped });
           prevDueloIds.current  = new Set(mapped.map((d) => d.id));
           prevDueloData.current = new Map(mapped.map((d) => [d.id, d]));
@@ -294,17 +310,24 @@ export function useDbSync(userId: string | null) {
       /* New duelos */
       for (const d of current) {
         if (!prevDueloIds.current.has(d.id)) {
-          api.duelos.create(userId, {
-            title:          d.title,
-            targetEquity:   d.targetEquity,
-            startBalance:   d.startBalance,
-            maxDrawdownPct: d.maxDrawdownPct,
-            maxTrades:      d.maxTrades,
-            expiresAt:      d.expiresAt,
-            startEquity:    d.startEquity,
-            accepted:       d.accepted,
-            code:           d.code,
-          }).catch(console.error);
+          /* Joined duelos: the server row is owned by the creator — we only
+             call joinByCode (fire-and-forget) to set opponent_user_id.
+             Joiner duelos must NOT call create() as the code is already taken. */
+          if (d.isJoiner) {
+            api.duelos.joinByCode(d.code).catch(console.error);
+          } else {
+            api.duelos.create(userId, {
+              title:          d.title,
+              targetEquity:   d.targetEquity,
+              startBalance:   d.startBalance,
+              maxDrawdownPct: d.maxDrawdownPct,
+              maxTrades:      d.maxTrades,
+              expiresAt:      d.expiresAt,
+              startEquity:    d.startEquity,
+              accepted:       d.accepted,
+              code:           d.code,
+            }).catch(console.error);
+          }
         } else {
           /* Updated duelos (accepted flag or startEquity changed) */
           const prev = prevDueloData.current.get(d.id);

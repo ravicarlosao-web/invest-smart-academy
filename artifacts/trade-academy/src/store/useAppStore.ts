@@ -160,6 +160,8 @@ export interface DueloEntry {
   startEquity: number;
   accepted: boolean;
   code: string;
+  /** true when this user is the opponent (joined someone else's duelo) */
+  isJoiner?: boolean;
 }
 
 interface AppState {
@@ -862,7 +864,9 @@ export const useAppStore = create<AppState>()(
             if (!existing.accepted) {
               set((s) => ({
                 duelos: s.duelos.map((d) =>
-                  d.id === existing.id ? { ...d, accepted: true, startEquity: currentEquity } : d
+                  d.id === existing.id
+                    ? { ...d, accepted: true, startEquity: currentEquity, isJoiner: true }
+                    : d
                 ),
               }));
             }
@@ -874,6 +878,7 @@ export const useAppStore = create<AppState>()(
             createdAt: Date.now(),
             accepted: true,
             startEquity: currentEquity,
+            isJoiner: true,
           };
           set((s) => ({ duelos: [entry, ...s.duelos] }));
           return true;

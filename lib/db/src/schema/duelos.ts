@@ -19,6 +19,7 @@ export const duelosTable = sqliteTable("duelos", {
   startEquity:     real("start_equity").notNull().default(0),
   accepted:        integer("accepted").notNull().default(0),  // 0 | 1
   code:            text("code").notNull().unique(),
+  opponentUserId:  text("opponent_user_id"),  // set when another user joins via code
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

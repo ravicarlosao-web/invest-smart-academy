@@ -133,6 +133,19 @@ export const api = {
       authRequest<{ ok: boolean }>("PATCH", `/duelos/${userId}/${id}`, patch),
     remove: (userId: string, id: string) =>
       authRequest<{ ok: boolean }>("DELETE", `/duelos/${userId}/${id}`),
+    /** Join a duelo as the opponent — sets opponent_user_id on the creator's DB row */
+    joinByCode: (code: string) =>
+      authRequest<{ ok: boolean; duelo: Record<string, unknown> }>("POST", `/duelos/join`, { code }),
+    /** Returns duelos where the current user is the opponent (joined duelos) */
+    joined: () =>
+      authRequest<unknown[]>("GET", `/duelos/joined`),
+    /** Returns live equity for both participants (for polling) */
+    live: (code: string) =>
+      authRequest<{
+        accepted: boolean;
+        creator:  { name: string; equity: number } | null;
+        opponent: { name: string; equity: number } | null;
+      }>("GET", `/duelos/live/${code}`),
   },
 
   /* ---------- Admin ---------- */

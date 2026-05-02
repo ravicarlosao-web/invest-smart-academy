@@ -202,6 +202,7 @@ export async function initDb(): Promise<void> {
 
   // Add new columns to existing tables (idempotent — errors ignored if column already exists)
   const alterStatements = [
+    `ALTER TABLE duelos ADD COLUMN opponent_user_id TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_data TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_mime_type TEXT`,
     `ALTER TABLE subscriptions ADD COLUMN receipt_filename TEXT`,
