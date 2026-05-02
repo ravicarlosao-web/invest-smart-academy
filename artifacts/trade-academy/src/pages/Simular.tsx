@@ -510,15 +510,16 @@ export default function Simular() {
   const placePendingOrder = useAppStore((s) => s.placePendingOrder);
   const cancelPendingOrder = useAppStore((s) => s.cancelPendingOrder);
   const startChallenge = useAppStore((s) => s.startChallenge);
-  const resetSim      = useAppStore((s) => s.resetSim);
-  const simZeroedAt   = useAppStore((s) => s.simZeroedAt);
+  const resetSim          = useAppStore((s) => s.resetSim);
+  const simZeroedAt       = useAppStore((s) => s.simZeroedAt);
+  const simCooldownUntil  = useAppStore((s) => s.simCooldownUntil);
+  const simCooldownReason = useAppStore((s) => s.simCooldownReason);
+  const setSimCooldown    = useAppStore((s) => s.setSimCooldown);
 
   const upnl = calcUnrealizedPnL(positions, priceMap);
 
   /* ── Cooldown (Anti-Impulso) ─────────────────────────── */
-  const [cooldownUntil, setCooldownUntil]   = useState<number | null>(null);
-  const [cooldownReason, setCooldownReason] = useState("");
-  const [tickNow, setTickNow]               = useState(Date.now());
+  const [tickNow, setTickNow] = useState(Date.now());
   // Initialize to -1 so the first effect run (which may fire AFTER Zustand
   // rehydrates from localStorage, causing history.length to jump from 0→N)
   // is always treated as a "baseline snapshot" and never shows stale feedback.
@@ -548,24 +549,21 @@ export default function Simular() {
 
     // Liquidation → 15 min
     if (latest.reason === "liquidation") {
-      setCooldownUntil(Date.now() + 15 * 60_000);
-      setCooldownReason("liquidação — respira 15 minutos antes de continuar");
+      setSimCooldown(Date.now() + 15 * 60_000, "liquidação — respira 15 minutos antes de continuar");
       toast.error("Liquidação! Cooldown de 15 min activado.");
       return;
     }
     // Single loss > 10% of equity → 10 min
     const eq = cash + positions.reduce((s, p) => s + positionMargin(p), 0);
     if (latest.pnl < 0 && eq > 0 && Math.abs(latest.pnl) / eq > 0.1) {
-      setCooldownUntil(Date.now() + 10 * 60_000);
-      setCooldownReason("perda grave (>10% do patrimônio) — respira 10 minutos");
+      setSimCooldown(Date.now() + 10 * 60_000, "perda grave (>10% do patrimônio) — respira 10 minutos");
       toast.error("Perda grave! Cooldown de 10 min activado.");
       return;
     }
     // 2 consecutive losses → 5 min
     const last2 = history.slice(0, 2);
     if (last2.length === 2 && last2.every((t) => t.pnl <= 0)) {
-      setCooldownUntil(Date.now() + 5 * 60_000);
-      setCooldownReason("2 perdas seguidas — respira 5 minutos");
+      setSimCooldown(Date.now() + 5 * 60_000, "2 perdas seguidas — respira 5 minutos");
       toast.warning("Cooldown de 5 min activado — 2 perdas seguidas.");
     }
 
@@ -602,8 +600,9 @@ export default function Simular() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
 
-  const cooldownActive   = cooldownUntil != null && tickNow < cooldownUntil;
-  const cooldownSecsLeft = cooldownActive ? Math.ceil((cooldownUntil! - tickNow) / 1000) : 0;
+  const cooldownActive   = simCooldownUntil != null && tickNow < simCooldownUntil;
+  const cooldownSecsLeft = cooldownActive ? Math.ceil((simCooldownUntil! - tickNow) / 1000) : 0;
+  const cooldownReason   = simCooldownReason;
 
   /* ── Quarentena de Conta Zerada (30 dias) ────────────── */
   const bustCooldownEnd  = simZeroedAt != null ? simZeroedAt + COOLDOWN_MS : null;
@@ -1044,7 +1043,6 @@ export default function Simular() {
           cooldownReason={cooldownReason}
           bustCooldownEnd={bustCooldownEnd}
           now={tickNow}
-          onClearCooldown={() => setCooldownUntil(null)}
           feedbackEnabled={feedbackEnabled}
           candles={candles}
           equity={equityVal}
@@ -1759,7 +1757,7 @@ const LEVERAGE_OPTIONS = [1, 2, 5, 10, 25, 50, 100] as const;
 function OrderPanel({
   symbol, lastPrice, precision, cash, category,
   spreadEnabled, commissionEnabled,
-  cooldownActive, cooldownSecsLeft, cooldownReason, onClearCooldown,
+  cooldownActive, cooldownSecsLeft, cooldownReason,
   bustCooldownEnd, now,
   onSubmitMarket, onSubmitPending, onReset,
   feedbackEnabled, candles, equity,
@@ -1774,7 +1772,6 @@ function OrderPanel({
   cooldownActive: boolean;
   cooldownSecsLeft: number;
   cooldownReason: string;
-  onClearCooldown: () => void;
   bustCooldownEnd: number | null;
   now: number;
   onSubmitMarket: (o: OrderInput) => void;
@@ -1905,12 +1902,6 @@ function OrderPanel({
             :{(cooldownSecsLeft % 60).toString().padStart(2, "0")}
           </div>
           <p className="text-[10px] text-muted-foreground">Respira. Revê o teu plano de trading.</p>
-          <button
-            onClick={onClearCooldown}
-            className="text-[10px] text-muted-foreground underline hover:text-foreground mt-1"
-          >
-            Ignorar cooldown (não recomendado)
-          </button>
         </div>
       )}
 
