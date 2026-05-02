@@ -963,12 +963,15 @@ function CurriculumTab() {
       try { questions = JSON.parse(lessonDraft.questionsJson); } catch { toast.error("Perguntas JSON inválido"); setLessonSaving(false); return; }
 
       if (lessonIsNew) {
-        await api.admin.createCurriculumLesson({ levelId: lessonDraft.levelId, title: lessonDraft.title, summary: lessonDraft.summary, xp: lessonDraft.xp, content, questions });
+        const created = await api.admin.createCurriculumLesson({ levelId: lessonDraft.levelId, title: lessonDraft.title, summary: lessonDraft.summary, xp: lessonDraft.xp, content, questions });
+        if (lessonDraft.audioUrl && created?.id) {
+          const newOverrides = { ...overrides };
+          newOverrides[created.id] = { audioUrl: lessonDraft.audioUrl, audioEnabled: lessonDraft.audioEnabled };
+          await api.admin.saveCurriculumOverride({ lessons: newOverrides });
+          setOverrides(newOverrides);
+        }
       } else {
         await api.admin.updateCurriculumLesson(lessonDraft.id, { title: lessonDraft.title, summary: lessonDraft.summary, xp: lessonDraft.xp, content, questions });
-      }
-
-      if (!lessonIsNew) {
         const newOverrides = { ...overrides };
         const patch: Record<string, unknown> = {};
         if (lessonDraft.audioUrl) { patch.audioUrl = lessonDraft.audioUrl; patch.audioEnabled = lessonDraft.audioEnabled; }
@@ -1197,40 +1200,38 @@ function CurriculumTab() {
                 />
               </div>
 
-              {!lessonIsNew && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Headphones className="h-3.5 w-3.5" /> Áudio (mp3/wav · máx. 5 MB)
-                    </Label>
-                    {lessonDraft.audioUrl ? (
-                      <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-1 p-2">
-                        <Volume2 className="h-4 w-4 text-primary shrink-0" />
-                        <audio src={lessonDraft.audioUrl} controls className="h-8 flex-1 min-w-0" />
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setLessonDraft((d) => ({ ...d, audioUrl: "", audioEnabled: false }))}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <label className={cn("flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/60 p-3 transition-colors", audioUploading ? "opacity-50 pointer-events-none" : "hover:border-primary/40 hover:bg-surface-2")}>
-                        {audioUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
-                        <span className="text-xs text-muted-foreground">{audioUploading ? "A processar..." : "Clica para fazer upload de áudio"}</span>
-                        <input type="file" accept="audio/*" className="hidden" onChange={handleAudioUpload} />
-                      </label>
-                    )}
-                    {lessonDraft.audioUrl && (
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <input type="checkbox" checked={lessonDraft.audioEnabled} onChange={(e) => setLessonDraft((d) => ({ ...d, audioEnabled: e.target.checked }))} />
-                        Mostrar player de áudio aos alunos
-                      </label>
-                    )}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <Headphones className="h-3.5 w-3.5" /> Áudio (mp3/wav · máx. 5 MB)
+                </Label>
+                {lessonDraft.audioUrl ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-1 p-2">
+                    <Volume2 className="h-4 w-4 text-primary shrink-0" />
+                    <audio src={lessonDraft.audioUrl} controls className="h-8 flex-1 min-w-0" />
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setLessonDraft((d) => ({ ...d, audioUrl: "", audioEnabled: false }))}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" checked={lessonDraft.hidden} onChange={(e) => setLessonDraft((d) => ({ ...d, hidden: e.target.checked }))} />
-                    Ocultar esta lição para os alunos
+                ) : (
+                  <label className={cn("flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/60 p-3 transition-colors", audioUploading ? "opacity-50 pointer-events-none" : "hover:border-primary/40 hover:bg-surface-2")}>
+                    {audioUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
+                    <span className="text-xs text-muted-foreground">{audioUploading ? "A processar..." : "Clica para fazer upload de áudio"}</span>
+                    <input type="file" accept="audio/*" className="hidden" onChange={handleAudioUpload} />
                   </label>
-                </>
+                )}
+                {lessonDraft.audioUrl && (
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={lessonDraft.audioEnabled} onChange={(e) => setLessonDraft((d) => ({ ...d, audioEnabled: e.target.checked }))} />
+                    Mostrar player de áudio aos alunos
+                  </label>
+                )}
+              </div>
+
+              {!lessonIsNew && (
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input type="checkbox" checked={lessonDraft.hidden} onChange={(e) => setLessonDraft((d) => ({ ...d, hidden: e.target.checked }))} />
+                  Ocultar esta lição para os alunos
+                </label>
               )}
             </CardContent>
             <div className="flex justify-end gap-2 p-4 pt-2 shrink-0 border-t border-border/40">

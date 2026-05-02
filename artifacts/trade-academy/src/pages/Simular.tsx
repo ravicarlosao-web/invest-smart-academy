@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { PriceChart, type ChartType } from "@/components/PriceChart";
+import { PriceChart, type ChartType, type PriceChartHandle } from "@/components/PriceChart";
 import {
   useAppStore,
   calcUnrealizedPnL,
@@ -25,7 +25,7 @@ import {
   fmtPrice, fmtUSD,
   type Candle,
 } from "@/lib/market";
-import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw, X, Settings2, Target, Trophy, BookOpen, TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle, Share2, Brain, ThumbsUp, Lightbulb, Zap, ChevronDown, BarChart2, BarChart3, AreaChart, Activity, Minus, Download } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { toast } from "sonner";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -343,6 +343,8 @@ export default function Simular() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  const chartRef = useRef<PriceChartHandle>(null);
 
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const [showRsi, setShowRsi] = useState(false);
@@ -737,6 +739,17 @@ export default function Simular() {
                   onClick={() => setShowMacd((v) => !v)}
                   className={`rounded px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${showMacd ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-surface-2"}`}
                 >MACD</button>
+
+                <div className="h-4 w-px bg-border/40" />
+                <button
+                  onClick={() => chartRef.current?.takeScreenshot()}
+                  title="Guardar gráfico como imagem"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  <Download className="h-3 w-3" />
+                  <span className="hidden sm:inline">Print</span>
+                </button>
+
                 {/* ── Botão Coach IA ── */}
                 <button
                   onClick={() => setFeedbackEnabled((v) => !v)}
@@ -853,6 +866,7 @@ export default function Simular() {
                 : (showRsi && showMacd ? 720 : showRsi || showMacd ? 620 : 500)
             }}>
               <PriceChart
+                ref={chartRef}
                 candles={candles}
                 precision={meta.precision}
                 chartType={chartType}

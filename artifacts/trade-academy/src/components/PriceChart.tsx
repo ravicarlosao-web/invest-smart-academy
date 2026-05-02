@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -14,6 +14,10 @@ import type { Candle } from "@/lib/market";
 import { rsi as calcRsi, macd as calcMacd } from "@/lib/indicators";
 
 export type ChartType = "candlestick" | "bar" | "line" | "area" | "heikin-ashi";
+
+export interface PriceChartHandle {
+  takeScreenshot: () => void;
+}
 
 interface Props {
   candles: Candle[];
@@ -78,7 +82,7 @@ function toHeikinAshi(candles: Candle[]): Candle[] {
   return ha;
 }
 
-export function PriceChart({
+export const PriceChart = forwardRef<PriceChartHandle, Props>(function PriceChart({
   candles,
   precision,
   chartType = "candlestick",
@@ -90,13 +94,13 @@ export function PriceChart({
   macdSlow = 26,
   macdSignal = 9,
   className,
-}: Props) {
+}, ref) {
   const mainRef    = useRef<HTMLDivElement>(null);
   const rsiContRef = useRef<HTMLDivElement>(null);
   const macdContRef= useRef<HTMLDivElement>(null);
 
   const mainChart  = useRef<IChartApi | null>(null);
-  const mainSeries = useRef<any>(null);      // typed loosely — varies per chart type
+  const mainSeries = useRef<any>(null);
   const maSeries   = useRef<any>(null);
 
   const rsiChart  = useRef<IChartApi | null>(null);
@@ -108,6 +112,44 @@ export function PriceChart({
   const macdLine   = useRef<any>(null);
   const signalLine = useRef<any>(null);
   const histSeries = useRef<any>(null);
+
+  /* ── Expose screenshot API ── */
+  useImperativeHandle(ref, () => ({
+    takeScreenshot() {
+      const activeCharts = [
+        mainChart.current,
+        rsiChart.current,
+        macdChart.current,
+      ].filter(Boolean) as IChartApi[];
+
+      if (activeCharts.length === 0) return;
+
+      const canvasEls = activeCharts.map((c) => c.takeScreenshot());
+      const width  = canvasEls[0].width;
+      const height = canvasEls.reduce((sum, c) => sum + c.height, 0);
+
+      const combined = document.createElement("canvas");
+      combined.width  = width;
+      combined.height = height;
+      const ctx = combined.getContext("2d")!;
+      ctx.fillStyle = "#0d0f12";
+      ctx.fillRect(0, 0, width, height);
+
+      let y = 0;
+      for (const c of canvasEls) {
+        ctx.drawImage(c, 0, y);
+        y += c.height;
+      }
+
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const ts  = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+      const link = document.createElement("a");
+      link.download = `aluka-grafico-${ts}.png`;
+      link.href = combined.toDataURL("image/png");
+      link.click();
+    },
+  }));
 
   /* ── Main chart: recreate when precision OR chart type changes ── */
   useEffect(() => {
@@ -340,4 +382,4 @@ export function PriceChart({
       )}
     </div>
   );
-}
+});
