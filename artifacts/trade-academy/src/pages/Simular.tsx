@@ -327,6 +327,59 @@ function CandleCountdown({ intervalSec }: { intervalSec: number }) {
   );
 }
 
+/* ============================================================
+   COMPONENTE: Renderização estruturada da resposta Aluka IA
+============================================================ */
+function parseAlukaResponse(text: string) {
+  const lines = text.split("\n");
+  const sections: { num: number; title: string; body: string }[] = [];
+  let current: { num: number; title: string; bodyLines: string[] } | null = null;
+
+  for (const line of lines) {
+    const m = line.match(/^(\d+)\.\s+(.+)$/);
+    if (m) {
+      if (current) sections.push({ num: current.num, title: current.title, body: current.bodyLines.join("\n").trim() });
+      current = { num: Number(m[1]), title: m[2].trim(), bodyLines: [] };
+    } else if (current) {
+      current.bodyLines.push(line);
+    }
+  }
+  if (current) sections.push({ num: current.num, title: current.title, body: current.bodyLines.join("\n").trim() });
+  return sections;
+}
+
+const SECTION_STYLES: Record<number, { border: string; bg: string; iconColor: string }> = {
+  1: { border: "border-blue-500/25",   bg: "bg-blue-500/5",   iconColor: "text-blue-400"  },
+  2: { border: "border-green-500/25",  bg: "bg-green-500/5",  iconColor: "text-green-400" },
+  3: { border: "border-amber-500/25",  bg: "bg-amber-500/5",  iconColor: "text-amber-400" },
+  4: { border: "border-purple-500/25", bg: "bg-purple-500/5", iconColor: "text-purple-400"},
+  5: { border: "border-primary/25",    bg: "bg-primary/5",    iconColor: "text-primary"   },
+};
+
+function AlukaAiFormatted({ text }: { text: string }) {
+  const sections = parseAlukaResponse(text);
+  if (sections.length === 0) {
+    return <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">{text}</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {sections.map((s) => {
+        const style = SECTION_STYLES[s.num] ?? SECTION_STYLES[1];
+        return (
+          <div key={s.num} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2`}>
+            <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${style.iconColor}`}>
+              {s.title}
+            </p>
+            {s.body && (
+              <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">{s.body}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Simular() {
   useSEO({ title: "Simulador de Trading — ALUKA", noindex: true });
   const [symbol, setSymbol] = useState<string>("BTC/USD");
@@ -1141,7 +1194,7 @@ export default function Simular() {
                   <Brain className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span className="text-xs font-semibold text-primary">Análise Aluka IA</span>
                 </div>
-                <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{chartAnalysis}</p>
+                <AlukaAiFormatted text={chartAnalysis} />
                 <button
                   onClick={handleChartAnalysis}
                   disabled={chartAnalyzing}
@@ -1305,14 +1358,12 @@ export default function Simular() {
           )}
 
           {exitAiAnalysis && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 space-y-1.5">
+            <div className="space-y-1.5">
               <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <Brain className="h-3 w-3" />
                 Análise aprofundada
               </p>
-              <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">
-                {exitAiAnalysis}
-              </p>
+              <AlukaAiFormatted text={exitAiAnalysis} />
             </div>
           )}
 
