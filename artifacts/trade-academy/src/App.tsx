@@ -13,7 +13,8 @@ import Cadastrar      from "./pages/Cadastrar";
 import Termos         from "./pages/Termos";
 import Privacidade    from "./pages/Privacidade";
 import EsqueciSenha   from "./pages/EsqueciSenha";
-import RedefinirSenha from "./pages/RedefinirSenha";
+import RedefinirSenha       from "./pages/RedefinirSenha";
+import GoogleAuthResultado  from "./pages/GoogleAuthResultado";
 
 import Dashboard    from "./pages/Dashboard";
 import Aprender     from "./pages/Aprender";
@@ -52,7 +53,8 @@ const App = () => (
           <Route path="/termos"           element={<Termos />} />
           <Route path="/privacidade"      element={<Privacidade />} />
           <Route path="/esqueci-senha"    element={<EsqueciSenha />} />
-          <Route path="/redefinir-senha"  element={<RedefinirSenha />} />
+          <Route path="/redefinir-senha"       element={<RedefinirSenha />} />
+          <Route path="/auth/google/resultado" element={<GoogleAuthResultado />} />
 
           {/* ── Gestão interna (protegida por senha) ── */}
           <Route path="/ta-painel-gestao" element={<Admin />} />

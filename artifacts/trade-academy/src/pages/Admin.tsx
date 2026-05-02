@@ -10,7 +10,7 @@ import {
   FileText, Image, Download, TrendingUp, TrendingDown, DollarSign,
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
-  Mail, Send, CheckCircle, Globe,
+  Mail, Send, CheckCircle, Globe, Plug, Copy, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import type { SubscriptionWithUser, SeoConfig } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -2829,6 +2829,223 @@ function SeoSettingsTab() {
 }
 
 /* =========================================================================
+ * Integrações tab — Google OAuth
+ * ========================================================================= */
+function IntegracoesTb() {
+  const [cfg, setCfg] = useState({
+    clientId: "",
+    clientSecret: "",
+    clientSecretPreview: "",
+    enabled: false,
+    configured: false,
+    callbackUrl: "",
+  });
+  const [loading, setLoading]   = useState(true);
+  const [saving,  setSaving]    = useState(false);
+  const [newSecret, setNewSecret] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
+  const [copied, setCopied]     = useState(false);
+
+  useEffect(() => {
+    api.admin.getGoogleOAuth()
+      .then((data) => setCfg({ ...data, clientSecret: "" }))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const body: { clientId?: string; clientSecret?: string; enabled?: boolean } = {
+        enabled: cfg.enabled,
+      };
+      if (cfg.clientId.trim()) body.clientId = cfg.clientId.trim();
+      if (newSecret.trim())   body.clientSecret = newSecret.trim();
+
+      const res = await api.admin.saveGoogleOAuth(body);
+      toast.success("Configuração Google OAuth guardada.");
+      setCfg((prev) => ({
+        ...prev,
+        configured: res.configured,
+        enabled: res.enabled,
+        clientSecretPreview: newSecret.trim() ? `${"•".repeat(Math.max(0, newSecret.length - 4))}${newSecret.slice(-4)}` : prev.clientSecretPreview,
+      }));
+      setNewSecret("");
+    } catch {
+      toast.error("Erro ao guardar configuração.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function copyCallback() {
+    if (!cfg.callbackUrl) return;
+    navigator.clipboard.writeText(cfg.callbackUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-bold">Integrações</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Configura o Google OAuth para permitir que os alunos se registem e entrem com a conta Google.
+        </p>
+      </div>
+
+      {/* Google OAuth Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white dark:bg-white">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+              </div>
+              <div>
+                <CardTitle className="text-base">Google OAuth 2.0</CardTitle>
+                <CardDescription className="text-xs">Login e registo com conta Google</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {cfg.configured ? (
+                <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 bg-emerald-500/10 text-[11px]">
+                  <CheckCircle className="h-3 w-3 mr-1" />Configurado
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground text-[11px]">
+                  Não configurado
+                </Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-5">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">Activar Google Login</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {cfg.configured
+                  ? cfg.enabled ? "Visível no login e registo." : "Configurado mas desactivado."
+                  : "Adiciona as credenciais abaixo para activar."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCfg((p) => ({ ...p, enabled: !p.enabled }))}
+              disabled={!cfg.configured}
+              className="transition-colors disabled:opacity-40"
+              title={cfg.enabled ? "Desactivar" : "Activar"}
+            >
+              {cfg.enabled
+                ? <ToggleRight className="h-8 w-8 text-emerald-500" />
+                : <ToggleLeft className="h-8 w-8 text-muted-foreground" />
+              }
+            </button>
+          </div>
+
+          {/* Client ID */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Client ID</Label>
+            <Input
+              value={cfg.clientId}
+              onChange={(e) => setCfg((p) => ({ ...p, clientId: e.target.value }))}
+              placeholder="123456789-abc.apps.googleusercontent.com"
+              className="font-mono text-xs h-10"
+            />
+          </div>
+
+          {/* Client Secret */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Client Secret</Label>
+            {cfg.clientSecretPreview && !newSecret && (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 mb-1.5">
+                <span className="font-mono text-xs text-muted-foreground flex-1">{cfg.clientSecretPreview}</span>
+                <span className="text-[10px] text-muted-foreground">guardado</span>
+              </div>
+            )}
+            <div className="relative">
+              <Input
+                type={showSecret ? "text" : "password"}
+                value={newSecret}
+                onChange={(e) => setNewSecret(e.target.value)}
+                placeholder={cfg.clientSecretPreview ? "Novo secret (deixa vazio para manter)" : "GOCSPX-..."}
+                className="pr-11 font-mono text-xs h-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Callback URL */}
+          {cfg.callbackUrl && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                URL de Callback
+                <span className="text-[10px] font-normal text-muted-foreground">(adiciona esta URL no Google Console)</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2">
+                  <p className="font-mono text-[11px] text-muted-foreground break-all">{cfg.callbackUrl}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyCallback}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
+                  title="Copiar URL"
+                >
+                  {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Instructions */}
+          <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2">
+            <p className="text-xs font-semibold text-foreground">Como configurar no Google Cloud Console</p>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Acede a <span className="text-foreground font-mono">console.cloud.google.com</span></li>
+              <li>Cria um projecto ou selecciona um existente</li>
+              <li>Vai a <strong className="text-foreground">APIs &amp; Services → Credentials</strong></li>
+              <li>Clica em <strong className="text-foreground">Create Credentials → OAuth 2.0 Client ID</strong></li>
+              <li>Tipo de aplicação: <strong className="text-foreground">Web application</strong></li>
+              <li>Em <strong className="text-foreground">Authorized redirect URIs</strong> adiciona a URL de callback acima</li>
+              <li>Copia o Client ID e Client Secret para os campos acima</li>
+            </ol>
+          </div>
+
+          <Button onClick={handleSave} disabled={saving} className="h-10 gap-2">
+            {saving ? <><Loader2 className="h-4 w-4 animate-spin" />A guardar…</> : <><Save className="h-4 w-4" />Guardar configuração</>}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* =========================================================================
  * Admin sidebar navigation
  * ========================================================================= */
 const NAV_ITEMS = [
@@ -2837,6 +3054,7 @@ const NAV_ITEMS = [
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
   { id: "email",          label: "Email / SendGrid",      icon: Mail,           group: "negocio" },
   { id: "seo",            label: "SEO & Domínio",         icon: Globe,          group: "negocio" },
+  { id: "integracoes",    label: "Integrações",           icon: Plug,           group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
   { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
   { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
@@ -2868,6 +3086,7 @@ export default function Admin() {
     users:         <UsersTab />,
     email:         <EmailConfigTab />,
     seo:           <SeoSettingsTab />,
+    integracoes:   <IntegracoesTb />,
     settings:      <SettingsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,

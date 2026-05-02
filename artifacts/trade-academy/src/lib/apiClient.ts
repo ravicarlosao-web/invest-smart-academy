@@ -85,6 +85,8 @@ export const api = {
       request<{ ok: boolean }>("POST", "/auth/forgot-password", { email }),
     resetPassword: (token: string, newPassword: string) =>
       request<{ ok: boolean }>("POST", "/auth/reset-password", { token, newPassword }),
+    googleStatus: () =>
+      request<{ enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/auth/google/status"),
   },
 
   /* ---------- Progress ---------- */
@@ -204,6 +206,11 @@ export const api = {
       adminRequest<SeoConfig>("GET", "/admin/seo-config"),
     saveSeoConfig: (cfg: Partial<SeoConfig>) =>
       adminRequest<{ ok: boolean; config: SeoConfig }>("PUT", "/admin/seo-config", cfg),
+
+    getGoogleOAuth: () =>
+      adminRequest<{ clientId: string; clientSecretPreview: string; enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/admin/google-oauth"),
+    saveGoogleOAuth: (cfg: { clientId?: string; clientSecret?: string; enabled?: boolean }) =>
+      adminRequest<{ ok: boolean; configured: boolean; enabled: boolean }>("PUT", "/admin/google-oauth", cfg),
 
     finance: () =>
       adminRequest<{

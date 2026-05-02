@@ -11,6 +11,7 @@ export const usersTable = sqliteTable("users", {
   name:         text("name"),
   email:        text("email"),
   passwordHash: text("password_hash"),
+  googleId:     text("google_id"),
   createdAt:    integer("created_at").notNull(),
   updatedAt:    integer("updated_at").notNull(),
 });

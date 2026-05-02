@@ -66,6 +66,24 @@ Manual payment system (5.000 AOA/month) for Angola:
 
 The frontend (`trade-academy`) calls `/api` by default. This is routed to the `api-server` artifact by the shared proxy. If you move the api-server to a different path, set the `VITE_API_BASE_URL` environment variable in the trade-academy artifact to the new prefix (e.g. `/api`).
 
+## Authentication
+
+### Email/Password (default)
+- Register via `POST /api/auth/register` → bcrypt hash, JWT returned
+- Login via `POST /api/auth/login`
+- Password reset via `/api/auth/forgot-password` → email link → `/api/auth/reset-password`
+
+### Google OAuth 2.0
+- Admin configures Google credentials at `/ta-painel-gestao` → "Integrações" tab
+- Stored in `admin_settings` table under key `"auth.google"` as `{clientId, clientSecret, enabled}`
+- Flow: `GET /api/auth/google` → Google → `GET /api/auth/google/callback` → redirect to `/auth/google/resultado?token=...&isNew=...`
+- `GoogleAuthResultado.tsx` reads URL params, stores JWT via `useAuthStore.setFromOAuth()`, redirects
+- Public status endpoint: `GET /api/auth/google/status` → `{enabled, configured, callbackUrl}`
+- CSRF protection via short-lived in-memory state tokens (10-min TTL)
+- Account linking: if email already exists → links Google ID to existing account; new email → creates account
+- Button behaviour: if `enabled=false` → friendly toast (no technical errors shown)
+- `users.google_id` column added via idempotent `ALTER TABLE` in `initDb()`
+
 ## Required Secrets
 
 All secrets must be set in Replit Secrets before the api-server will start:

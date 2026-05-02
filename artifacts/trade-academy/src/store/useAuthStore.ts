@@ -17,9 +17,10 @@ interface AuthState {
   user:  AuthUser | null;
   token: string | null;
 
-  register: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  login:    (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
-  logout:   () => void;
+  register:     (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login:        (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
+  setFromOAuth: (user: AuthUser, token: string)                 => void;
+  logout:       () => void;
   isAuthenticated: () => boolean;
 }
 
@@ -69,6 +70,8 @@ export const useAuthStore = create<AuthState>()(
           return { ok: false, error: msg };
         }
       },
+
+      setFromOAuth: (user, token) => set({ user, token }),
 
       logout: () => set({ user: null, token: null }),
 

@@ -1058,6 +1058,61 @@ const SEO_DEFAULTS = {
   geoCity:       "Luanda, Angola",
 };
 
+/* =========================================================================
+ * Google OAuth configuration
+ * ========================================================================= */
+router.get("/google-oauth", async (req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "auth.google")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+
+    /* Build callback URL hint */
+    const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0]?.trim() ?? req.protocol ?? "https";
+    const host  = (req.headers["x-forwarded-host"] as string | undefined) ?? (req.headers["host"] as string) ?? "";
+    const callbackUrl = `${proto}://${host}/api-server/api/auth/google/callback`;
+
+    res.json({
+      clientId:            cfg.clientId ?? "",
+      clientSecretPreview: cfg.clientSecret ? `${"•".repeat(Math.max(0, cfg.clientSecret.length - 4))}${cfg.clientSecret.slice(-4)}` : "",
+      enabled:             cfg.enabled === true,
+      configured:          !!(cfg.clientId && cfg.clientSecret),
+      callbackUrl,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/google-oauth", async (req: any, res: any) => {
+  try {
+    const { clientId, clientSecret, enabled } = req.body ?? {};
+    const now = Date.now();
+
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "auth.google")).get();
+    let current: any = {};
+    try { current = row ? JSON.parse(row.value) : {}; } catch { current = {}; }
+
+    const merged = {
+      clientId:     (typeof clientId     === "string" && clientId.trim())     ? clientId.trim()     : (current.clientId ?? ""),
+      clientSecret: (typeof clientSecret === "string" && clientSecret.trim()) ? clientSecret.trim() : (current.clientSecret ?? ""),
+      enabled:      typeof enabled === "boolean" ? enabled : (current.enabled ?? false),
+    };
+
+    if (row) {
+      await db.update(adminSettingsTable).set({ value: JSON.stringify(merged), updatedAt: now }).where(eq(adminSettingsTable.key, "auth.google"));
+    } else {
+      await db.insert(adminSettingsTable).values({ key: "auth.google", value: JSON.stringify(merged), updatedAt: now });
+    }
+
+    res.json({ ok: true, configured: !!(merged.clientId && merged.clientSecret), enabled: merged.enabled });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 router.get("/seo-config", async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "seo.config")).get();
