@@ -359,6 +359,7 @@ export default function Simular() {
   const [chartPreview, setChartPreview] = useState<string | null>(null);
   const [chartAnalysis, setChartAnalysis] = useState<string | null>(null);
   const [chartAnalyzing, setChartAnalyzing] = useState(false);
+  const [exitAiAnalysis, setExitAiAnalysis] = useState<string | null>(null);
 
   const CHART_TYPES: { id: ChartType; label: string; short: string; Icon: React.ElementType }[] = [
     { id: "candlestick",  label: "Velas Japonesas", short: "Velas",  Icon: BarChart2  },
@@ -570,12 +571,33 @@ export default function Simular() {
 
     // Feedback inteligente de saída
     if (feedbackEnabled) {
-      const fb = analyzeExit(latest, cash + positions.reduce((s, p) => s + positionMargin(p), 0) + upnl);
+      const eq = cash + positions.reduce((s, p) => s + positionMargin(p), 0) + upnl;
+      const fb = analyzeExit(latest, eq);
       if (fb.length > 0) {
         setExitFeedback(fb);
+        setExitAiAnalysis(null);
         if (exitFeedbackTimer.current) window.clearTimeout(exitFeedbackTimer.current);
-        exitFeedbackTimer.current = window.setTimeout(() => setExitFeedback(null), 14_000);
+        exitFeedbackTimer.current = window.setTimeout(() => { setExitFeedback(null); setExitAiAnalysis(null); }, 20_000);
       }
+      // Fire AI analysis in background (non-blocking, silently ignored if not configured)
+      const rrNum = (() => {
+        if (!latest.stopLoss) return null;
+        const risk   = Math.abs(latest.entryPrice - latest.stopLoss);
+        const reward = Math.abs(latest.exitPrice  - latest.entryPrice);
+        return risk > 0 ? reward / risk : null;
+      })();
+      api.ai.tradeFeedback({
+        ativo:      latest.symbol,
+        tipo:       latest.side === "buy" ? "COMPRA" : "VENDA",
+        entrada:    latest.entryPrice,
+        saida:      latest.exitPrice,
+        stop_loss:  latest.stopLoss,
+        resultado:  (latest.pnl >= 0 ? "+" : "") + fmtUSD(latest.pnl),
+        racio_rr:   rrNum != null ? `1:${rrNum.toFixed(1)}` : "N/A",
+        saldo_atual: fmtUSD(eq),
+      }).then((r) => {
+        if (r.analysis) setExitAiAnalysis(r.analysis);
+      }).catch(() => { /* silent — AI é opcional */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length]);
@@ -619,6 +641,9 @@ export default function Simular() {
           signalValue = macdVals[macdVals.length - 1].signal;
         }
       }
+      const imageBase64 = chartPreview
+        ? chartPreview.replace(/^data:image\/\w+;base64,/, "")
+        : undefined;
       const result = await api.ai.analyzeChart({
         symbol,
         timeframe:    tf.label,
@@ -627,6 +652,7 @@ export default function Simular() {
         lastCandles:  candles.slice(-20),
         showRsi,  rsiValue,  rsiPeriod,
         showMacd, macdValue, signalValue,
+        imageBase64,
       });
       setChartAnalysis(result.analysis);
     } catch {
@@ -683,13 +709,21 @@ export default function Simular() {
               <Brain className="h-4 w-4 text-primary shrink-0" />
               <p className="text-xs font-bold text-primary uppercase tracking-wider">Análise do teu trade</p>
             </div>
-            <button onClick={() => setExitFeedback(null)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => { setExitFeedback(null); setExitAiAnalysis(null); }} className="text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
           {exitFeedback.map((fb, i) => (
             <FeedbackCard key={i} item={fb} />
           ))}
+          {exitAiAnalysis && (
+            <div className="mt-2 rounded-lg border border-primary/20 bg-background/60 px-3 py-2.5 space-y-1">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                <Brain className="h-3 w-3" /> Aluka IA — Análise aprofundada
+              </p>
+              <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">{exitAiAnalysis}</p>
+            </div>
+          )}
         </div>
       )}
 

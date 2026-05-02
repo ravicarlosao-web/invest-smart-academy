@@ -116,8 +116,14 @@ export const api = {
       lastCandles: { open: number; high: number; low: number; close: number; time: number }[];
       showRsi: boolean; rsiValue?: number; rsiPeriod?: number;
       showMacd: boolean; macdValue?: number; signalValue?: number;
+      imageBase64?: string;
     }) =>
       authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/chart-analysis", ctx),
+    tradeFeedback: (trade: {
+      ativo: string; tipo: string; entrada: number; saida: number;
+      stop_loss?: number; resultado: string; racio_rr: string; saldo_atual: string;
+    }) =>
+      authRequest<{ ok: boolean; analysis: string }>("POST", "/ai/trade-feedback", trade),
   },
 
   /* ---------- Notifications ---------- */
@@ -215,11 +221,17 @@ export const api = {
       adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
 
     getAiConfig: () =>
-      adminRequest<{ configured: boolean; keyPreview: string; model: string }>("GET", "/admin/ai-config"),
-    saveAiConfig: (cfg: { openaiKey?: string; model?: string }) =>
+      adminRequest<{
+        textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
+        imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
+      }>("GET", "/admin/ai-config"),
+    saveAiConfig: (cfg: {
+      geminiTextKey?: string; geminiTextEnabled?: boolean;
+      geminiImageKey?: string; geminiImageEnabled?: boolean;
+    }) =>
       adminRequest<{ ok: boolean }>("PUT", "/admin/ai-config", cfg),
-    testAiConfig: () =>
-      adminRequest<{ ok: boolean; model: string }>("POST", "/admin/ai-config/test"),
+    testAiConfig: (type: "text" | "image" = "text") =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/ai-config/test", { type }),
 
     getEmailConfig: () =>
       adminRequest<{ configured: boolean; keySource: string; fromEmail: string; fromName: string; adminEmail: string }>("GET", "/admin/email-config"),

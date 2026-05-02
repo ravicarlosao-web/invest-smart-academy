@@ -1047,21 +1047,37 @@ router.get("/finance", async (req: any, res: any) => {
 
 /* ---------------------------------------------------------------------------
  * AI Config — GET/PUT /admin/ai-config
- * POST /admin/ai-config/test — validates the stored key against OpenAI API
- * Stores { openaiKey, model } in admin_settings under key "ai.config"
- * The GET endpoint returns the key partially masked for security.
+ * POST /admin/ai-config/test — validates a Gemini key
+ * Stores { geminiTextKey, geminiTextEnabled, geminiImageKey, geminiImageEnabled }
+ * in admin_settings under key "ai.config"
  * ------------------------------------------------------------------------- */
+
+type AiCfg = {
+  geminiTextKey: string;  geminiTextEnabled: boolean;
+  geminiImageKey: string; geminiImageEnabled: boolean;
+};
+const AI_CFG_DEFAULT: AiCfg = {
+  geminiTextKey: "", geminiTextEnabled: false,
+  geminiImageKey: "", geminiImageEnabled: false,
+};
+
+function maskKey(key: string): string {
+  if (!key) return "";
+  if (key.length <= 12) return "•".repeat(key.length);
+  return key.slice(0, 8) + "•".repeat(Math.min(key.length - 12, 20)) + key.slice(-4);
+}
+
 router.get("/ai-config", async (req: any, res: any) => {
   try {
-    const cfg = await getSetting<{ openaiKey: string; model: string }>(
-      "ai.config",
-      { openaiKey: "", model: "gpt-4o-mini" },
-    );
-    const key = cfg.openaiKey;
-    const masked = key.length > 12
-      ? key.slice(0, 8) + "•".repeat(Math.min(key.length - 12, 20)) + key.slice(-4)
-      : key.length > 0 ? "•".repeat(key.length) : "";
-    res.json({ configured: key.length > 0, keyPreview: masked, model: cfg.model });
+    const cfg = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
+    res.json({
+      textConfigured:  cfg.geminiTextKey.length  > 0,
+      textEnabled:     cfg.geminiTextEnabled,
+      textKeyPreview:  maskKey(cfg.geminiTextKey),
+      imageConfigured: cfg.geminiImageKey.length > 0,
+      imageEnabled:    cfg.geminiImageEnabled,
+      imageKeyPreview: maskKey(cfg.geminiImageKey),
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });
@@ -1070,19 +1086,14 @@ router.get("/ai-config", async (req: any, res: any) => {
 
 router.put("/ai-config", async (req: any, res: any) => {
   try {
-    const { openaiKey, model } = req.body as { openaiKey?: string; model?: string };
-    const VALID_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"];
-    if (model !== undefined && !VALID_MODELS.includes(model)) {
-      return res.status(400).json({ error: "invalid_model" });
-    }
-    const current = await getSetting<{ openaiKey: string; model: string }>(
-      "ai.config",
-      { openaiKey: "", model: "gpt-4o-mini" },
-    );
-    const newKey = (openaiKey ?? current.openaiKey).trim();
+    const { geminiTextKey, geminiTextEnabled, geminiImageKey, geminiImageEnabled } =
+      req.body as Partial<AiCfg>;
+    const current = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
     await setSetting("ai.config", {
-      openaiKey: newKey,
-      model: model ?? current.model,
+      geminiTextKey:     geminiTextKey  !== undefined ? geminiTextKey.trim()  : current.geminiTextKey,
+      geminiTextEnabled: geminiTextEnabled !== undefined ? geminiTextEnabled   : current.geminiTextEnabled,
+      geminiImageKey:    geminiImageKey !== undefined ? geminiImageKey.trim() : current.geminiImageKey,
+      geminiImageEnabled: geminiImageEnabled !== undefined ? geminiImageEnabled : current.geminiImageEnabled,
     });
     res.json({ ok: true });
   } catch (err) {
@@ -1093,24 +1104,21 @@ router.put("/ai-config", async (req: any, res: any) => {
 
 router.post("/ai-config/test", async (req: any, res: any) => {
   try {
-    const cfg = await getSetting<{ openaiKey: string; model: string }>(
-      "ai.config",
-      { openaiKey: "", model: "gpt-4o-mini" },
-    );
-    if (!cfg.openaiKey) {
-      return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada." });
+    const { type = "text" } = req.body as { type?: "text" | "image" };
+    const cfg = await getSetting<AiCfg>("ai.config", AI_CFG_DEFAULT);
+    const key = type === "image" ? cfg.geminiImageKey : cfg.geminiTextKey;
+    if (!key) {
+      return res.status(400).json({ error: "no_key", message: "Nenhuma chave configurada para este modelo." });
     }
-    const testRes = await fetch("https://api.openai.com/v1/models", {
-      headers: { Authorization: `Bearer ${cfg.openaiKey}` },
-    });
+    const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
     if (!testRes.ok) {
-      const body = await testRes.json().catch(() => ({}));
+      const body = await testRes.json().catch(() => ({})) as any;
       return res.status(400).json({
         error: "invalid_key",
         message: body?.error?.message ?? "Chave inválida ou sem permissões.",
       });
     }
-    res.json({ ok: true, model: cfg.model });
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

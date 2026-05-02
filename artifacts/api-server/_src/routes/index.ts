@@ -361,20 +361,59 @@ router.get("/manifest", async (_req: any, res: any) => {
   }
 });
 
+/* ── Aluka IA — helpers ─────────────────────────────────────────────────── */
+
+type AiCfgI = {
+  geminiTextKey: string;  geminiTextEnabled: boolean;
+  geminiImageKey: string; geminiImageEnabled: boolean;
+};
+const AI_DEFAULTS: AiCfgI = {
+  geminiTextKey: "", geminiTextEnabled: false,
+  geminiImageKey: "", geminiImageEnabled: false,
+};
+
+async function getAiCfg(): Promise<AiCfgI> {
+  const rows = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "ai.config"));
+  return rows[0]?.value ? { ...AI_DEFAULTS, ...(JSON.parse(rows[0].value) as Partial<AiCfgI>) } : AI_DEFAULTS;
+}
+
+async function callGemini(apiKey: string, parts: unknown[]): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as any;
+    throw new Error(err?.error?.message ?? "Erro ao contactar o Gemini.");
+  }
+  const data = await res.json() as any;
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
 /* ── Aluka IA — análise de gráfico ─────────────────────────────────────── */
 
 router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
   try {
-    const rows = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "ai.config"));
-    const cfg = rows[0]?.value
-      ? JSON.parse(rows[0].value) as { openaiKey: string; model: string }
-      : { openaiKey: "", model: "gpt-4o-mini" };
+    const cfg = await getAiCfg();
+    const { symbol, timeframe, chartType, currentPrice, lastCandles,
+            showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue,
+            imageBase64 } = req.body as any;
 
-    if (!cfg.openaiKey) {
+    const hasImage = !!imageBase64 && cfg.geminiImageEnabled && !!cfg.geminiImageKey;
+    const hasText  = cfg.geminiTextEnabled && !!cfg.geminiTextKey;
+
+    if (!hasImage && !hasText) {
       return res.status(503).json({ error: "no_key", message: "Aluka IA não configurado pelo administrador." });
     }
 
-    const { symbol, timeframe, chartType, currentPrice, lastCandles, showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue } = req.body as any;
+    const apiKey = hasImage ? cfg.geminiImageKey : cfg.geminiTextKey;
 
     const candleSummary = Array.isArray(lastCandles) && lastCandles.length > 0
       ? lastCandles.slice(-5).map((c: any) =>
@@ -382,9 +421,9 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
         ).join(" | ")
       : "N/A";
 
-    const systemPrompt = `És o Aluka IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado fornecidos e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar ou ter cuidado agora.`;
-
-    const lines = [
+    const textContent = [
+      `És o Aluka IA da ALUKA, plataforma de educação de trading em português para Angola e Portugal. Analisa os dados de mercado e explica de forma educativa e clara o que está a acontecer no gráfico. Sê direto, objetivo e encorajador. Usa português europeu. Máximo 5 frases curtas. Foca em: tendência atual, padrões de preço visíveis, o que os indicadores sugerem, e o que o trader deve observar agora.`,
+      "",
       `Instrumento: ${symbol ?? "N/A"}`,
       `Timeframe: ${timeframe ?? "N/A"}`,
       `Tipo de gráfico: ${chartType ?? "N/A"}`,
@@ -394,32 +433,34 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
       showMacd ? `MACD: ${macdValue != null ? Number(macdValue).toFixed(5) : "N/A"}, Sinal: ${signalValue != null ? Number(signalValue).toFixed(5) : "N/A"}` : null,
     ].filter(Boolean).join("\n");
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization:  `Bearer ${cfg.openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: cfg.model ?? "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user",   content: lines },
-        ],
-        max_tokens:  300,
-        temperature: 0.7,
-      }),
-    });
+    const parts: unknown[] = hasImage
+      ? [{ inline_data: { mime_type: "image/png", data: imageBase64 } }, { text: textContent }]
+      : [{ text: textContent }];
 
-    if (!openaiRes.ok) {
-      const err = await openaiRes.json().catch(() => ({})) as any;
-      return res.status(502).json({ error: "openai_error", message: err?.error?.message ?? "Erro ao contactar a OpenAI." });
+    const analysis = await callGemini(apiKey, parts);
+    res.json({ ok: true, analysis });
+  } catch (err: any) {
+    req.log?.error(err);
+    if (err?.message?.includes("Gemini")) return res.status(502).json({ error: "gemini_error", message: err.message });
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ── Aluka IA — feedback de trade ──────────────────────────────────────── */
+
+router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
+  try {
+    const cfg = await getAiCfg();
+    if (!cfg.geminiTextEnabled || !cfg.geminiTextKey) {
+      return res.status(503).json({ error: "no_key" });
     }
 
-    const data = await openaiRes.json() as any;
-    const analysis = data.choices?.[0]?.message?.content ?? "";
+    const trade = req.body as any;
+    const prompt = `És o Aluka IA, um coach de trading experiente que ajuda iniciantes a aprender. Analisa este trade e dá feedback construtivo em português de Angola. Sê directo mas encorajador. Avalia: (1) qualidade da entrada, (2) gestão de risco e stop loss, (3) saída — saiu cedo ou tarde demais, (4) uma lição concreta para melhorar. Máximo 4 pontos curtos.\n\nDados do trade:\n${JSON.stringify(trade, null, 2)}`;
+
+    const analysis = await callGemini(cfg.geminiTextKey, [{ text: prompt }]);
     res.json({ ok: true, analysis });
-  } catch (err) {
+  } catch (err: any) {
     req.log?.error(err);
     res.status(500).json({ error: "internal" });
   }

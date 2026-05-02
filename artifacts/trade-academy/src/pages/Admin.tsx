@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 import { useAdminStore } from "@/store/useAdminStore";
 import { api } from "@/lib/apiClient";
@@ -374,22 +375,31 @@ function SettingsTab() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* ── AI Config state ── */
-  const [aiCfg, setAiCfg]     = useState<{ configured: boolean; keyPreview: string; model: string } | null>(null);
-  const [aiKey, setAiKey]      = useState("");
-  const [aiModel, setAiModel]  = useState("gpt-4o-mini");
-  const [showKey, setShowKey]  = useState(false);
-  const [aiSaving, setAiSaving] = useState(false);
-  const [aiTesting, setAiTesting] = useState(false);
-  const [aiStatus, setAiStatus]   = useState<"idle" | "ok" | "error">("idle");
-  const [aiStatusMsg, setAiStatusMsg] = useState("");
+  /* ── AI Config state (Gemini) ── */
+  type GeminiCfg = {
+    textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
+    imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
+  };
+  const [aiCfg, setAiCfg]                   = useState<GeminiCfg | null>(null);
+  const [geminiTextKey, setGeminiTextKey]    = useState("");
+  const [geminiImageKey, setGeminiImageKey]  = useState("");
+  const [geminiTextEnabled,  setGeminiTextEnabled]  = useState(false);
+  const [geminiImageEnabled, setGeminiImageEnabled] = useState(false);
+  const [showTextKey,  setShowTextKey]  = useState(false);
+  const [showImageKey, setShowImageKey] = useState(false);
+  const [aiSaving,  setAiSaving]  = useState(false);
+  const [aiTesting, setAiTesting] = useState<"text" | "image" | null>(null);
+  const [aiTextStatus,  setAiTextStatus]  = useState<"idle" | "ok" | "error">("idle");
+  const [aiImageStatus, setAiImageStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [aiTextMsg,  setAiTextMsg]  = useState("");
+  const [aiImageMsg, setAiImageMsg] = useState("");
 
   useEffect(() => {
     api.admin.getPlanConfig()
       .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
       .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
     api.admin.getAiConfig()
-      .then((c) => { setAiCfg(c); setAiModel(c.model); })
+      .then((c) => { setAiCfg(c); setGeminiTextEnabled(c.textEnabled); setGeminiImageEnabled(c.imageEnabled); })
       .catch(() => {});
   }, []);
 
@@ -408,29 +418,34 @@ function SettingsTab() {
   const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
 
   async function saveAi() {
-    if (!aiKey.trim() && aiModel === aiCfg?.model) { toast.error("Nada a guardar"); return; }
     setAiSaving(true);
-    setAiStatus("idle");
     try {
-      const payload: { openaiKey?: string; model?: string } = { model: aiModel };
-      if (aiKey.trim()) payload.openaiKey = aiKey.trim();
-      await api.admin.saveAiConfig(payload);
+      await api.admin.saveAiConfig({
+        geminiTextKey:     geminiTextKey.trim()  || undefined,
+        geminiTextEnabled,
+        geminiImageKey:    geminiImageKey.trim() || undefined,
+        geminiImageEnabled,
+      });
       const updated = await api.admin.getAiConfig();
-      setAiCfg(updated); setAiModel(updated.model); setAiKey("");
+      setAiCfg(updated); setGeminiTextKey(""); setGeminiImageKey("");
       toast.success("Configurações do Aluka IA guardadas");
     } catch { toast.error("Falha ao guardar"); }
     finally { setAiSaving(false); }
   }
 
-  async function testAi() {
-    setAiTesting(true); setAiStatus("idle"); setAiStatusMsg("");
+  async function testAiKey(type: "text" | "image") {
+    setAiTesting(type);
+    if (type === "text") { setAiTextStatus("idle"); setAiTextMsg(""); }
+    else { setAiImageStatus("idle"); setAiImageMsg(""); }
     try {
-      await api.admin.testAiConfig();
-      setAiStatus("ok"); setAiStatusMsg("Ligação bem-sucedida — chave válida.");
+      await api.admin.testAiConfig(type);
+      if (type === "text") { setAiTextStatus("ok");    setAiTextMsg("Ligação bem-sucedida — chave válida."); }
+      else                 { setAiImageStatus("ok");   setAiImageMsg("Ligação bem-sucedida — chave válida."); }
     } catch (err: any) {
-      setAiStatus("error");
-      setAiStatusMsg(err?.message ?? "Chave inválida ou sem permissões.");
-    } finally { setAiTesting(false); }
+      const msg = err?.message ?? "Chave inválida ou sem permissões.";
+      if (type === "text") { setAiTextStatus("error"); setAiTextMsg(msg); }
+      else                 { setAiImageStatus("error");setAiImageMsg(msg); }
+    } finally { setAiTesting(null); }
   }
 
   return (
@@ -524,164 +539,170 @@ function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* ── Aluka IA — AI Config ── */}
+      {/* ── Aluka IA — Inteligência Artificial ── */}
       <div className="pt-2">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" /> Aluka IA
         </h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Configura a chave API da OpenAI para activar a análise inteligente de trades no simulador.
+          Configura os modelos Google Gemini para activar análise de trades e gráficos.
+          Obtém a chave gratuitamente em{" "}
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+            className="underline underline-offset-2 text-primary hover:opacity-80">
+            aistudio.google.com
+          </a>{" "}(1500 req/dia grátis).
         </p>
       </div>
 
+      {/* ── Modelo 1: Análise de Texto ── */}
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Brain className="h-4 w-4 text-primary" /> Integração OpenAI
+            <Brain className="h-4 w-4 text-primary" />
+            Gemini — Análise de Texto
             {aiCfg && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "ml-auto text-[10px] font-semibold",
-                  aiCfg.configured
-                    ? "border-bull/40 text-bull bg-bull/5"
-                    : "border-border text-muted-foreground",
-                )}
-              >
-                {aiCfg.configured ? "Chave configurada" : "Sem chave"}
+              <Badge variant="outline" className={cn("ml-auto text-[10px] font-semibold",
+                aiCfg.textConfigured ? "border-bull/40 text-bull bg-bull/5" : "border-border text-muted-foreground")}>
+                {aiCfg.textConfigured ? "Chave configurada" : "Sem chave"}
               </Badge>
             )}
           </CardTitle>
           <CardDescription>
-            A chave é guardada de forma segura no servidor e nunca exposta ao cliente.
-            Obtém a tua chave em{" "}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 text-primary hover:opacity-80"
-            >
-              platform.openai.com/api-keys
-            </a>.
+            Usado pelo Aluka IA para analisar os dados do trade: entrada, saída, resultado, duração e gestão de risco.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium">Activar análise de texto</p>
+              <p className="text-[11px] text-muted-foreground">Feedback automático com IA após cada trade fechado</p>
+            </div>
+            <Switch checked={geminiTextEnabled} onCheckedChange={setGeminiTextEnabled} />
+          </div>
 
-          {/* Current key preview */}
-          {aiCfg?.configured && (
+          {aiCfg?.textConfigured && (
             <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="font-mono text-xs text-muted-foreground tracking-widest flex-1 truncate">
-                {aiCfg.keyPreview}
-              </span>
+              <span className="font-mono text-xs text-muted-foreground tracking-widest flex-1 truncate">{aiCfg.textKeyPreview}</span>
               <span className="text-[10px] text-muted-foreground">chave actual</span>
             </div>
           )}
 
-          {/* New key input */}
           <div className="space-y-1.5">
-            <Label htmlFor="ai-key">
-              {aiCfg?.configured ? "Substituir chave API" : "Chave API da OpenAI"}
-            </Label>
+            <Label htmlFor="gemini-text-key">{aiCfg?.textConfigured ? "Substituir Gemini API Key (Texto)" : "Gemini API Key (Texto)"}</Label>
             <div className="relative max-w-sm">
-              <Input
-                id="ai-key"
-                type={showKey ? "text" : "password"}
-                value={aiKey}
-                onChange={(e) => setAiKey(e.target.value)}
-                placeholder="sk-proj-..."
-                className="pr-10 font-mono text-sm"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                tabIndex={-1}
-              >
-                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <Input id="gemini-text-key" type={showTextKey ? "text" : "password"}
+                value={geminiTextKey} onChange={(e) => setGeminiTextKey(e.target.value)}
+                placeholder="AIza..." className="pr-10 font-mono text-sm" autoComplete="off" spellCheck={false} />
+              <button type="button" onClick={() => setShowTextKey((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
+                {showTextKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Deixa em branco se não quiseres alterar a chave existente.
-            </p>
+            <p className="text-[11px] text-muted-foreground">Deixa em branco para manter a chave existente.</p>
           </div>
 
-          {/* Model selector */}
-          <div className="space-y-1.5">
-            <Label htmlFor="ai-model">Modelo</Label>
-            <Select value={aiModel} onValueChange={setAiModel}>
-              <SelectTrigger id="ai-model" className="max-w-sm">
-                <SelectValue placeholder="Selecciona modelo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gpt-4o-mini">
-                  <span className="font-medium">GPT-4o Mini</span>
-                  <span className="ml-2 text-[11px] text-muted-foreground">Rápido e económico — recomendado</span>
-                </SelectItem>
-                <SelectItem value="gpt-4o">
-                  <span className="font-medium">GPT-4o</span>
-                  <span className="ml-2 text-[11px] text-muted-foreground">Mais capaz, maior custo</span>
-                </SelectItem>
-                <SelectItem value="gpt-4-turbo">
-                  <span className="font-medium">GPT-4 Turbo</span>
-                  <span className="ml-2 text-[11px] text-muted-foreground">Contexto longo</span>
-                </SelectItem>
-                <SelectItem value="gpt-3.5-turbo">
-                  <span className="font-medium">GPT-3.5 Turbo</span>
-                  <span className="ml-2 text-[11px] text-muted-foreground">Muito económico</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status badge after test */}
-          {aiStatus !== "idle" && (
-            <div className={cn(
-              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
-              aiStatus === "ok"
-                ? "border-bull/40 bg-bull/5 text-bull"
-                : "border-bear/40 bg-bear/5 text-bear",
-            )}>
-              {aiStatus === "ok"
-                ? <Wifi className="h-4 w-4 shrink-0" />
-                : <WifiOff className="h-4 w-4 shrink-0" />}
-              <span>{aiStatusMsg}</span>
+          {aiTextStatus !== "idle" && (
+            <div className={cn("flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+              aiTextStatus === "ok" ? "border-bull/40 bg-bull/5 text-bull" : "border-bear/40 bg-bear/5 text-bear")}>
+              {aiTextStatus === "ok" ? <Wifi className="h-4 w-4 shrink-0" /> : <WifiOff className="h-4 w-4 shrink-0" />}
+              <span>{aiTextMsg}</span>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Button onClick={saveAi} disabled={aiSaving}>
-              {aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-              {aiSaving ? "A guardar…" : "Guardar"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={testAi}
-              disabled={aiTesting || !aiCfg?.configured}
-              title={!aiCfg?.configured ? "Guarda primeiro uma chave para poder testar" : ""}
-            >
-              {aiTesting
-                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
-              {aiTesting ? "A testar…" : "Testar ligação"}
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => testAiKey("text")}
+            disabled={aiTesting !== null || !aiCfg?.textConfigured}
+            title={!aiCfg?.textConfigured ? "Guarda primeiro uma chave" : ""}>
+            {aiTesting === "text" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
+            {aiTesting === "text" ? "A testar…" : "Testar ligação"}
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Info about AI */}
+      {/* ── Modelo 2: Análise de Imagem ── */}
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Image className="h-4 w-4 text-primary" />
+            Gemini — Análise de Gráfico (Imagem)
+            {aiCfg && (
+              <Badge variant="outline" className={cn("ml-auto text-[10px] font-semibold",
+                aiCfg.imageConfigured ? "border-bull/40 text-bull bg-bull/5" : "border-border text-muted-foreground")}>
+                {aiCfg.imageConfigured ? "Chave configurada" : "Sem chave"}
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Usado pelo Aluka IA quando o aluno captura um screenshot do gráfico. Identifica padrões, suportes, resistências e avalia a qualidade da entrada.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium">Activar análise de imagem</p>
+              <p className="text-[11px] text-muted-foreground">Análise visual do gráfico com um clique do aluno</p>
+            </div>
+            <Switch checked={geminiImageEnabled} onCheckedChange={setGeminiImageEnabled} />
+          </div>
+
+          {aiCfg?.imageConfigured && (
+            <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 flex items-center gap-2">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="font-mono text-xs text-muted-foreground tracking-widest flex-1 truncate">{aiCfg.imageKeyPreview}</span>
+              <span className="text-[10px] text-muted-foreground">chave actual</span>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="gemini-image-key">{aiCfg?.imageConfigured ? "Substituir Gemini API Key (Imagem)" : "Gemini API Key (Imagem)"}</Label>
+            <div className="relative max-w-sm">
+              <Input id="gemini-image-key" type={showImageKey ? "text" : "password"}
+                value={geminiImageKey} onChange={(e) => setGeminiImageKey(e.target.value)}
+                placeholder="AIza..." className="pr-10 font-mono text-sm" autoComplete="off" spellCheck={false} />
+              <button type="button" onClick={() => setShowImageKey((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
+                {showImageKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Pode ser a mesma chave que a de texto. Deixa em branco para manter.</p>
+          </div>
+
+          {aiImageStatus !== "idle" && (
+            <div className={cn("flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+              aiImageStatus === "ok" ? "border-bull/40 bg-bull/5 text-bull" : "border-bear/40 bg-bear/5 text-bear")}>
+              {aiImageStatus === "ok" ? <Wifi className="h-4 w-4 shrink-0" /> : <WifiOff className="h-4 w-4 shrink-0" />}
+              <span>{aiImageMsg}</span>
+            </div>
+          )}
+
+          <Button variant="outline" size="sm" onClick={() => testAiKey("image")}
+            disabled={aiTesting !== null || !aiCfg?.imageConfigured}
+            title={!aiCfg?.imageConfigured ? "Guarda primeiro uma chave" : ""}>
+            {aiTesting === "image" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wifi className="mr-1.5 h-3.5 w-3.5" />}
+            {aiTesting === "image" ? "A testar…" : "Testar ligação"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Guardar ambos */}
+      <div className="flex items-center gap-3">
+        <Button onClick={saveAi} disabled={aiSaving}>
+          {aiSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+          {aiSaving ? "A guardar…" : "Guardar configurações"}
+        </Button>
+      </div>
+
+      {/* Info */}
       <Card className="border-border/40 bg-muted/30">
         <CardContent className="p-4 space-y-2">
           <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">O que o Aluka IA faz</p>
           <ul className="space-y-1.5 text-sm text-muted-foreground">
             {[
-              "Analisa cada trade após ser fechado — entrada, saída, risco e R:R",
-              "Identifica padrões de comportamento: overtrading, FOMO, disciplina",
-              "Sugere melhorias com base no historial de operações da sessão",
-              "Funciona 100% no servidor — a chave nunca é enviada ao browser",
+              "Analisa cada trade após ser fechado — entrada, saída, risco e R:R (modelo de texto)",
+              "Analisa o gráfico visualmente a partir do screenshot do aluno (modelo de imagem)",
+              "Os dois modelos são independentes — podes activar um sem o outro",
+              "Funciona 100% no servidor — as chaves nunca são enviadas ao browser",
+              "Tier gratuito do Gemini: 1500 requests/dia — suficiente para começar",
             ].map((item) => (
               <li key={item} className="flex items-start gap-1.5">
                 <Brain className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
