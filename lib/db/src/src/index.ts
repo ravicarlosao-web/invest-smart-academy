@@ -194,6 +194,15 @@ export async function initDb(): Promise<void> {
       expires_at INTEGER NOT NULL,
       revoked_at INTEGER NOT NULL
     )`),
+    sql.raw(`CREATE TABLE IF NOT EXISTS email_verifications (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL,
+      email       TEXT NOT NULL,
+      code        TEXT NOT NULL,
+      expires_at  INTEGER NOT NULL,
+      used        INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
@@ -209,6 +218,7 @@ export async function initDb(): Promise<void> {
     `ALTER TABLE subscriptions ADD COLUMN receipt_purge_at INTEGER`,
     `ALTER TABLE users ADD COLUMN google_id TEXT`,
     `ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)`,
+    `ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const stmt of alterStatements) {
     try {

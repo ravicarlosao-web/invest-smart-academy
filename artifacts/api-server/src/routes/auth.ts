@@ -3,19 +3,20 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import {
-  db, usersTable, passwordResetTokensTable, adminSettingsTable, eq,
+  db, usersTable, passwordResetTokensTable, emailVerificationsTable, adminSettingsTable, eq,
 } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { signToken, revokeToken } from "../middlewares/auth.js";
 import jwt from "jsonwebtoken";
 import type { JwtPayload } from "../middlewares/auth.js";
 import { validate } from "../middlewares/validate.js";
-import { sendPasswordResetEmail } from "../lib/email.js";
+import { sendPasswordResetEmail, sendEmailVerificationCode } from "../lib/email.js";
 
 const router = Router();
 
-const BCRYPT_ROUNDS = 12;
-const RESET_TTL_MS  = 60 * 60 * 1000; // 1 hora
+const BCRYPT_ROUNDS     = 12;
+const RESET_TTL_MS      = 60 * 60 * 1000;       // 1 hora
+const VERIFY_TTL_MS     = 15 * 60 * 1000;       // 15 minutos
 
 /* ── OAuth state store (in-memory, 10-min TTL) ────────────────────────── */
 const oauthStates = new Map<string, number>();
@@ -67,16 +68,35 @@ router.post("/register", validate(RegisterBody), async (req: any, res: any) => {
       name,
       email,
       passwordHash,
+      emailVerified: 0,
       createdAt: now,
       updatedAt: now,
     });
 
+    // Gerar e enviar código de verificação de email (6 dígitos)
+    const code      = String(Math.floor(100000 + Math.random() * 900000));
+    const verifyId  = `ev_${Date.now()}_${randomBytes(4).toString("hex")}`;
+    await db.insert(emailVerificationsTable).values({
+      id:        verifyId,
+      userId:    id,
+      email,
+      code,
+      expiresAt: now + VERIFY_TTL_MS,
+      used:      0,
+      createdAt: now,
+    });
+
+    sendEmailVerificationCode({ to: email, name, code })
+      .then((r) => { if (!r.ok) req.log.warn({ reason: r.reason }, "verification email failed"); })
+      .catch(() => {});
+
     const token = signToken({ userId: id, email });
 
     return res.status(201).json({
-      ok:   true,
+      ok:            true,
       token,
-      user: { id, name, email },
+      user:          { id, name, email },
+      emailVerified: false,
     });
   } catch (err) {
     req.log.error(err);
@@ -175,6 +195,83 @@ router.post("/reset-password", async (req: any, res: any) => {
 
     await db.update(usersTable).set({ passwordHash, updatedAt: now }).where(eq(usersTable.id, row.userId));
     await db.update(passwordResetTokensTable).set({ usedAt: now }).where(eq(passwordResetTokensTable.token, token));
+
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "internal" });
+  }
+});
+
+/* =========================================================================
+ * Email Verification
+ * ========================================================================= */
+
+/**
+ * POST /api/auth/verify-email
+ * Body: { code: string }
+ * Requires auth token (JWT)
+ */
+router.post("/verify-email", async (req: any, res: any) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+    const { code } = req.body ?? {};
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({ error: "invalid_code", message: "Código inválido." });
+    }
+
+    // Find latest unused code for this user
+    const row = await db
+      .select()
+      .from(emailVerificationsTable)
+      .where(eq(emailVerificationsTable.userId, userId))
+      .all()
+      .then((rows) => rows.filter((r) => !r.used).sort((a, b) => b.createdAt - a.createdAt)[0]);
+
+    if (!row)              return res.status(400).json({ error: "no_pending_verification", message: "Nenhum código de verificação pendente." });
+    if (row.code !== code) return res.status(400).json({ error: "invalid_code", message: "Código incorrecto." });
+    if (row.expiresAt < Date.now()) return res.status(400).json({ error: "code_expired", message: "Código expirado. Solicita um novo." });
+
+    const now = Date.now();
+    await db.update(emailVerificationsTable).set({ used: 1 }).where(eq(emailVerificationsTable.id, row.id));
+    await db.update(usersTable).set({ emailVerified: 1, updatedAt: now }).where(eq(usersTable.id, userId));
+
+    return res.json({ ok: true, message: "Email verificado com sucesso." });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "internal" });
+  }
+});
+
+/**
+ * POST /api/auth/resend-verification
+ * Resend a new 6-digit code to the authenticated user's email
+ */
+router.post("/resend-verification", async (req: any, res: any) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+    const user = await db.select().from(usersTable).where(eq(usersTable.id, userId)).get();
+    if (!user) return res.status(404).json({ error: "user_not_found" });
+    if (user.emailVerified) return res.json({ ok: true, message: "Email já verificado." });
+
+    const now    = Date.now();
+    const code   = String(Math.floor(100000 + Math.random() * 900000));
+    const evId   = `ev_${now}_${randomBytes(4).toString("hex")}`;
+
+    await db.insert(emailVerificationsTable).values({
+      id: evId, userId, email: user.email ?? "", code,
+      expiresAt: now + VERIFY_TTL_MS, used: 0, createdAt: now,
+    });
+
+    const result = await sendEmailVerificationCode({ to: user.email ?? "", name: user.name ?? "utilizador", code });
+    if (!result.ok) {
+      req.log.warn({ reason: result.reason }, "resend-verification email failed");
+      return res.status(500).json({ error: "email_failed", message: "Não foi possível enviar o email. Tenta novamente." });
+    }
 
     return res.json({ ok: true });
   } catch (err) {

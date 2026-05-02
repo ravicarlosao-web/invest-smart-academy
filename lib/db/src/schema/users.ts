@@ -7,13 +7,14 @@ import { z } from "zod";
  * One row per registered account.
  */
 export const usersTable = sqliteTable("users", {
-  id:           text("id").primaryKey(),
-  name:         text("name"),
-  email:        text("email"),
-  passwordHash: text("password_hash"),
-  googleId:     text("google_id"),
-  createdAt:    integer("created_at").notNull(),
-  updatedAt:    integer("updated_at").notNull(),
+  id:            text("id").primaryKey(),
+  name:          text("name"),
+  email:         text("email"),
+  passwordHash:  text("password_hash"),
+  googleId:      text("google_id"),
+  emailVerified: integer("email_verified").notNull().default(0),
+  createdAt:     integer("created_at").notNull(),
+  updatedAt:     integer("updated_at").notNull(),
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
