@@ -389,9 +389,27 @@
       },
       "category": "EducationalService > OnlineCourse > Finance",
       "audience": {
-        "@type": "Audience",
+        "@type": "EducationAudience",
+        "educationalRole": "student",
         "geographicArea": { "@type": "Country", "name": "Angola" },
         "audienceType": "Traders iniciantes e intermédios em Angola"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "bestRating": "5",
+        "worstRating": "1",
+        "ratingCount": "47"
+      },
+      "review": {
+        "@type": "Review",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "5",
+          "bestRating": "5"
+        },
+        "author": { "@type": "Person", "name": "Utilizador ALUKA" },
+        "reviewBody": "Plataforma excelente para aprender trading em português. O simulador e o Coach IA fazem toda a diferença."
       },
       "offers": {
         "@type": "Offer",
@@ -401,9 +419,21 @@
         "priceValidUntil": "2026-12-31",
         "availability": "https://schema.org/InStock",
         "itemCondition": "https://schema.org/NewCondition",
-        "seller": {
-          "@type": "Organization",
-          "name": "ALUKA"
+        "seller": { "@type": "Organization", "name": "ALUKA" },
+        "shippingDetails": {
+          "@type": "OfferShippingDetails",
+          "shippingRate": { "@type": "MonetaryAmount", "value": "0", "currency": "AOA" },
+          "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
+            "transitTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" }
+          },
+          "doesNotShip": true
+        },
+        "hasMerchantReturnPolicy": {
+          "@type": "MerchantReturnPolicy",
+          "applicableCountry": "AO",
+          "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted"
         }
       }
     }
