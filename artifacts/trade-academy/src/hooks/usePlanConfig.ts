@@ -14,7 +14,7 @@ export function usePlanConfig() {
   useEffect(() => {
     if (_cache) { setConfig(_cache); return; }
     if (!_promise) {
-      _promise = api.planConfig().catch(() => DEFAULT);
+      _promise = api.public.getPlanConfig().catch(() => DEFAULT);
     }
     _promise.then((cfg) => { _cache = cfg; setConfig(cfg); });
   }, []);
