@@ -675,6 +675,8 @@ export default function Simular() {
   /* ── Feedback Inteligente ────────────────────────────── */
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
   const [exitFeedback, setExitFeedback]       = useState<TradeFeedback[] | null>(null);
+  const [entryFeedback, setEntryFeedback]     = useState<TradeFeedback[] | null>(null);
+  const entryFeedbackTimer = useRef<number | null>(null);
   const usedMargin = positions.reduce((sum, p) => sum + positionMargin(p), 0);
   const exposure = positions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
   const equityVal = cash + usedMargin + upnl;
@@ -1092,6 +1094,11 @@ export default function Simular() {
           feedbackEnabled={feedbackEnabled}
           candles={candles}
           equity={equityVal}
+          onEntryFeedback={(fb) => {
+            setEntryFeedback(fb);
+            if (entryFeedbackTimer.current) window.clearTimeout(entryFeedbackTimer.current);
+            entryFeedbackTimer.current = window.setTimeout(() => setEntryFeedback(null), 18_000);
+          }}
           onSubmitMarket={(order) => {
             if (cooldownActive) {
               toast.error("Trading bloqueado — aguarda o fim do cooldown.");
@@ -1326,7 +1333,7 @@ export default function Simular() {
     )}
 
     {/* ── Popup flutuante Aluka IA ─────────────────────── */}
-    {((exitFeedback && exitFeedback.length > 0) || exitAiAnalysis) && (
+    {((exitFeedback && exitFeedback.length > 0) || exitAiAnalysis || (entryFeedback && entryFeedback.length > 0)) && (
       <div
         className="fixed bottom-4 right-4 z-[9999] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-primary/40 bg-background shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300"
         style={{ maxHeight: "70vh" }}
@@ -1338,7 +1345,7 @@ export default function Simular() {
             <span className="text-sm font-bold text-primary tracking-wide">Aluka IA</span>
           </div>
           <button
-            onClick={() => { setExitFeedback(null); setExitAiAnalysis(null); }}
+            onClick={() => { setExitFeedback(null); setExitAiAnalysis(null); setEntryFeedback(null); }}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
             aria-label="Fechar análise"
           >
@@ -1348,6 +1355,17 @@ export default function Simular() {
 
         {/* Conteúdo com scroll */}
         <div className="overflow-y-auto p-4 space-y-3">
+          {entryFeedback && entryFeedback.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                Análise da entrada
+              </p>
+              {entryFeedback.map((fb, i) => (
+                <FeedbackCard key={i} item={fb} compact />
+              ))}
+            </div>
+          )}
+
           {exitFeedback && exitFeedback.length > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -1932,7 +1950,7 @@ function OrderPanel({
   cooldownActive, cooldownSecsLeft, cooldownReason,
   bustCooldownEnd, now,
   onSubmitMarket, onSubmitPending, onReset,
-  feedbackEnabled, candles, equity,
+  feedbackEnabled, candles, equity, onEntryFeedback,
 }: {
   symbol: string;
   lastPrice: number;
@@ -1951,6 +1969,7 @@ function OrderPanel({
   onReset: () => void;
   feedbackEnabled: boolean;
   candles: Candle[];
+  onEntryFeedback: (fb: TradeFeedback[]) => void;
   equity: number;
 }) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
@@ -1958,8 +1977,6 @@ function OrderPanel({
   const [orderType, setOrderType] = useState<OrderTypeUI>("market");
   const [triggerPrice, setTriggerPrice] = useState<string>("");
   const [note, setNote] = useState<string>("");
-  const [entryFeedback, setEntryFeedback] = useState<TradeFeedback[] | null>(null);
-  const entryFeedbackTimer = useRef<number | null>(null);
 
   const defaultSize = useMemo(() => {
     const target = cash * 0.02;
@@ -2042,9 +2059,7 @@ function OrderPanel({
           sizeNum, leverage, equity,
         );
         if (fb.length > 0) {
-          setEntryFeedback(fb);
-          if (entryFeedbackTimer.current) window.clearTimeout(entryFeedbackTimer.current);
-          entryFeedbackTimer.current = window.setTimeout(() => setEntryFeedback(null), 18_000);
+          onEntryFeedback(fb);
         }
       }
     } else {
@@ -2261,23 +2276,6 @@ function OrderPanel({
 
       {exceeds && <p className="text-center text-[11px] text-bear">Margem insuficiente. Reduza tamanho ou aumente alavancagem.</p>}
 
-      {/* ── Feedback de Entrada ── */}
-      {entryFeedback && entryFeedback.length > 0 && (
-        <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Brain className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[11px] font-bold text-primary uppercase tracking-wider">Análise da entrada</span>
-            </div>
-            <button onClick={() => setEntryFeedback(null)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-          {entryFeedback.map((fb, i) => (
-            <FeedbackCard key={i} item={fb} compact />
-          ))}
-        </div>
-      )}
 
       <div className="border-t border-border pt-2 space-y-1.5">
         {bustCooldownEnd != null && now < bustCooldownEnd ? (
