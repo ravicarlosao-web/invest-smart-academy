@@ -212,6 +212,21 @@ export const api = {
     saveGoogleOAuth: (cfg: { clientId?: string; clientSecret?: string; enabled?: boolean }) =>
       adminRequest<{ ok: boolean; configured: boolean; enabled: boolean }>("PUT", "/admin/google-oauth", cfg),
 
+    getCurriculumDb: () =>
+      adminRequest<unknown[]>("GET", "/admin/curriculum-db"),
+    createCurriculumLevel: (body: { title: string; subtitle: string; difficulty: string }) =>
+      adminRequest<{ ok: boolean }>("POST", "/admin/curriculum-db/levels", body),
+    updateCurriculumLevel: (id: number, body: { title?: string; subtitle?: string; difficulty?: string; sortOrder?: number }) =>
+      adminRequest<{ ok: boolean }>("PUT", `/admin/curriculum-db/levels/${id}`, body),
+    deleteCurriculumLevel: (id: number) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/curriculum-db/levels/${id}`),
+    createCurriculumLesson: (body: { levelId: number; title: string; summary: string; xp: number; content: unknown[]; questions: unknown[] }) =>
+      adminRequest<{ ok: boolean; id: string }>("POST", "/admin/curriculum-db/lessons", body),
+    updateCurriculumLesson: (id: string, body: { title?: string; summary?: string; xp?: number; content?: unknown[]; questions?: unknown[]; sortOrder?: number }) =>
+      adminRequest<{ ok: boolean }>("PUT", `/admin/curriculum-db/lessons/${id}`, body),
+    deleteCurriculumLesson: (id: string) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/curriculum-db/lessons/${id}`),
+
     finance: () =>
       adminRequest<{
         plan:    { priceAoa: number; planName: string };

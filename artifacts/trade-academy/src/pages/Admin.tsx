@@ -848,206 +848,400 @@ function UsersTab() {
  * ========================================================================= */
 type LessonOverride = { title?: string; summary?: string; xp?: number; hidden?: boolean; audioUrl?: string; audioEnabled?: boolean };
 
+type DbLesson = {
+  id: string; levelId: number; title: string; summary: string;
+  xp: number; content: unknown[]; questions: unknown[]; sortOrder: number;
+};
+type DbLevel = {
+  id: number; title: string; subtitle: string; difficulty: string; sortOrder: number;
+  lessons: DbLesson[];
+};
+type LessonDraft = {
+  id: string; levelId: number; title: string; summary: string; xp: number;
+  contentJson: string; questionsJson: string;
+  audioUrl: string; audioEnabled: boolean; hidden: boolean;
+};
+const DIFF_OPTIONS = [
+  { value: "iniciante",     label: "Iniciante" },
+  { value: "intermediario", label: "Intermediário" },
+  { value: "avancado",      label: "Avançado" },
+] as const;
+
 function CurriculumTab() {
-  const [overrides, setOverrides] = useState<Record<string, LessonOverride>>({});
-  const [loaded, setLoaded]       = useState(false);
-  const [saving, setSaving]       = useState(false);
-  const [filter, setFilter]       = useState("");
-  const [audioDurations, setAudioDurations] = useState<Record<string, { durationSec: number; estimatedSec: number }>>({});
-  const [audioUploading, setAudioUploading] = useState<Record<string, boolean>>({});
+  const [levels,    setLevels]   = useState<DbLevel[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, any>>({});
+  const [loaded,    setLoaded]   = useState(false);
+  const [expanded,  setExpanded] = useState<number | null>(null);
 
-  useEffect(() => {
-    api.admin.getCurriculumOverride()
-      .then((r) => { setOverrides((r.value?.lessons as Record<string, LessonOverride>) ?? {}); setLoaded(true); })
-      .catch(() => { toast.error("Erro ao carregar overrides"); setLoaded(true); });
-  }, []);
+  const [levelDialog,  setLevelDialog]  = useState(false);
+  const [levelIsNew,   setLevelIsNew]   = useState(true);
+  const [levelDraft,   setLevelDraft]   = useState({ id: 0, title: "", subtitle: "", difficulty: "iniciante" });
+  const [levelSaving,  setLevelSaving]  = useState(false);
 
-  function update(lessonId: string, patch: Partial<LessonOverride>) {
-    setOverrides((prev) => ({ ...prev, [lessonId]: { ...prev[lessonId], ...patch } }));
-  }
+  const [lessonDialog,  setLessonDialog]  = useState(false);
+  const [lessonIsNew,   setLessonIsNew]   = useState(true);
+  const [lessonDraft,   setLessonDraft]   = useState<LessonDraft>({ id: "", levelId: 0, title: "", summary: "", xp: 20, contentJson: "[]", questionsJson: "[]", audioUrl: "", audioEnabled: false, hidden: false });
+  const [lessonSaving,  setLessonSaving]  = useState(false);
+  const [audioUploading, setAudioUploading] = useState(false);
 
-  async function persist() {
-    setSaving(true);
+  async function loadData() {
     try {
-      const cleaned: Record<string, LessonOverride> = {};
-      for (const [id, o] of Object.entries(overrides)) {
-        if (Object.values(o).some((v) => v !== undefined && v !== "")) cleaned[id] = o;
-      }
-      await api.admin.saveCurriculumOverride({ lessons: cleaned });
-      setOverrides(cleaned);
-      toast.success("Trilha de aprendizado actualizada");
-    } catch { toast.error("Falha ao salvar"); }
-    finally { setSaving(false); }
+      const [data, ov] = await Promise.all([
+        api.admin.getCurriculumDb(),
+        api.admin.getCurriculumOverride(),
+      ]);
+      setOverrides((ov.value?.lessons as Record<string, any>) ?? {});
+      setLevels(data as DbLevel[]);
+      setLoaded(true);
+    } catch { toast.error("Erro ao carregar trilha"); setLoaded(true); }
   }
 
-  function handleAudioUpload(lessonId: string, estimatedSec: number, e: ChangeEvent<HTMLInputElement>) {
+  useEffect(() => { loadData(); }, []);
+
+  function openNewLevel() {
+    setLevelDraft({ id: 0, title: "", subtitle: "", difficulty: "iniciante" });
+    setLevelIsNew(true);
+    setLevelDialog(true);
+  }
+  function openEditLevel(lv: DbLevel) {
+    setLevelDraft({ id: lv.id, title: lv.title, subtitle: lv.subtitle, difficulty: lv.difficulty });
+    setLevelIsNew(false);
+    setLevelDialog(true);
+  }
+  async function saveLevel() {
+    if (!levelDraft.title.trim()) return;
+    setLevelSaving(true);
+    try {
+      if (levelIsNew) {
+        await api.admin.createCurriculumLevel({ title: levelDraft.title, subtitle: levelDraft.subtitle, difficulty: levelDraft.difficulty });
+        toast.success("Nível criado");
+      } else {
+        await api.admin.updateCurriculumLevel(levelDraft.id, { title: levelDraft.title, subtitle: levelDraft.subtitle, difficulty: levelDraft.difficulty });
+        toast.success("Nível actualizado");
+      }
+      await loadData();
+      setLevelDialog(false);
+    } catch { toast.error("Erro ao salvar nível"); }
+    finally { setLevelSaving(false); }
+  }
+  async function deleteLevel(id: number) {
+    if (!confirm("Apagar este nível e TODAS as suas lições? Esta acção é irreversível.")) return;
+    try {
+      await api.admin.deleteCurriculumLevel(id);
+      await loadData();
+      toast.success("Nível apagado");
+    } catch { toast.error("Erro ao apagar nível"); }
+  }
+
+  function openNewLesson(levelId: number) {
+    setLessonDraft({ id: "", levelId, title: "", summary: "", xp: 20, contentJson: "[]", questionsJson: "[]", audioUrl: "", audioEnabled: false, hidden: false });
+    setLessonIsNew(true);
+    setLessonDialog(true);
+  }
+  function openEditLesson(ls: DbLesson) {
+    const ov = overrides[ls.id] ?? {};
+    setLessonDraft({
+      id: ls.id, levelId: ls.levelId,
+      title: ls.title, summary: ls.summary, xp: ls.xp,
+      contentJson:   JSON.stringify(ls.content,   null, 2),
+      questionsJson: JSON.stringify(ls.questions, null, 2),
+      audioUrl:     ov.audioUrl     ?? "",
+      audioEnabled: ov.audioEnabled ?? false,
+      hidden:       ov.hidden       ?? false,
+    });
+    setLessonIsNew(false);
+    setLessonDialog(true);
+  }
+  async function saveLesson() {
+    if (!lessonDraft.title.trim()) return;
+    setLessonSaving(true);
+    try {
+      let content: unknown[] = [];
+      let questions: unknown[] = [];
+      try { content   = JSON.parse(lessonDraft.contentJson);   } catch { toast.error("Conteúdo JSON inválido"); setLessonSaving(false); return; }
+      try { questions = JSON.parse(lessonDraft.questionsJson); } catch { toast.error("Perguntas JSON inválido"); setLessonSaving(false); return; }
+
+      if (lessonIsNew) {
+        await api.admin.createCurriculumLesson({ levelId: lessonDraft.levelId, title: lessonDraft.title, summary: lessonDraft.summary, xp: lessonDraft.xp, content, questions });
+      } else {
+        await api.admin.updateCurriculumLesson(lessonDraft.id, { title: lessonDraft.title, summary: lessonDraft.summary, xp: lessonDraft.xp, content, questions });
+      }
+
+      if (!lessonIsNew) {
+        const newOverrides = { ...overrides };
+        const patch: Record<string, unknown> = {};
+        if (lessonDraft.audioUrl) { patch.audioUrl = lessonDraft.audioUrl; patch.audioEnabled = lessonDraft.audioEnabled; }
+        if (lessonDraft.hidden) patch.hidden = true;
+        if (Object.keys(patch).length > 0) newOverrides[lessonDraft.id] = patch;
+        else delete newOverrides[lessonDraft.id];
+        await api.admin.saveCurriculumOverride({ lessons: newOverrides });
+        setOverrides(newOverrides);
+      }
+
+      await loadData();
+      toast.success(lessonIsNew ? "Lição criada" : "Lição actualizada");
+      setLessonDialog(false);
+    } catch { toast.error("Erro ao salvar lição"); }
+    finally { setLessonSaving(false); }
+  }
+  async function deleteLesson(id: string) {
+    if (!confirm("Apagar esta lição?")) return;
+    try {
+      await api.admin.deleteCurriculumLesson(id);
+      const newOverrides = { ...overrides };
+      delete newOverrides[id];
+      await api.admin.saveCurriculumOverride({ lessons: newOverrides });
+      setOverrides(newOverrides);
+      await loadData();
+      toast.success("Lição apagada");
+    } catch { toast.error("Erro ao apagar lição"); }
+  }
+
+  function handleAudioUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Ficheiro demasiado grande. Máximo 5 MB.");
-      e.target.value = "";
-      return;
-    }
-    setAudioUploading((prev) => ({ ...prev, [lessonId]: true }));
+    if (file.size > 5 * 1024 * 1024) { toast.error("Ficheiro demasiado grande. Máximo 5 MB."); return; }
+    setAudioUploading(true);
     const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const audio = new Audio(dataUrl);
-      audio.addEventListener("loadedmetadata", () => {
-        const durationSec = Math.round(audio.duration);
-        setAudioDurations((prev) => ({ ...prev, [lessonId]: { durationSec, estimatedSec } }));
-        setAudioUploading((prev) => ({ ...prev, [lessonId]: false }));
-      });
-      audio.addEventListener("error", () => {
-        setAudioUploading((prev) => ({ ...prev, [lessonId]: false }));
-      });
-      update(lessonId, { audioUrl: dataUrl, audioEnabled: true });
-    };
+    reader.onload  = () => { setLessonDraft((d) => ({ ...d, audioUrl: reader.result as string, audioEnabled: true })); setAudioUploading(false); };
+    reader.onerror = () => setAudioUploading(false);
     reader.readAsDataURL(file);
     e.target.value = "";
   }
 
-  function removeAudio(lessonId: string) {
-    update(lessonId, { audioUrl: undefined, audioEnabled: undefined });
-    setAudioDurations((prev) => { const n = { ...prev }; delete n[lessonId]; return n; });
-  }
-
-  const allLessons = LEVELS.flatMap((lvl) =>
-    lvl.lessons.map((l) => ({ ...l, levelTitle: lvl.title, levelId: lvl.id })),
-  );
-  const filtered = filter
-    ? allLessons.filter((l) => l.title.toLowerCase().includes(filter.toLowerCase()) || l.id.includes(filter))
-    : allLessons;
+  const diffLabel = (d: string) => DIFF_OPTIONS.find((x) => x.value === d)?.label ?? d;
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Trilha de Aprendizado</h2>
-          <p className="text-sm text-muted-foreground">
-            Sobrescreve título, XP ou resumo de qualquer lição. Esconde lições sem apagar o código. Adiciona áudio por lição.
-          </p>
+          <p className="text-sm text-muted-foreground">Cria e edita níveis e lições directamente na base de dados.</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Input placeholder="Filtrar lições..." value={filter}
-            onChange={(e) => setFilter(e.target.value)} className="w-44" />
-          <Button onClick={persist} disabled={!loaded || saving}>
-            <Save className="mr-1.5 h-3.5 w-3.5" />
-            {saving ? "Salvando..." : "Salvar tudo"}
-          </Button>
-        </div>
+        <Button onClick={openNewLevel}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo Nível
+        </Button>
       </div>
 
       {!loaded && <p className="text-sm text-muted-foreground">A carregar...</p>}
-      <div className="space-y-2">
-        {loaded && filtered.map((l) => {
-          const o = overrides[l.id] ?? {};
-          const dirty = Object.keys(o).length > 0;
-          const estimatedSec = Math.max(60, Math.round(
-            (l.content ?? []).reduce((acc: number, c: any) => acc + (c.body?.split(/\s+/).length ?? 0), 0) / 3
-          ));
-          const dur = audioDurations[l.id];
-          const audioWarning = dur && dur.durationSec > dur.estimatedSec + 30;
-          return (
-            <Card key={l.id} className={cn("border-border/60", dirty && "border-primary/40 bg-primary/5")}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="font-mono text-[10px]">{l.id}</Badge>
-                    <span className="text-xs text-muted-foreground">Nível {l.levelId} · {l.levelTitle}</span>
-                    {o.hidden && <Badge variant="destructive" className="text-[10px]">Oculta</Badge>}
-                    {o.audioUrl && (
-                      <Badge className={cn("text-[10px]", o.audioEnabled ? "bg-emerald-500/20 text-emerald-600" : "bg-muted text-muted-foreground")}>
-                        <Headphones className="mr-1 h-2.5 w-2.5" />
-                        {o.audioEnabled ? "Áudio ativo" : "Áudio desativado"}
-                      </Badge>
-                    )}
-                    {dirty && <Badge className="text-[10px] bg-primary/20 text-primary">Modificada</Badge>}
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    setOverrides((prev) => { const n = { ...prev }; delete n[l.id]; return n; });
-                    setAudioDurations((prev) => { const n = { ...prev }; delete n[l.id]; return n; });
-                  }} disabled={!dirty}>Resetar</Button>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Título</Label>
-                    <Input value={o.title ?? ""} placeholder={l.title}
-                      onChange={(e) => update(l.id, { title: e.target.value || undefined })} />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">XP (padrão: {l.xp})</Label>
-                    <Input type="number" value={o.xp ?? ""} placeholder={String(l.xp)}
-                      onChange={(e) => update(l.id, { xp: e.target.value === "" ? undefined : Number(e.target.value) })} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs text-muted-foreground">Resumo</Label>
-                    <Textarea rows={2} value={o.summary ?? ""} placeholder={l.summary}
-                      onChange={(e) => update(l.id, { summary: e.target.value || undefined })} />
-                  </div>
 
-                  {/* ── Áudio ─────────────────────────────────────────────── */}
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Headphones className="h-3 w-3" /> Áudio da lição (mp3 / wav · máx. 5 MB)
+      <div className="space-y-3">
+        {loaded && levels.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="p-10 text-center text-muted-foreground">
+              <GraduationCap className="mx-auto h-10 w-10 mb-3 opacity-30" />
+              <p className="font-medium">Nenhum nível criado ainda.</p>
+              <p className="text-sm mt-1">Clica em "Novo Nível" para começar a construir a trilha.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {levels.map((lv) => (
+          <Card key={lv.id} className="border-border/60">
+            <div className="flex items-center gap-3 p-4">
+              <button
+                onClick={() => setExpanded(expanded === lv.id ? null : lv.id)}
+                className="flex flex-1 items-center gap-3 min-w-0 text-left"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-sm font-bold">
+                  {lv.id}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold">{lv.title}</span>
+                    <Badge variant="outline" className="text-[10px]">{diffLabel(lv.difficulty)}</Badge>
+                    <span className="text-xs text-muted-foreground">{lv.lessons.length} lição(ões)</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{lv.subtitle}</p>
+                </div>
+                {expanded === lv.id ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+              </button>
+              <div className="flex shrink-0 items-center gap-1 ml-2">
+                <Button size="sm" variant="outline" onClick={() => openNewLesson(lv.id)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Nova Lição
+                </Button>
+                <Button size="sm" variant="ghost" title="Editar nível" onClick={() => openEditLevel(lv)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" title="Apagar nível" onClick={() => deleteLevel(lv.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {expanded === lv.id && (
+              <div className="border-t border-border/40 px-4 pb-4 pt-3 space-y-1.5">
+                {lv.lessons.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-2 text-center">Nenhuma lição neste nível ainda. Clica em "Nova Lição".</p>
+                )}
+                {lv.lessons.map((ls) => {
+                  const ov = overrides[ls.id] ?? {};
+                  return (
+                    <div key={ls.id} className="flex items-center gap-2 rounded-lg border border-border/40 bg-surface-1/50 px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{ls.title}</span>
+                          <Badge variant="outline" className="text-[10px]">{ls.xp} XP</Badge>
+                          {ov.hidden    && <Badge variant="destructive" className="text-[10px]">Oculta</Badge>}
+                          {ov.audioUrl  && <Badge className="text-[10px] bg-emerald-500/20 text-emerald-600"><Headphones className="mr-1 h-2.5 w-2.5" />Áudio</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{ls.summary}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button size="sm" variant="ghost" title="Editar lição" onClick={() => openEditLesson(ls)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" title="Apagar lição" onClick={() => deleteLesson(ls.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      {/* ── Level dialog ──────────────────────────────────────────────────── */}
+      {levelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-md shadow-2xl">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{levelIsNew ? "Novo Nível" : "Editar Nível"}</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setLevelDialog(false)}><X className="h-4 w-4" /></Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Título</Label>
+                <Input value={levelDraft.title} onChange={(e) => setLevelDraft((d) => ({ ...d, title: e.target.value }))} placeholder="ex: Conceitos Básicos" />
+              </div>
+              <div>
+                <Label>Subtítulo</Label>
+                <Input value={levelDraft.subtitle} onChange={(e) => setLevelDraft((d) => ({ ...d, subtitle: e.target.value }))} placeholder="ex: Fundamentos do mercado financeiro" />
+              </div>
+              <div>
+                <Label>Dificuldade</Label>
+                <Select value={levelDraft.difficulty} onValueChange={(v) => setLevelDraft((d) => ({ ...d, difficulty: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DIFF_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <div className="flex justify-end gap-2 p-4 pt-0">
+              <Button variant="ghost" onClick={() => setLevelDialog(false)}>Cancelar</Button>
+              <Button onClick={saveLevel} disabled={levelSaving || !levelDraft.title.trim()}>
+                {levelSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                Salvar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Lesson dialog ─────────────────────────────────────────────────── */}
+      {lessonDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <CardHeader className="shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle>{lessonIsNew ? "Nova Lição" : "Editar Lição"}</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setLessonDialog(false)}><X className="h-4 w-4" /></Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 overflow-y-auto flex-1 pb-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label>Título</Label>
+                  <Input value={lessonDraft.title} onChange={(e) => setLessonDraft((d) => ({ ...d, title: e.target.value }))} placeholder="ex: O que é trading?" />
+                </div>
+                <div className="col-span-2">
+                  <Label>Resumo</Label>
+                  <Textarea rows={2} value={lessonDraft.summary} onChange={(e) => setLessonDraft((d) => ({ ...d, summary: e.target.value }))} placeholder="Breve descrição do que o aluno vai aprender" />
+                </div>
+                <div>
+                  <Label>XP</Label>
+                  <Input type="number" min={0} value={lessonDraft.xp} onChange={(e) => setLessonDraft((d) => ({ ...d, xp: Number(e.target.value) }))} />
+                </div>
+              </div>
+
+              <div>
+                <Label className="flex items-center justify-between mb-1">
+                  <span>Conteúdo (JSON)</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">tipos: text (title+body) · tip (body) · example (title+body)</span>
+                </Label>
+                <Textarea
+                  rows={8} className="font-mono text-xs"
+                  value={lessonDraft.contentJson}
+                  onChange={(e) => setLessonDraft((d) => ({ ...d, contentJson: e.target.value }))}
+                  placeholder={`[\n  { "type": "text", "title": "Título", "body": "Texto..." },\n  { "type": "tip", "body": "Dica..." },\n  { "type": "example", "title": "Exemplo", "body": "..." }\n]`}
+                />
+              </div>
+
+              <div>
+                <Label className="flex items-center justify-between mb-1">
+                  <span>Perguntas (JSON)</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">tipos: multiple · truefalse</span>
+                </Label>
+                <Textarea
+                  rows={8} className="font-mono text-xs"
+                  value={lessonDraft.questionsJson}
+                  onChange={(e) => setLessonDraft((d) => ({ ...d, questionsJson: e.target.value }))}
+                  placeholder={`[\n  {\n    "type": "multiple",\n    "prompt": "Pergunta?",\n    "options": ["A","B","C","D"],\n    "correctIndex": 0,\n    "explanation": "Porque..."\n  }\n]`}
+                />
+              </div>
+
+              {!lessonIsNew && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <Headphones className="h-3.5 w-3.5" /> Áudio (mp3/wav · máx. 5 MB)
                     </Label>
-                    {o.audioUrl ? (
+                    {lessonDraft.audioUrl ? (
                       <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-1 p-2">
                         <Volume2 className="h-4 w-4 text-primary shrink-0" />
-                        <audio src={o.audioUrl} controls className="h-8 flex-1 min-w-0" style={{ maxWidth: "100%" }} />
-                        <Button size="sm" variant="ghost" className="shrink-0 h-7 w-7 p-0" onClick={() => removeAudio(l.id)}>
+                        <audio src={lessonDraft.audioUrl} controls className="h-8 flex-1 min-w-0" />
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setLessonDraft((d) => ({ ...d, audioUrl: "", audioEnabled: false }))}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <label className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/60 p-3 transition-colors",
-                        audioUploading[l.id] ? "opacity-50 pointer-events-none" : "hover:border-primary/40 hover:bg-surface-2"
-                      )}>
-                        {audioUploading[l.id]
-                          ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          : <Upload className="h-4 w-4 text-muted-foreground" />}
-                        <span className="text-xs text-muted-foreground">
-                          {audioUploading[l.id] ? "A processar..." : "Clica para fazer upload"}
-                        </span>
-                        <input
-                          type="file"
-                          accept="audio/mp3,audio/wav,audio/mpeg,audio/*"
-                          className="hidden"
-                          onChange={(e) => handleAudioUpload(l.id, estimatedSec, e)}
-                        />
+                      <label className={cn("flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/60 p-3 transition-colors", audioUploading ? "opacity-50 pointer-events-none" : "hover:border-primary/40 hover:bg-surface-2")}>
+                        {audioUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
+                        <span className="text-xs text-muted-foreground">{audioUploading ? "A processar..." : "Clica para fazer upload de áudio"}</span>
+                        <input type="file" accept="audio/*" className="hidden" onChange={handleAudioUpload} />
                       </label>
                     )}
-                    {audioWarning && (
-                      <p className="flex items-start gap-1.5 text-xs text-amber-500">
-                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        O áudio ({Math.round((dur?.durationSec ?? 0) / 60)}m{((dur?.durationSec ?? 0) % 60).toString().padStart(2, "0")}s) é mais longo que o conteúdo escrito estimado (~{Math.round(estimatedSec / 60)}m). O áudio tem conteúdo adicional?
-                      </p>
-                    )}
-                    {o.audioUrl && (
-                      <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(o.audioEnabled)}
-                          onChange={(e) => update(l.id, { audioEnabled: e.target.checked || undefined })}
-                        />
+                    {lessonDraft.audioUrl && (
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input type="checkbox" checked={lessonDraft.audioEnabled} onChange={(e) => setLessonDraft((d) => ({ ...d, audioEnabled: e.target.checked }))} />
                         Mostrar player de áudio aos alunos
                       </label>
                     )}
                   </div>
-                  {/* ───────────────────────────────────────────────────────── */}
 
                   <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" checked={Boolean(o.hidden)}
-                      onChange={(e) => update(l.id, { hidden: e.target.checked || undefined })} />
+                    <input type="checkbox" checked={lessonDraft.hidden} onChange={(e) => setLessonDraft((d) => ({ ...d, hidden: e.target.checked }))} />
                     Ocultar esta lição para os alunos
                   </label>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </>
+              )}
+            </CardContent>
+            <div className="flex justify-end gap-2 p-4 pt-2 shrink-0 border-t border-border/40">
+              <Button variant="ghost" onClick={() => setLessonDialog(false)}>Cancelar</Button>
+              <Button onClick={saveLesson} disabled={lessonSaving || !lessonDraft.title.trim()}>
+                {lessonSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                Salvar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

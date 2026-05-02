@@ -357,6 +357,147 @@ router.put("/curriculum", async (req: any, res: any) => {
 });
 
 /* ---------------------------------------------------------------------------
+ * Curriculum DB — CRUD for levels and lessons
+ * ------------------------------------------------------------------------- */
+router.get("/curriculum-db", async (req: any, res: any) => {
+  try {
+    const levels  = await db.select().from(curriculumLevelsTable).orderBy(asc(curriculumLevelsTable.sortOrder)).all();
+    const lessons = await db.select().from(curriculumLessonsTable).orderBy(asc(curriculumLessonsTable.sortOrder)).all();
+    const result  = levels.map((lv: any) => ({
+      id:         lv.id,
+      title:      lv.title,
+      subtitle:   lv.subtitle,
+      difficulty: lv.difficulty,
+      sortOrder:  lv.sortOrder,
+      lessons: lessons
+        .filter((ls: any) => ls.levelId === lv.id)
+        .map((ls: any) => ({
+          id:        ls.id,
+          levelId:   ls.levelId,
+          title:     ls.title,
+          summary:   ls.summary,
+          xp:        ls.xp,
+          content:   (() => { try { return JSON.parse(ls.content); } catch { return []; } })(),
+          questions: (() => { try { return JSON.parse(ls.questions); } catch { return []; } })(),
+          sortOrder: ls.sortOrder,
+        })),
+    }));
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.post("/curriculum-db/levels", async (req: any, res: any) => {
+  try {
+    const { title, subtitle, difficulty } = req.body;
+    const now = Date.now();
+    const maxRow: any = await db.select({ m: sql`MAX(sort_order)` }).from(curriculumLevelsTable).get();
+    const nextOrder = ((maxRow?.m ?? 0) as number) + 1;
+    await db.insert(curriculumLevelsTable).values({
+      title:      String(title      ?? "Novo Nível"),
+      subtitle:   String(subtitle   ?? ""),
+      difficulty: String(difficulty ?? "iniciante"),
+      sortOrder:  nextOrder,
+      createdAt:  now,
+      updatedAt:  now,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/curriculum-db/levels/:id", async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, subtitle, difficulty, sortOrder } = req.body;
+    const patch: Record<string, any> = { updatedAt: Date.now() };
+    if (title      !== undefined) patch.title      = String(title);
+    if (subtitle   !== undefined) patch.subtitle   = String(subtitle);
+    if (difficulty !== undefined) patch.difficulty = String(difficulty);
+    if (sortOrder  !== undefined) patch.sortOrder  = Number(sortOrder);
+    await db.update(curriculumLevelsTable).set(patch).where(eq(curriculumLevelsTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.delete("/curriculum-db/levels/:id", async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    await db.delete(curriculumLessonsTable).where(eq(curriculumLessonsTable.levelId, id));
+    await db.delete(curriculumLevelsTable).where(eq(curriculumLevelsTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.post("/curriculum-db/lessons", async (req: any, res: any) => {
+  try {
+    const { levelId, title, summary, xp, content, questions } = req.body;
+    const now      = Date.now();
+    const lessonId = `${levelId}-${now}`;
+    const maxRow: any = await db.select({ m: sql`MAX(sort_order)` })
+      .from(curriculumLessonsTable)
+      .where(eq(curriculumLessonsTable.levelId, Number(levelId)))
+      .get();
+    const nextOrder = ((maxRow?.m ?? 0) as number) + 1;
+    await db.insert(curriculumLessonsTable).values({
+      id:        lessonId,
+      levelId:   Number(levelId),
+      title:     String(title   ?? "Nova Lição"),
+      summary:   String(summary ?? ""),
+      xp:        Number(xp      ?? 20),
+      content:   JSON.stringify(Array.isArray(content)   ? content   : []),
+      questions: JSON.stringify(Array.isArray(questions) ? questions : []),
+      sortOrder: nextOrder,
+      createdAt: now,
+      updatedAt: now,
+    });
+    res.json({ ok: true, id: lessonId });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/curriculum-db/lessons/:id", async (req: any, res: any) => {
+  try {
+    const { id }     = req.params;
+    const { title, summary, xp, content, questions, sortOrder } = req.body;
+    const patch: Record<string, any> = { updatedAt: Date.now() };
+    if (title     !== undefined) patch.title     = String(title);
+    if (summary   !== undefined) patch.summary   = String(summary);
+    if (xp        !== undefined) patch.xp        = Number(xp);
+    if (content   !== undefined) patch.content   = JSON.stringify(Array.isArray(content)   ? content   : []);
+    if (questions !== undefined) patch.questions  = JSON.stringify(Array.isArray(questions) ? questions : []);
+    if (sortOrder !== undefined) patch.sortOrder  = Number(sortOrder);
+    await db.update(curriculumLessonsTable).set(patch).where(eq(curriculumLessonsTable.id, String(id)));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.delete("/curriculum-db/lessons/:id", async (req: any, res: any) => {
+  try {
+    await db.delete(curriculumLessonsTable).where(eq(curriculumLessonsTable.id, String(req.params.id)));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
  * Strategies — read/write directly to strategiesTable
  * ------------------------------------------------------------------------- */
 router.get("/strategies", async (req: any, res: any) => {
