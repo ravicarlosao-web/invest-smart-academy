@@ -102,8 +102,8 @@ function Nav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/80 backdrop-blur-md border-b border-white/5">
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
-        <span className="font-bold text-white tracking-tight">TradeAcademy</span>
+        <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" />
+        <span className="font-bold text-white tracking-tight">ALUKA</span>
       </Link>
 
       <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -136,7 +136,7 @@ export default function Landing() {
   const [planName, setPlanName] = useState("Plano Mensal");
 
   useSEO({
-    title: "TradeAcademy Angola — Curso de Trading em Português | Grátis",
+    title: "ALUKA — Curso de Trading em Português | Grátis",
     description: "Aprende trading em Angola: 40+ aulas gratuitas, simulador com 5 tipos de gráfico, Coach IA por trade e vídeo aulas curadas. Nível Iniciante 100% gratuito, tudo em português.",
     canonical: "/",
   });
@@ -212,7 +212,7 @@ export default function Landing() {
             <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
             <div className="w-3 h-3 rounded-full bg-green-500/50" />
             <div className="flex-1 mx-4 bg-white/5 rounded px-3 py-0.5 text-xs text-gray-600">
-              tradeacademy.app/simulador
+              aluka.app/simulador
             </div>
           </div>
 
@@ -312,7 +312,7 @@ export default function Landing() {
             <span className="text-cyan-400">de trading em português.</span>
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed">
-            A TradeAcademy transforma a forma como os traders aprendem —
+            A ALUKA transforma a forma como os traders aprendem —
             com conteúdo estruturado, vídeos curados e prática real sem riscos financeiros.
           </p>
         </div>
@@ -781,8 +781,8 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-7 h-7 object-contain" />
-            <span className="font-bold text-white tracking-tight text-sm">TradeAcademy</span>
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-7 h-7 object-contain" />
+            <span className="font-bold text-white tracking-tight text-sm">ALUKA</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -797,7 +797,7 @@ export default function Landing() {
           </div>
 
           <p className="text-xs text-gray-600 text-center md:text-right">
-            © {new Date().getFullYear()} TradeAcademy ·{" "}
+            © {new Date().getFullYear()} ALUKA ·{" "}
             <Link to="/termos" className="hover:text-gray-400 transition-colors">Termos de Serviço</Link>
             {" · "}
             <Link to="/privacidade" className="hover:text-gray-400 transition-colors">Política de Privacidade</Link>

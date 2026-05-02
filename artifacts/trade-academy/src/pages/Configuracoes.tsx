@@ -310,7 +310,7 @@ export default function Configuracoes() {
 
       {/* ── Sobre ── */}
       <Section icon={Info} title="Sobre" accent="text-muted-foreground">
-        <SettingRow label="Versão" description="TradeAcademy Web Platform">
+        <SettingRow label="Versão" description="ALUKA Web Platform">
           <span className="text-xs font-mono bg-surface-2 px-2 py-0.5 rounded text-muted-foreground">
             v{VERSION}
           </span>

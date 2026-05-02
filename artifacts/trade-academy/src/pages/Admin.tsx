@@ -195,7 +195,7 @@ function OverviewTab() {
         <div>
           <h2 className="text-xl font-bold">Dashboard do Negócio</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Visão financeira e de crescimento do TradeAcademy · {fin?.plan.planName} · {fin ? fmtAoa(fin.plan.priceAoa) : "…"}/mês
+            Visão financeira e de crescimento do ALUKA · {fin?.plan.planName} · {fin ? fmtAoa(fin.plan.priceAoa) : "…"}/mês
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load}>
@@ -1457,7 +1457,7 @@ function StrategiesTab() {
  * Books tab
  * ========================================================================= */
 const BLANK_BOOK: Omit<BookMeta, "id"> = {
-  order: 99, title: "", author: "TradeAcademy", cover: "BookOpen",
+  order: 99, title: "", author: "ALUKA", cover: "BookOpen",
   category: "Geral", description: "", pages: 50, content: "",
 };
 
@@ -2751,7 +2751,7 @@ function SubscriptionsTab() {
  * Email Config tab
  * ========================================================================= */
 function EmailConfigTab() {
-  const [cfg, setCfg]         = useState({ apiKey: "", fromEmail: "", fromName: "TradeAcademy", adminEmail: "" });
+  const [cfg, setCfg]         = useState({ apiKey: "", fromEmail: "", fromName: "ALUKA", adminEmail: "" });
   const [status, setStatus]   = useState<{ configured: boolean; keySource: string } | null>(null);
   const [saving, setSaving]   = useState(false);
   const [testing, setTesting] = useState(false);
@@ -2860,7 +2860,7 @@ function EmailConfigTab() {
               <Label className="text-xs text-muted-foreground">Email remetente</Label>
               <Input
                 type="email"
-                placeholder="noreply@tradeacademy.ao"
+                placeholder="noreply@aluka.app"
                 value={cfg.fromEmail}
                 onChange={(e) => setCfg((p) => ({ ...p, fromEmail: e.target.value }))}
                 className="mt-1"
@@ -2870,7 +2870,7 @@ function EmailConfigTab() {
             <div>
               <Label className="text-xs text-muted-foreground">Nome remetente</Label>
               <Input
-                placeholder="TradeAcademy"
+                placeholder="ALUKA"
                 value={cfg.fromName}
                 onChange={(e) => setCfg((p) => ({ ...p, fromName: e.target.value }))}
                 className="mt-1"
@@ -2931,9 +2931,9 @@ function EmailConfigTab() {
  * SEO / Site Settings tab
  * ========================================================================= */
 const SEO_EMPTY: SeoConfig = {
-  siteName: "TradeAcademy Angola", shortName: "TradeAcademy", domain: "",
+  siteName: "ALUKA", shortName: "ALUKA", domain: "",
   description: "A primeira plataforma angolana de educação em trading.",
-  twitterHandle: "@TradeAcademyAO", themeColor: "#06b6d4", priceAoa: 5000,
+  twitterHandle: "@ALUKAAO", themeColor: "#06b6d4", priceAoa: 5000,
   geo: "AO", geoCity: "Luanda, Angola",
 };
 
@@ -3004,7 +3004,7 @@ function SeoSettingsTab() {
             <div>
               <Label className="text-xs text-muted-foreground">Nome completo</Label>
               <Input
-                placeholder="TradeAcademy Angola"
+                placeholder="ALUKA"
                 value={cfg.siteName}
                 onChange={(e) => set("siteName", e.target.value)}
                 className="mt-1"
@@ -3014,7 +3014,7 @@ function SeoSettingsTab() {
             <div>
               <Label className="text-xs text-muted-foreground">Nome curto (PWA)</Label>
               <Input
-                placeholder="TradeAcademy"
+                placeholder="ALUKA"
                 value={cfg.shortName}
                 onChange={(e) => set("shortName", e.target.value)}
                 className="mt-1"
@@ -3040,7 +3040,7 @@ function SeoSettingsTab() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Domínio</CardTitle>
           <CardDescription className="text-xs">
-            Sem "https://" — ex: <code className="bg-muted px-1 rounded">tradeacademy.ao</code>
+            Sem "https://" — ex: <code className="bg-muted px-1 rounded">aluka.app</code>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -3049,7 +3049,7 @@ function SeoSettingsTab() {
             <div className="flex items-center mt-1">
               <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 py-2 text-xs text-muted-foreground">https://</span>
               <Input
-                placeholder="tradeacademy.ao"
+                placeholder="aluka.app"
                 value={cfg.domain}
                 onChange={(e) => set("domain", e.target.value.replace(/^https?:\/\//, "").replace(/\/$/, ""))}
                 className="rounded-l-none font-mono text-sm"
@@ -3086,7 +3086,7 @@ function SeoSettingsTab() {
             <div>
               <Label className="text-xs text-muted-foreground">Twitter / X Handle</Label>
               <Input
-                placeholder="@TradeAcademyAO"
+                placeholder="@ALUKAAO"
                 value={cfg.twitterHandle}
                 onChange={(e) => set("twitterHandle", e.target.value)}
                 className="mt-1"
@@ -3402,7 +3402,7 @@ type NavId = (typeof NAV_ITEMS)[number]["id"];
  * Main Admin shell
  * ========================================================================= */
 export default function Admin() {
-  useSEO({ title: "Painel de Gestão — TradeAcademy", noindex: true });
+  useSEO({ title: "Painel de Gestão — ALUKA", noindex: true });
   const navigate                  = useNavigate();
   const { token, logout }         = useAdminStore();
   const [active, setActive]       = useState<NavId>("overview");
@@ -3438,12 +3438,12 @@ export default function Admin() {
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" />
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
               <div className="text-sm font-bold leading-none tracking-tight">Admin</div>
-              <div className="text-[10px] text-muted-foreground tracking-wide mt-0.5">TradeAcademy</div>
+              <div className="text-[10px] text-muted-foreground tracking-wide mt-0.5">ALUKA</div>
             </div>
           )}
           <button

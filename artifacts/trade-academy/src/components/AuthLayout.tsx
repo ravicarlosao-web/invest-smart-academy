@@ -89,8 +89,8 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 mb-auto">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-9 h-9 object-contain" />
-            <span className="font-bold text-lg tracking-tight">TradeAcademy</span>
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-9 h-9 object-contain" />
+            <span className="font-bold text-lg tracking-tight">ALUKA</span>
           </Link>
 
           {/* Center block */}
@@ -138,7 +138,7 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
 
           {/* Footer */}
           <p className="text-[11px] text-gray-600 mt-auto">
-            © {new Date().getFullYear()} TradeAcademy Angola · Educação financeira acessível
+            © {new Date().getFullYear()} ALUKA · Educação financeira acessível
           </p>
         </div>
       </div>
@@ -152,8 +152,8 @@ export default function AuthLayout({ children, panelTitle, panelBody }: AuthLayo
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 flex flex-col items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="TradeAcademy" className="w-10 h-10 object-contain" />
-            <span className="font-bold text-xl tracking-tight">TradeAcademy</span>
+            <img src="/logo-transparent.png" alt="ALUKA" className="w-10 h-10 object-contain" />
+            <span className="font-bold text-xl tracking-tight">ALUKA</span>
           </Link>
         </div>
 

@@ -18,7 +18,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-- **trade-academy** (`artifacts/trade-academy/`) — TradeAcademy frontend app. A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language.
+- **trade-academy** (`artifacts/trade-academy/`) — ALUKA frontend app (formerly TradeAcademy). A trading education platform with lessons, a market simulator (with $10,000 demo account), and a user profile. Built with React + Vite, react-router-dom, Tailwind v3, shadcn/ui, zustand for state, and lightweight-charts for price charts. Dark-themed. Portuguese language. Target market: Angola and Portuguese-speaking countries.
 - **api-server** (`artifacts/api-server/`) — Express 5 backend with full API: auth, progress, trades, notifications, duelos, subscriptions, admin.
 
 ## Content Management (Dedicated DB Tables)
@@ -96,12 +96,12 @@ Videos stored as JSON blob in `admin_settings` key `"content.videos"` via GET/PU
 **Admin panel** (`/ta-painel-gestao` → Vídeos tab):
 - Form fields: Criador, Título, Nível, Ordem, **Categoria** (Select), **Tags** (comma-separated Input), URL, Descrição
 - Filter bar above list: search input + category dropdown ("Todas as categorias")
-- Video list grouped by category with emoji icon headers
+- Video list grouped by category with Lucide icon headers
 
 **Student gallery** (`/video-aulas`):
 - Stats row: total videos / categories / creators
 - Search bar (filters by title, creator, description, tags)
-- Horizontal category pill tabs (scrollable, with emoji icons)
+- Horizontal category pill tabs (scrollable, with Lucide icons)
 - Creator chips (shown when ≥2 creators in current view)
 - Grouped display: by category (default) → by creator within category → by creator → flat search results
 - Video cards show level badge + category badge + tags

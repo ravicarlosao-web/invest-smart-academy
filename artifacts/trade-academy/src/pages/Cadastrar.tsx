@@ -102,8 +102,8 @@ function StepBar({ current }: { current: number }) {
 
 export default function Cadastrar() {
   useSEO({
-    title: "Criar Conta Grátis — TradeAcademy Angola",
-    description: "Regista-te gratuitamente no TradeAcademy e começa a aprender trading em Angola. Nível Iniciante 100% gratuito, sem cartão de crédito.",
+    title: "Criar Conta Grátis — ALUKA",
+    description: "Regista-te gratuitamente no ALUKA e começa a aprender trading em Angola. Nível Iniciante 100% gratuito, sem cartão de crédito.",
     canonical: "/cadastrar",
   });
   const navigate           = useNavigate();

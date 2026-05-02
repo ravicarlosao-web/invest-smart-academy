@@ -7,8 +7,8 @@ interface SEOOptions {
   canonical?: string;
 }
 
-const SITE_NAME = "TradeAcademy Angola";
-const BASE_URL = "https://tradeacademy.ao";
+const SITE_NAME = "ALUKA";
+const BASE_URL = "https://aluka.app";
 
 export function useSEO({ title, description, noindex = false, canonical }: SEOOptions) {
   useEffect(() => {
@@ -38,7 +38,7 @@ export function useSEO({ title, description, noindex = false, canonical }: SEOOp
     }
 
     return () => {
-      document.title = `${SITE_NAME} — Curso de Trading em Português | Grátis`;
+      document.title = `${SITE_NAME} — Aprende a investir sem arriscar dinheiro`;
       setMeta("name", "robots", "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1");
     };
   }, [title, description, noindex, canonical]);

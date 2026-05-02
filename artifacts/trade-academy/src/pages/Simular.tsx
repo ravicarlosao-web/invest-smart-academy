@@ -326,7 +326,7 @@ function CandleCountdown({ intervalSec }: { intervalSec: number }) {
 }
 
 export default function Simular() {
-  useSEO({ title: "Simulador de Trading — TradeAcademy", noindex: true });
+  useSEO({ title: "Simulador de Trading — ALUKA", noindex: true });
   const [symbol, setSymbol] = useState<string>("BTC/USD");
   const [tfIdx, setTfIdx] = useState(1); // default: 1m
   const meta = SYMBOL_MAP[symbol];

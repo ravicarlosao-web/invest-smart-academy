@@ -4,8 +4,8 @@ import { useSEO } from "@/hooks/useSEO";
 
 export default function Termos() {
   useSEO({
-    title: "Termos de Serviço — TradeAcademy Angola",
-    description: "Termos e condições de utilização da plataforma TradeAcademy Angola — plataforma de educação em trading e investimentos em português.",
+    title: "Termos de Serviço — ALUKA",
+    description: "Termos e condições de utilização da plataforma ALUKA — plataforma de educação em trading e investimentos em português.",
     canonical: "/termos",
   });
 
@@ -14,8 +14,8 @@ export default function Termos() {
       {/* Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#060709]/90 backdrop-blur-md border-b border-white/5">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo-transparent.png" alt="TradeAcademy" className="w-8 h-8 object-contain" />
-          <span className="font-bold text-white tracking-tight">TradeAcademy</span>
+          <img src="/logo-transparent.png" alt="ALUKA" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-white tracking-tight">ALUKA</span>
         </Link>
         <Link to="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Voltar
@@ -31,7 +31,7 @@ export default function Termos() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">1. Aceitação dos Termos</h2>
             <p>
-              Ao aceder ou utilizar a plataforma TradeAcademy ("Plataforma"), concordas com estes Termos de Serviço
+              Ao aceder ou utilizar a plataforma ALUKA ("Plataforma"), concordas com estes Termos de Serviço
               e com a nossa Política de Privacidade. Se não concordares com algum destes termos, não deves utilizar
               a Plataforma.
             </p>
@@ -40,7 +40,7 @@ export default function Termos() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">2. Descrição do Serviço</h2>
             <p>
-              A TradeAcademy é uma plataforma de educação em trading e investimentos. O serviço inclui aulas
+              A ALUKA é uma plataforma de educação em trading e investimentos. O serviço inclui aulas
               estruturadas, vídeo aulas curadas, um simulador de trading virtual, duelos entre utilizadores,
               biblioteca de livros, glossário e recursos complementares. Todo o conteúdo tem fins exclusivamente
               educativos e não constitui aconselhamento financeiro ou de investimento.
@@ -67,7 +67,7 @@ export default function Termos() {
             <h2 className="text-xl font-bold text-white mb-3">4. Conta de Utilizador</h2>
             <p>
               Ao registares-te, és responsável por manter a confidencialidade das tuas credenciais de acesso.
-              Não podes partilhar a tua conta com terceiros. A TradeAcademy reserva-se o direito de suspender
+              Não podes partilhar a tua conta com terceiros. A ALUKA reserva-se o direito de suspender
               ou eliminar contas que violem estes Termos.
             </p>
           </section>
@@ -87,7 +87,7 @@ export default function Termos() {
             <h2 className="text-xl font-bold text-white mb-3">6. Aviso de Risco</h2>
             <p>
               O trading e o investimento em mercados financeiros envolvem riscos significativos de perda de capital.
-              O conteúdo da TradeAcademy tem finalidade exclusivamente educativa. A TradeAcademy não garante
+              O conteúdo da ALUKA tem finalidade exclusivamente educativa. A ALUKA não garante
               resultados financeiros e não é responsável por decisões de investimento tomadas pelos utilizadores.
               O simulador usa dados fictícios e não reflecte necessariamente condições reais de mercado.
             </p>
@@ -97,7 +97,7 @@ export default function Termos() {
             <h2 className="text-xl font-bold text-white mb-3">7. Propriedade Intelectual</h2>
             <p>
               Todo o conteúdo da Plataforma — incluindo texto, gráficos, logótipos, ícones e software — é propriedade
-              da TradeAcademy ou dos seus licenciadores e está protegido pela legislação aplicável. É concedida ao
+              da ALUKA ou dos seus licenciadores e está protegido pela legislação aplicável. É concedida ao
               utilizador uma licença limitada, pessoal e intransmissível para acesso ao conteúdo para uso pessoal.
             </p>
           </section>
@@ -105,7 +105,7 @@ export default function Termos() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">8. Limitação de Responsabilidade</h2>
             <p>
-              Na máxima extensão permitida por lei, a TradeAcademy não é responsável por quaisquer danos directos,
+              Na máxima extensão permitida por lei, a ALUKA não é responsável por quaisquer danos directos,
               indirectos, incidentais ou consequentes resultantes do uso ou impossibilidade de uso da Plataforma.
             </p>
           </section>
@@ -113,7 +113,7 @@ export default function Termos() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">9. Alterações aos Termos</h2>
             <p>
-              A TradeAcademy pode actualizar estes Termos a qualquer momento. Alterações significativas serão
+              A ALUKA pode actualizar estes Termos a qualquer momento. Alterações significativas serão
               comunicadas através da Plataforma. O uso continuado após qualquer alteração constitui aceitação
               dos novos termos.
             </p>

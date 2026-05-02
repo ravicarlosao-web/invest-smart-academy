@@ -1,9 +1,9 @@
 {
-  "name": "TradeAcademy Angola",
-  "short_name": "TradeAcademy",
+  "name": "ALUKA",
+  "short_name": "ALUKA",
   "description": "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
   "start_url": "/",
-  "id": "https://tradeacademy.ao/",
+  "id": "https://aluka.app/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
@@ -31,7 +31,7 @@
       "sizes": "1200x630",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "TradeAcademy — Aprenda Trading"
+      "label": "ALUKA — Aprenda Trading"
     }
   ],
   "shortcuts": [

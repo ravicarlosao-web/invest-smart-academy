@@ -31,7 +31,7 @@ export default function AppLayout() {
   const { user, logout } = useAuthStore();
 
   const baseKey = "/" + (pathname.split("/")[1] ?? "");
-  const title = titles[baseKey] ?? titles[pathname] ?? "TradeAcademy";
+  const title = titles[baseKey] ?? titles[pathname] ?? "ALUKA";
 
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? "T";
 

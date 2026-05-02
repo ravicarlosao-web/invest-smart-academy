@@ -1,4 +1,4 @@
-# TradeAcademy Angola — robots.txt
+# ALUKA — robots.txt
 
 # ── Motores de busca tradicionais ────────────────────────────────────────────
 User-agent: Googlebot
@@ -125,4 +125,4 @@ Disallow: /financeiro
 Crawl-delay: 5
 
 # ── Sitemap ───────────────────────────────────────────────────────────────────
-Sitemap: https://tradeacademy.ao/sitemap.xml
+Sitemap: https://aluka.app/sitemap.xml

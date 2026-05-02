@@ -23,8 +23,8 @@ function GoogleIcon() {
 
 export default function Login() {
   useSEO({
-    title: "Entrar — TradeAcademy Angola",
-    description: "Inicia sessão no TradeAcademy Angola e continua a aprender trading em português.",
+    title: "Entrar — ALUKA",
+    description: "Inicia sessão no ALUKA e continua a aprender trading em português.",
     canonical: "/entrar",
   });
   const navigate  = useNavigate();

@@ -23,7 +23,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     id:       "fundamentos-mercado",
     order:    1,
     title:    "Fundamentos do Mercado Financeiro",
-    author:   "TradeAcademy",
+    author:   "ALUKA",
     cover:    "TrendingUp",
     category: "Iniciante",
     description:
@@ -131,7 +131,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     id:       "analise-tecnica",
     order:    2,
     title:    "Análise Técnica: O Guia Completo",
-    author:   "TradeAcademy",
+    author:   "ALUKA",
     cover:    "BarChart2",
     category: "Intermediário",
     description:
@@ -264,7 +264,7 @@ export const BOOKS_CATALOG: BookMeta[] = [
     id:       "gestao-portfolio",
     order:    3,
     title:    "Gestão de Portfólio e Capital",
-    author:   "TradeAcademy",
+    author:   "ALUKA",
     cover:    "Briefcase",
     category: "Avançado",
     description:

@@ -1,0 +1,80 @@
+Olá,
+
+Preciso que faças o rebranding completo da plataforma. O nome oficial passa a ser **ALUKA**. Abaixo tens tudo o que precisas de saber.
+
+---
+
+**REBRANDING: TradeAcademy → ALUKA**
+
+**O que muda**
+- O nome da plataforma passa de "TradeAcademy" para "ALUKA" em todo o sistema
+- Apenas o nome muda — a estrutura, funcionalidades e base de dados mantêm-se intactas
+
+**1. Substituições de nome obrigatórias**
+Substituir todas as ocorrências de "TradeAcademy" e "Trade Academy" por "ALUKA" em:
+- Títulos de páginas (`<title>`)
+- Textos visíveis na interface (headers, footers, botões, mensagens, emails automáticos)
+- Meta tags (title, description, og:title, og:description, og:site_name, twitter:title, twitter:description)
+- Ficheiros de configuração do projecto (ex: package.json, app name, environment variables)
+- Emails transaccionais (confirmação de registo, recuperação de password, confirmação de pagamento)
+- Notificações push (se existirem)
+- Nome do separador do browser (favicon title)
+- Mensagens de erro e popups do sistema
+
+---
+
+**2. SEO — deve ficar perfeito**
+
+O objectivo da plataforma é ser encontrada por pessoas lusófonas que querem aprender trading. O SEO deve reflectir isso.
+
+**Meta description da página principal:**
+> "ALUKA é a plataforma de educação em trading 100% em português. Aprende do zero ao avançado com aulas estruturadas, simulador com dinheiro virtual e Coach IA. Nível Iniciante grátis para sempre."
+
+**Meta keywords a incluir:**
+- aprender trading em português
+- plataforma de trading Angola
+- simulador de trading gratuito
+- educação financeira em português
+- trading para iniciantes
+- aprender a investir Angola
+- curso de trading em português
+- ALUKA trading
+
+**og:title:** `ALUKA — Aprende a investir sem arriscar dinheiro`
+**og:description:** `Plataforma de educação em trading 100% em português. Do zero ao avançado. Nível Iniciante sempre grátis.`
+**og:image:** usar o logo oficial do ALUKA
+
+**Twitter/X Card:**
+- twitter:title: `ALUKA — Educação em Trading em Português`
+- twitter:description: `Aprende trading do zero com aulas estruturadas, simulador real e Coach IA. Grátis para começar.`
+
+**Canonical URL:** garantir que está configurado correctamente para evitar conteúdo duplicado
+
+**Sitemap:** actualizar o sitemap.xml com o novo nome e garantir que está submetido no Google Search Console
+
+**robots.txt:** verificar se está configurado correctamente para indexação
+
+**Structured Data (Schema.org):** se ainda não existir, adicionar o schema de tipo `EducationalOrganization` com:
+```json
+{
+  "@type": "EducationalOrganization",
+  "name": "ALUKA",
+  "description": "Plataforma de educação em trading em português",
+  "url": "https://aluka.app",
+  "inLanguage": "pt"
+}
+```
+
+---
+
+**3. O que NÃO muda**
+- Estrutura da base de dados
+- Funcionalidades existentes
+- URLs internas (a não ser que contenham "tradeacademy" no path — nesse caso redirecionar com 301)
+- Lógica de negócio
+
+---
+
+**Resumo:** é um rebranding de nome, não uma reestruturação técnica. O foco é que o nome ALUKA apareça correctamente em toda a interface e que o SEO esteja optimizado para o público lusófono que quer aprender trading.
+
+Qualquer dúvida, fala comigo.
