@@ -2,7 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
-import { db, revokedTokensTable, eq } from "@workspace/db";
+import { db, revokedTokensTable, usersTable, eq } from "@workspace/db";
 
 const JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) {
@@ -66,6 +66,35 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 export function signToken(payload: Omit<JwtPayload, "jti">): string {
   const jti = randomUUID();
   return jwt.sign({ ...payload, jti }, JWT_SECRET!, { expiresIn: "7d" });
+}
+
+/**
+ * Middleware that blocks access when the authenticated user hasn't verified
+ * their email yet. Must run AFTER requireAuth (which sets req.userId).
+ * Returns 403 { error: "email_not_verified" } if emailVerified = 0 in DB.
+ */
+export async function requireEmailVerified(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const userId = req.userId;
+  if (!userId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  const row = await db
+    .select({ emailVerified: usersTable.emailVerified })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .get();
+
+  if (!row || !row.emailVerified) {
+    res.status(403).json({
+      error:   "email_not_verified",
+      message: "Verifica o teu email para poderes aceder a esta funcionalidade.",
+    });
+    return;
+  }
+
+  next();
 }
 
 /** Adds a JTI to the blocklist so the token is rejected on every subsequent request. */

@@ -38,10 +38,15 @@ export default function Login() {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
-    const result = await login(email, password);
+    const result = await login(email, password) as any;
     setLoading(false);
     if (result.ok) {
-      navigate("/dashboard");
+      // If email not yet verified, send user to the verification step
+      if (result.emailVerified === false) {
+        navigate("/cadastrar?verificar=1");
+      } else {
+        navigate("/dashboard");
+      }
     } else {
       toast.error(result.error ?? "Erro ao iniciar sessão.");
     }

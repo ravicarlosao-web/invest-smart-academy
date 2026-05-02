@@ -127,9 +127,10 @@ router.post("/login", validate(LoginBody), async (req: any, res: any) => {
     const token = signToken({ userId: row.id, email: row.email ?? "" });
 
     return res.json({
-      ok:   true,
+      ok:            true,
       token,
-      user: { id: row.id, name: row.name ?? "", email: row.email ?? "" },
+      user:          { id: row.id, name: row.name ?? "", email: row.email ?? "" },
+      emailVerified: !!row.emailVerified,
     });
   } catch (err) {
     req.log.error(err);

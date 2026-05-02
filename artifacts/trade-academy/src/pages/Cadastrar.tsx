@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSEO } from "@/hooks/useSEO";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Eye, EyeOff, Loader2, ChevronRight,
   Check, Rocket, ArrowLeft, User, Mail, Lock,
@@ -165,13 +165,16 @@ export default function Cadastrar() {
     description: "Regista-te gratuitamente no ALUKA e começa a aprender trading em Angola. Nível Iniciante 100% gratuito, sem cartão de crédito.",
     canonical: "/cadastrar",
   });
-  const navigate           = useNavigate();
-  const { register }       = useAuthStore();
+  const navigate            = useNavigate();
+  const [searchParams]      = useSearchParams();
+  const { register, setEmailVerified, user } = useAuthStore();
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
 
-  const [step,      setStep]      = useState(0);
+  // If redirected from login/AuthGuard because email not verified, start at step 1
+  const [step, setStep] = useState(() => searchParams.get("verificar") === "1" ? 1 : 0);
   const [name,      setName]      = useState("");
-  const [email,     setEmail]     = useState("");
+  // Pre-fill email from auth store when redirected for verification
+  const [email,     setEmail]     = useState(searchParams.get("verificar") === "1" ? (user?.email ?? "") : "");
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [showPw,    setShowPw]    = useState(false);
@@ -237,6 +240,7 @@ export default function Cadastrar() {
     setVerifying(true);
     try {
       await api.auth.verifyEmail(otp);
+      setEmailVerified();
       toast.success("Email verificado!");
       setStep(2);
     } catch (err: unknown) {

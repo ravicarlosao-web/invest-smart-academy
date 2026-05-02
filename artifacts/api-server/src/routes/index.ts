@@ -8,7 +8,7 @@ import notificationsRouter from "./notifications.js";
 import duelosRouter        from "./duelos.js";
 import adminRouter         from "./admin.js";
 import subscriptionsRouter from "./subscriptions.js";
-import { requireAuth }     from "../middlewares/auth.js";
+import { requireAuth, requireEmailVerified } from "../middlewares/auth.js";
 import {
   db, asc, desc, eq, and, gt, sql,
   glossaryTermsTable,
@@ -29,12 +29,12 @@ const router = Router();
 
 router.use(healthRouter);
 router.use("/auth",          authRouter);
-router.use("/progress",      requireAuth, progressRouter);
-router.use("/trades",        requireAuth, tradesRouter);
-router.use("/notifications", requireAuth, notificationsRouter);
-router.use("/duelos",        requireAuth, duelosRouter);
+router.use("/progress",      requireAuth, requireEmailVerified, progressRouter);
+router.use("/trades",        requireAuth, requireEmailVerified, tradesRouter);
+router.use("/notifications", requireAuth, requireEmailVerified, notificationsRouter);
+router.use("/duelos",        requireAuth, requireEmailVerified, duelosRouter);
 router.use("/admin",         adminRouter);
-router.use("/subscription",  requireAuth, subscriptionsRouter);
+router.use("/subscription",  requireAuth, requireEmailVerified, subscriptionsRouter);
 
 /* ── Public content routes — no auth required ─────────────────────────── */
 
@@ -448,7 +448,7 @@ async function checkAndIncrementAiUsage(userId: string): Promise<{ allowed: bool
 
 /* ── GET /ai/usage — estado de uso do utilizador ─────────────────────── */
 
-router.get("/ai/usage", requireAuth, async (req: any, res: any) => {
+router.get("/ai/usage", requireAuth, requireEmailVerified, async (req: any, res: any) => {
   try {
     const userId  = req.userId as string;
     const premium = await isUserPremium(userId);
@@ -465,7 +465,7 @@ router.get("/ai/usage", requireAuth, async (req: any, res: any) => {
 
 /* ── Aluka IA — análise de gráfico ─────────────────────────────────────── */
 
-router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
+router.post("/ai/chart-analysis", requireAuth, requireEmailVerified, async (req: any, res: any) => {
   try {
     const userId = req.userId as string;
     const limit  = await checkAndIncrementAiUsage(userId);
@@ -545,7 +545,7 @@ REGRAS:
 
 /* ── Aluka IA — feedback de trade ──────────────────────────────────────── */
 
-router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
+router.post("/ai/trade-feedback", requireAuth, requireEmailVerified, async (req: any, res: any) => {
   try {
     const userId = req.userId as string;
     const limit  = await checkAndIncrementAiUsage(userId);

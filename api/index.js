@@ -76984,6 +76984,22 @@ function signToken(payload) {
   const jti = (0, import_node_crypto2.randomUUID)();
   return import_jsonwebtoken.default.sign({ ...payload, jti }, JWT_SECRET, { expiresIn: "7d" });
 }
+async function requireEmailVerified(req, res, next) {
+  const userId = req.userId;
+  if (!userId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+  const row = await db.select({ emailVerified: usersTable.emailVerified }).from(usersTable).where(eq(usersTable.id, userId)).get();
+  if (!row || !row.emailVerified) {
+    res.status(403).json({
+      error: "email_not_verified",
+      message: "Verifica o teu email para poderes aceder a esta funcionalidade."
+    });
+    return;
+  }
+  next();
+}
 async function revokeToken(jti, expiresAt) {
   try {
     await db.insert(revokedTokensTable).values({
@@ -77274,7 +77290,8 @@ router2.post("/login", validate(LoginBody), async (req, res) => {
     return res.json({
       ok: true,
       token,
-      user: { id: row.id, name: row.name ?? "", email: row.email ?? "" }
+      user: { id: row.id, name: row.name ?? "", email: row.email ?? "" },
+      emailVerified: !!row.emailVerified
     });
   } catch (err) {
     req.log.error(err);
@@ -79287,12 +79304,12 @@ var subscriptions_default = router8;
 var router9 = (0, import_express9.Router)();
 router9.use(health_default);
 router9.use("/auth", auth_default);
-router9.use("/progress", requireAuth, progress_default);
-router9.use("/trades", requireAuth, trades_default);
-router9.use("/notifications", requireAuth, notifications_default);
-router9.use("/duelos", requireAuth, duelos_default);
+router9.use("/progress", requireAuth, requireEmailVerified, progress_default);
+router9.use("/trades", requireAuth, requireEmailVerified, trades_default);
+router9.use("/notifications", requireAuth, requireEmailVerified, notifications_default);
+router9.use("/duelos", requireAuth, requireEmailVerified, duelos_default);
 router9.use("/admin", admin_default);
-router9.use("/subscription", requireAuth, subscriptions_default);
+router9.use("/subscription", requireAuth, requireEmailVerified, subscriptions_default);
 router9.get("/videos", async (_req, res) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "content.videos")).get();
@@ -79651,7 +79668,7 @@ async function checkAndIncrementAiUsage(userId) {
   }
   return { allowed: true, isPremium: false, usageCount: count + 1 };
 }
-router9.get("/ai/usage", requireAuth, async (req, res) => {
+router9.get("/ai/usage", requireAuth, requireEmailVerified, async (req, res) => {
   try {
     const userId = req.userId;
     const premium = await isUserPremium(userId);
@@ -79665,7 +79682,7 @@ router9.get("/ai/usage", requireAuth, async (req, res) => {
     res.status(500).json({ error: "internal" });
   }
 });
-router9.post("/ai/chart-analysis", requireAuth, async (req, res) => {
+router9.post("/ai/chart-analysis", requireAuth, requireEmailVerified, async (req, res) => {
   try {
     const userId = req.userId;
     const limit = await checkAndIncrementAiUsage(userId);
@@ -79741,7 +79758,7 @@ REGRAS:
     res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
   }
 });
-router9.post("/ai/trade-feedback", requireAuth, async (req, res) => {
+router9.post("/ai/trade-feedback", requireAuth, requireEmailVerified, async (req, res) => {
   try {
     const userId = req.userId;
     const limit = await checkAndIncrementAiUsage(userId);

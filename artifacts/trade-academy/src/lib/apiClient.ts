@@ -27,6 +27,10 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    let errBody: Record<string, unknown> = {};
+    try { errBody = JSON.parse(text); } catch { /* not JSON */ }
+
     // Token expirado ou inválido → logout automático para limpar sessão
     if (res.status === 401 && extraHeaders?.["Authorization"]) {
       try {
@@ -34,12 +38,15 @@ async function request<T>(
         useAuthStore.getState().logout();
       } catch { /* ignorar */ }
     }
-    const text = await res.text().catch(() => res.statusText);
-    let body: Record<string, unknown> = {};
-    try { body = JSON.parse(text); } catch { /* not JSON */ }
+
+    // Email não verificado → evento global para o AuthGuard redirecionar
+    if (res.status === 403 && errBody["error"] === "email_not_verified") {
+      window.dispatchEvent(new CustomEvent("aluka:email_not_verified"));
+    }
+
     const err = new Error(`API ${method} ${path} → ${res.status}: ${text}`) as Error & { status: number; body: Record<string, unknown> };
     err.status = res.status;
-    err.body   = body;
+    err.body   = errBody;
     throw err;
   }
   return res.json() as Promise<T>;

@@ -14,13 +14,15 @@ export interface AuthUser {
 }
 
 interface AuthState {
-  user:  AuthUser | null;
-  token: string | null;
+  user:          AuthUser | null;
+  token:         string | null;
+  emailVerified: boolean;
 
-  register:     (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  login:        (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
-  setFromOAuth: (user: AuthUser, token: string)                 => void;
-  logout:       () => void;
+  register:        (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login:           (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
+  setFromOAuth:    (user: AuthUser, token: string)                 => void;
+  setEmailVerified: () => void;
+  logout:          () => void;
   isAuthenticated: () => boolean;
 }
 
@@ -31,8 +33,9 @@ function genId(): string {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user:  null,
-      token: null,
+      user:          null,
+      token:         null,
+      emailVerified: false,
 
       register: async (name, email, password) => {
         if (password.length < 6)
@@ -42,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const result = await api.auth.register({ id, name, email, password });
-          set({ user: result.user, token: result.token });
+          set({ user: result.user, token: result.token, emailVerified: false });
           return { ok: true };
         } catch (err: unknown) {
           const text = err instanceof Error ? err.message : "";
@@ -58,8 +61,8 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         try {
           const result = await api.auth.login({ email, password });
-          set({ user: result.user, token: result.token });
-          return { ok: true };
+          set({ user: result.user, token: result.token, emailVerified: !!result.emailVerified });
+          return { ok: true, emailVerified: !!result.emailVerified } as any;
         } catch (err: unknown) {
           const text = err instanceof Error ? err.message : "";
           let msg = "Erro ao iniciar sessão. Tenta novamente.";
@@ -71,12 +74,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      setFromOAuth: (user, token) => set({ user, token }),
+      setFromOAuth: (user, token) => set({ user, token, emailVerified: true }),
+
+      setEmailVerified: () => set({ emailVerified: true }),
 
       logout: () => {
-        // Fire-and-forget: revoke token server-side before clearing local state
         api.auth.logout().catch(() => {});
-        set({ user: null, token: null });
+        set({ user: null, token: null, emailVerified: false });
       },
 
       isAuthenticated: () => get().user !== null && get().token !== null,
