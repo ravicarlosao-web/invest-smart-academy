@@ -27,7 +27,7 @@ setInterval(() => {
 function buildCallbackUrl(req: any): string {
   const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0]?.trim() ?? req.protocol ?? "https";
   const host  = (req.headers["x-forwarded-host"] as string | undefined) ?? (req.headers["host"] as string) ?? "";
-  return `${proto}://${host}/api-server/api/auth/google/callback`;
+  return `${proto}://${host}/api/auth/google/callback`;
 }
 
 function frontendOrigin(req: any): string {

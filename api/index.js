@@ -65720,7 +65720,7 @@ setInterval(() => {
 function buildCallbackUrl(req) {
   const proto = req.headers["x-forwarded-proto"]?.split(",")[0]?.trim() ?? req.protocol ?? "https";
   const host = req.headers["x-forwarded-host"] ?? req.headers["host"] ?? "";
-  return `${proto}://${host}/api-server/api/auth/google/callback`;
+  return `${proto}://${host}/api/auth/google/callback`;
 }
 function frontendOrigin(req) {
   const proto = req.headers["x-forwarded-proto"]?.split(",")[0]?.trim() ?? req.protocol ?? "https";
