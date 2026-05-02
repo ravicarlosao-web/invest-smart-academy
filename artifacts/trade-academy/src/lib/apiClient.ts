@@ -89,6 +89,10 @@ export const api = {
       request<{ ok: boolean }>("POST", "/auth/reset-password", { token, newPassword }),
     googleStatus: () =>
       request<{ enabled: boolean; configured: boolean; callbackUrl: string }>("GET", "/auth/google/status"),
+    verifyEmail: (code: string) =>
+      authRequest<{ ok: boolean; message?: string }>("POST", "/auth/verify-email", { code }),
+    resendVerification: () =>
+      authRequest<{ ok: boolean }>("POST", "/auth/resend-verification", {}),
   },
 
   /* ---------- Progress ---------- */

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Eye, EyeOff, Loader2, ChevronRight,
   Check, Rocket, ArrowLeft, User, Mail, Lock,
-  BarChart2, Zap, Shield, Lightbulb, ArrowRight,
+  BarChart2, Zap, Shield, Lightbulb, RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Label }  from "@/components/ui/label";
 import { useAuthStore }  from "@/store/useAuthStore";
 import { useAppStore }   from "@/store/useAppStore";
 import { toast }         from "sonner";
+import { api }           from "@/lib/apiClient";
 import AuthLayout from "@/components/AuthLayout";
 
 function GoogleIcon() {
@@ -67,7 +69,8 @@ const INTERESTS = [
   { id: "fundamentos",  label: "Fundamental",           icon: "FileText",       color: "text-teal-400"   },
 ];
 
-const STEPS = ["Conta", "Nível", "Interesses", "Pronto"];
+// Steps: 0=Conta 1=Verificar 2=Nível 3=Interesses 4=Pronto
+const STEPS = ["Conta", "Email", "Nível", "Interesses", "Pronto"];
 
 function StepBar({ current }: { current: number }) {
   return (
@@ -99,6 +102,58 @@ function StepBar({ current }: { current: number }) {
   );
 }
 
+/** 6-box OTP input */
+function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const boxes = 6;
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const digits = value.padEnd(boxes, "").slice(0, boxes).split("");
+
+  function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const next = value.slice(0, i) + value.slice(i + 1);
+      onChange(next);
+      if (i > 0) inputRefs.current[i - 1]?.focus();
+    }
+  }
+
+  function handleChange(i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "").slice(-1);
+    if (!raw) return;
+    const next = value.slice(0, i) + raw + value.slice(i + 1);
+    onChange(next.slice(0, boxes));
+    if (i < boxes - 1) inputRefs.current[i + 1]?.focus();
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, boxes);
+    if (pasted) { onChange(pasted); e.preventDefault(); }
+  }
+
+  return (
+    <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={(el) => { inputRefs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={d.trim()}
+          disabled={disabled}
+          onChange={(e) => handleChange(i, e)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onFocus={(e) => e.target.select()}
+          className={`w-11 h-14 rounded-xl border text-center text-xl font-bold transition-all duration-150 bg-white/[0.04] text-white caret-transparent focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500/50 disabled:opacity-50 ${
+            d.trim() ? "border-cyan-500/60" : "border-white/10"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function Cadastrar() {
   useSEO({
     title: "Criar Conta Grátis — ALUKA",
@@ -118,6 +173,12 @@ export default function Cadastrar() {
   const [loading,   setLoading]   = useState(false);
   const [level,     setLevel]     = useState<string | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
+
+  // Email verification state
+  const [otp,         setOtp]         = useState("");
+  const [verifying,   setVerifying]   = useState(false);
+  const [resending,   setResending]   = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const handleGoogleSignUp = () => {
     window.location.href = "/api/auth/google";
@@ -139,7 +200,61 @@ export default function Cadastrar() {
     setLoading(true);
     const result = await register(name, email, password);
     setLoading(false);
-    if (result.ok) { setStep(1); } else { toast.error(result.error ?? "Erro ao criar conta."); }
+    if (result.ok) {
+      setStep(1);
+      startResendCooldown();
+    } else {
+      toast.error(result.error ?? "Erro ao criar conta.");
+    }
+  }
+
+  function startResendCooldown(seconds = 60) {
+    setResendCooldown(seconds);
+  }
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  async function handleVerifyEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (otp.length < 6) { toast.error("Introduz o código de 6 dígitos."); return; }
+    setVerifying(true);
+    try {
+      await api.auth.verifyEmail(otp);
+      toast.success("Email verificado!");
+      setStep(2);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("code_expired"))          toast.error("Código expirado. Solicita um novo.");
+      else if (msg.includes("invalid_code"))     toast.error("Código incorrecto. Tenta novamente.");
+      else if (msg.includes("no_pending"))       toast.error("Nenhum código pendente. Solicita um novo.");
+      else                                       toast.error("Erro ao verificar. Tenta novamente.");
+      setOtp("");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendCooldown > 0) return;
+    setResending(true);
+    try {
+      await api.auth.resendVerification();
+      toast.success("Novo código enviado para " + email);
+      setOtp("");
+      startResendCooldown(60);
+    } catch {
+      toast.error("Não foi possível enviar o código. Tenta novamente.");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  function handleSkipVerification() {
+    setStep(2);
   }
 
   function handleFinish() {
@@ -149,22 +264,6 @@ export default function Cadastrar() {
   }
 
   const selectedLevelData = LEVELS.find((l) => l.id === level);
-
-  const panelsByStep = [
-    { title: undefined, body: undefined },
-    {
-      title: <>"Qual é o<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">teu nível?</span></>,
-      body: "Personalizamos o percurso de aprendizagem ao teu perfil — do básico ao avançado.",
-    },
-    {
-      title: <>"O que queres<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">aprender?</span></>,
-      body: "Selecciona os temas que mais te interessam. Podes alterar as preferências a qualquer momento.",
-    },
-    {
-      title: <>"Pronto para<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">começar!</span></>,
-      body: "O teu perfil está configurado. Clica em 'Começar' para aceder ao teu dashboard.",
-    },
-  ];
 
   return (
     <AuthLayout>
@@ -180,7 +279,6 @@ export default function Cadastrar() {
             </p>
           </div>
 
-          {/* Google button */}
           <button
             type="button"
             onClick={handleGoogleSignUp}
@@ -190,7 +288,6 @@ export default function Cadastrar() {
             Registar com Google
           </button>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-white/[0.07]" />
             <span className="text-xs text-gray-600">ou com e-mail e password</span>
@@ -198,7 +295,6 @@ export default function Cadastrar() {
           </div>
 
           <form onSubmit={handleCreateAccount} className="flex flex-col gap-4">
-            {/* Nome */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-gray-300 text-sm font-medium">Nome completo</Label>
               <div className="relative">
@@ -214,7 +310,6 @@ export default function Cadastrar() {
               </div>
             </div>
 
-            {/* Email */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-gray-300 text-sm font-medium">E-mail</Label>
               <div className="relative">
@@ -230,7 +325,6 @@ export default function Cadastrar() {
               </div>
             </div>
 
-            {/* Password */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-gray-300 text-sm font-medium">Password</Label>
               <div className="relative">
@@ -265,7 +359,6 @@ export default function Cadastrar() {
               )}
             </div>
 
-            {/* Confirmar */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-gray-300 text-sm font-medium">Confirmar password</Label>
               <div className="relative">
@@ -302,7 +395,6 @@ export default function Cadastrar() {
             </Button>
           </form>
 
-          {/* Benefits */}
           <div className="mt-5 flex flex-col gap-2">
             {[
               { icon: BarChart2, text: "40+ aulas do básico ao avançado" },
@@ -325,11 +417,65 @@ export default function Cadastrar() {
         </div>
       )}
 
-      {/* ── STEP 1: Nível ── */}
+      {/* ── STEP 1: Verificação de email ── */}
       {step === 1 && (
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
+            <ShieldCheck className="h-7 w-7 text-cyan-400" />
+          </div>
+
+          <h2 className="text-2xl font-extrabold mb-1">Verifica o teu email</h2>
+          <p className="text-gray-400 text-sm mb-2 max-w-xs">
+            Enviámos um código de 6 dígitos para{" "}
+            <span className="text-white font-medium">{email}</span>.
+          </p>
+          <p className="text-gray-600 text-xs mb-7">Verifica também a pasta de spam.</p>
+
+          <form onSubmit={handleVerifyEmail} className="w-full flex flex-col items-center gap-5">
+            <OtpInput value={otp} onChange={setOtp} disabled={verifying} />
+
+            <Button
+              type="submit"
+              disabled={verifying || otp.length < 6}
+              className="h-11 rounded-xl w-full font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-2"
+            >
+              {verifying
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> A verificar…</>
+                : <><ShieldCheck className="w-4 h-4" /> Verificar email</>
+              }
+            </Button>
+          </form>
+
+          <div className="mt-4 flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending || resendCooldown > 0}
+              className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`} />
+              {resendCooldown > 0
+                ? `Reenviar em ${resendCooldown}s`
+                : resending ? "A enviar…" : "Reenviar código"
+              }
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSkipVerification}
+            className="mt-5 text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
+          >
+            Verificar mais tarde
+          </button>
+        </div>
+      )}
+
+      {/* ── STEP 2: Nível ── */}
+      {step === 2 && (
         <div>
           <button
-            onClick={() => setStep(0)}
+            onClick={() => setStep(1)}
             className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm mb-5 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar
@@ -367,7 +513,7 @@ export default function Cadastrar() {
 
           <Button
             disabled={!level}
-            onClick={() => setStep(2)}
+            onClick={() => setStep(3)}
             className="h-11 rounded-xl w-full font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-2"
           >
             Continuar <ChevronRight className="w-4 h-4" />
@@ -375,11 +521,11 @@ export default function Cadastrar() {
         </div>
       )}
 
-      {/* ── STEP 2: Interesses ── */}
-      {step === 2 && (
+      {/* ── STEP 3: Interesses ── */}
+      {step === 3 && (
         <div>
           <button
-            onClick={() => setStep(1)}
+            onClick={() => setStep(2)}
             className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm mb-5 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar
@@ -413,7 +559,7 @@ export default function Cadastrar() {
           )}
 
           <Button
-            onClick={() => setStep(3)}
+            onClick={() => setStep(4)}
             className="h-11 rounded-xl w-full font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-2"
           >
             Continuar <ChevronRight className="w-4 h-4" />
@@ -421,8 +567,8 @@ export default function Cadastrar() {
         </div>
       )}
 
-      {/* ── STEP 3: Tudo pronto ── */}
-      {step === 3 && (
+      {/* ── STEP 4: Tudo pronto ── */}
+      {step === 4 && (
         <div className="text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 mx-auto mb-4 shadow-lg shadow-cyan-500/25">
             <Rocket className="h-8 w-8 text-white" />
