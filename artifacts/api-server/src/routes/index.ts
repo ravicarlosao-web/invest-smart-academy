@@ -450,7 +450,7 @@ async function checkAndIncrementAiUsage(userId: string): Promise<{ allowed: bool
 
 router.get("/ai/usage", requireAuth, async (req: any, res: any) => {
   try {
-    const userId  = req.user?.id;
+    const userId  = req.userId as string;
     const premium = await isUserPremium(userId);
     const usage   = await getUserAiUsage(userId);
     res.json({
@@ -467,7 +467,7 @@ router.get("/ai/usage", requireAuth, async (req: any, res: any) => {
 
 router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.userId as string;
     const limit  = await checkAndIncrementAiUsage(userId);
     if (!limit.allowed) {
       return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
@@ -522,7 +522,7 @@ router.post("/ai/chart-analysis", requireAuth, async (req: any, res: any) => {
 
 router.post("/ai/trade-feedback", requireAuth, async (req: any, res: any) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.userId as string;
     const limit  = await checkAndIncrementAiUsage(userId);
     if (!limit.allowed) {
       return res.status(403).json({ error: "ai_limit_exceeded", message: "Limite gratuito atingido. Torna-te Premium para acesso ilimitado." });
