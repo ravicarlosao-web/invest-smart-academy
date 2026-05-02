@@ -15,6 +15,9 @@ function GoogleLogo({ size = 48 }: { size?: number }) {
   );
 }
 
+const API_BASE: string = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const GOOGLE_AUTH_URL = `${API_BASE}/auth/google`;
+
 type State = "loading" | "redirecting" | "disabled" | "error";
 
 export default function GoogleAuth() {
@@ -40,7 +43,7 @@ export default function GoogleAuth() {
         setState("redirecting");
         setTimeout(() => {
           if (!cancelled) {
-            window.location.href = "/api-server/api/auth/google";
+            window.location.href = GOOGLE_AUTH_URL;
           }
         }, 800);
       } catch {
