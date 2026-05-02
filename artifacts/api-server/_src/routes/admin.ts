@@ -29,6 +29,7 @@ const router = Router();
 import { createHash } from "node:crypto";
 import { AdminLoginBody, AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
 import { sendSubscriptionApprovalEmail, sendSubscriptionRejectionEmail, sendTestEmail } from "../lib/email.js";
+import { addBusinessDays } from "../lib/receiptPurge.js";
 import { validate } from "../middlewares/validate.js";
 
 function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
@@ -865,17 +866,19 @@ router.get("/subscriptions/stats", async (req: any, res: any) => {
 /** PATCH /api/admin/subscriptions/:id/approve — aprova e ativa por 30 dias */
 router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
   try {
-    const now       = Date.now();
-    const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
+    const now             = Date.now();
+    const expiresAt       = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
+    const receiptPurgeAt  = addBusinessDays(now, 2);          // comprovativo eliminado após 2 dias úteis
 
     const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
     await db.update(subscriptionsTable).set({
-      status:     "active",
-      approvedAt: now,
+      status:          "active",
+      approvedAt:      now,
       expiresAt,
-      updatedAt:  now,
+      receiptPurgeAt,
+      updatedAt:       now,
     }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
     /* Notificação in-app para o aluno */
@@ -907,15 +910,17 @@ router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
 router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req: any, res: any) => {
   try {
     const { notes } = req.body;
-    const now = Date.now();
+    const now            = Date.now();
+    const receiptPurgeAt = addBusinessDays(now, 2); // comprovativo eliminado após 2 dias úteis
 
     const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
     await db.update(subscriptionsTable).set({
-      status:    "rejected",
-      notes:     notes ?? null,
-      updatedAt: now,
+      status:          "rejected",
+      notes:           notes ?? null,
+      receiptPurgeAt,
+      updatedAt:       now,
     }).where(eq(subscriptionsTable.id, String(req.params.id)));
 
     /* Notificação in-app para o aluno */

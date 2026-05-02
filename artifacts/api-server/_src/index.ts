@@ -4,6 +4,7 @@ import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
 import { seedContent } from "./seed.js";
 import { startSubscriptionExpiryJob } from "./lib/subscriptionExpiry.js";
+import { startReceiptPurgeJob } from "./lib/receiptPurge.js";
 
 const rawPort = process.env["PORT"];
 
@@ -37,6 +38,9 @@ try {
 
 /* Start background job — expires overdue active subscriptions every 5 min */
 startSubscriptionExpiryJob();
+
+/* Start background job — purges receipt data 2 business days after decision */
+startReceiptPurgeJob();
 
 app.listen(port, (err: any) => {
   if (err) {
