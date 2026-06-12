@@ -78,7 +78,11 @@ app.use(
       // Previews:   aluka-<hash>.vercel.app
       if (origin.startsWith("https://aluka") && origin.endsWith(".vercel.app")) return cb(null, true);
       // Allow all Replit dev/preview domains (frontend and API run on different subdomains)
-      if (origin.endsWith(".replit.dev") || origin.endsWith(".repl.co")) return cb(null, true);
+      // Parse hostname to strip any explicit port (e.g. origin may be https://foo.replit.dev:3001)
+      try {
+        const hostname = new URL(origin).hostname;
+        if (hostname.endsWith(".replit.dev") || hostname.endsWith(".repl.co")) return cb(null, true);
+      } catch { /* invalid URL — fall through to deny */ }
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
