@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -49,7 +49,7 @@ args = "PORT=22180 BASE_PATH=/ pnpm --filter @workspace/trade-academy run dev"
 waitForPort = 22180
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
@@ -63,3 +63,6 @@ externalPort = 80
 [[ports]]
 localPort = 22180
 externalPort = 3001
+
+[nix]
+channel = "stable-25_05"
