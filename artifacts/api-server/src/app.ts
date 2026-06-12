@@ -77,6 +77,8 @@ app.use(
       // Production: aluka.vercel.app (already in allowedOrigins above)
       // Previews:   aluka-<hash>.vercel.app
       if (origin.startsWith("https://aluka") && origin.endsWith(".vercel.app")) return cb(null, true);
+      // Allow all Replit dev/preview domains (frontend and API run on different subdomains)
+      if (origin.endsWith(".replit.dev") || origin.endsWith(".repl.co")) return cb(null, true);
       cb(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
