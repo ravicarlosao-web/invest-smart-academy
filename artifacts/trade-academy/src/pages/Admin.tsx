@@ -1079,7 +1079,7 @@ const DIFF_OPTIONS = [
   { value: "avancado",      label: "Avançado" },
 ] as const;
 
-function CurriculumTab() {
+export function CurriculumTab() {
   const [levels,    setLevels]   = useState<DbLevel[]>([]);
   const [overrides, setOverrides] = useState<Record<string, any>>({});
   const [loaded,    setLoaded]   = useState(false);
@@ -1473,7 +1473,7 @@ const BLANK_STRATEGY: Omit<Strategy, "id"> = {
   example: "", tags: [],
 };
 
-function StrategiesTab() {
+export function StrategiesTab() {
   const [extra, setExtra]     = useState<Strategy[]>([]);
   const [loaded, setLoaded]   = useState(false);
   const [editing, setEditing] = useState<Strategy | null>(null);
@@ -1673,7 +1673,7 @@ const BLANK_BOOK: Omit<BookMeta, "id"> = {
   category: "Geral", description: "", pages: 50, content: "",
 };
 
-function BooksTab() {
+export function BooksTab() {
   const [extra, setExtra]     = useState<BookMeta[]>([]);
   const [loaded, setLoaded]   = useState(false);
   const [editing, setEditing] = useState<BookMeta | null>(null);
@@ -1815,7 +1815,7 @@ const GLOSSARY_CATS: GlossaryCategory[] = [
 
 const BLANK_TERM: GlossaryTerm = { term: "", definition: "", category: "Geral" };
 
-function GlossaryTab() {
+export function GlossaryTab() {
   const [extra, setExtra]     = useState<GlossaryTerm[]>([]);
   const [loaded, setLoaded]   = useState(false);
   const [editing, setEditing] = useState<(GlossaryTerm & { _idx?: number }) | null>(null);
@@ -2004,7 +2004,7 @@ const BLANK_RESOURCE: Omit<AdminResource, "id"> = {
   sectionId: "other", name: "", description: "", url: "", badge: "", stars: 4, tags: [],
 };
 
-function ResourcesTab() {
+export function ResourcesTab() {
   const [extra, setExtra]     = useState<AdminResource[]>([]);
   const [loaded, setLoaded]   = useState(false);
   const [editing, setEditing] = useState<AdminResource | null>(null);
@@ -2267,7 +2267,7 @@ const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
   videoUrl: "", description: "", requiredXp: undefined, order: 99, duration: "",
 };
 
-function VideosTab() {
+export function VideosTab() {
   const [videos, setVideos]   = useState<VideoLesson[]>([]);
   const [loaded, setLoaded]   = useState(false);
   const [editing, setEditing] = useState<VideoLesson | null>(null);

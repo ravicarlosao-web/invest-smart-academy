@@ -61,7 +61,8 @@ Plataforma de educação em trading de língua portuguesa.
 ### Gestão interna (área restrita)
 | Rota | Descrição |
 |------|-----------|
-| `/ta-painel-gestao` | **Painel admin** — mostra login de e-mail+password quando não autenticado; após login com conta `administrador`/`professor`/`master`, mostra o painel de gestão |
+| `/ta-painel-gestao` | **Painel admin** — mostra login de e-mail+password quando não autenticado; após login com conta `administrador`/`master`, mostra o painel completo de gestão |
+| `/professor/painel` | **Painel do professor** — login inline para contas `professor`/`master`/`administrador`; mostra só as áreas de conteúdo (curriculum, vídeos, estratégias, livros, glossário, recursos) |
 | `/master/entrar` | Login da conta Master |
 | `/master/painel` | Painel Master (só role `master`) |
 
@@ -76,7 +77,7 @@ Plataforma de educação em trading de língua portuguesa.
 
 ### Sistema actual (JWT-only)
 1. O **Master** cria contas de administrador/professor em `/master/painel` → aba Equipa → "Criar conta"
-2. O admin/professor acede a `/ta-painel-gestao` com as suas credenciais de e-mail e password
+2. O admin acede a `/ta-painel-gestao` e o professor acede a `/professor/painel` com as suas credenciais de e-mail e password
 3. O backend verifica o JWT via `requireAuth` (assinatura + lista de revogação) + `requireRole` — não confia em nada vindo do frontend
 4. Não existe senha partilhada nem header `x-admin-token`
 

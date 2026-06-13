@@ -25,7 +25,8 @@ const NotFound             = lazy(() => import("./pages/NotFound"));
 // Painel admin — lazy
 const Admin        = lazy(() => import("./pages/Admin"));
 const MasterLogin  = lazy(() => import("./pages/MasterLogin"));
-const MasterPanel  = lazy(() => import("./pages/MasterPanel"));
+const MasterPanel      = lazy(() => import("./pages/MasterPanel"));
+const ProfessorPanel   = lazy(() => import("./pages/ProfessorPanel"));
 
 // Páginas autenticadas — todas lazy (só carregam após login)
 const Dashboard    = lazy(() => import("./pages/Dashboard"));
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/master/entrar"    element={<MasterLogin />} />
             <Route path="/master/painel"    element={<MasterPanel />} />
             <Route path="/ta-painel-gestao" element={<Admin />} />
+            <Route path="/professor/painel" element={<ProfessorPanel />} />
 
             {/* ── Páginas protegidas (requerem login) ──────────── */}
             <Route element={<AuthGuard />}>
