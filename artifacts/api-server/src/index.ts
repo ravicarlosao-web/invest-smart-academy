@@ -2,7 +2,7 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
-import { seedContent } from "./seed.js";
+import { seedContent, seedMasterAccount } from "./seed.js";
 import { startSubscriptionExpiryJob } from "./lib/subscriptionExpiry.js";
 import { startReceiptPurgeJob } from "./lib/receiptPurge.js";
 import { startTokenCleanupJob } from "./lib/tokenCleanup.js";
@@ -47,6 +47,9 @@ try {
 } catch (err) {
   logger.warn({ err }, "Content seeding encountered an error (non-fatal)");
 }
+
+/* Seed master account once if MASTER_EMAIL/MASTER_PASSWORD are set */
+await seedMasterAccount();
 
 /* Start background job — expires overdue active subscriptions every 5 min */
 startSubscriptionExpiryJob();
