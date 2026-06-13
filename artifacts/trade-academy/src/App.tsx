@@ -23,7 +23,8 @@ const GoogleAuthResultado  = lazy(() => import("./pages/GoogleAuthResultado"));
 const NotFound             = lazy(() => import("./pages/NotFound"));
 
 // Painel admin — lazy
-const Admin = lazy(() => import("./pages/Admin"));
+const Admin        = lazy(() => import("./pages/Admin"));
+const MasterLogin  = lazy(() => import("./pages/MasterLogin"));
 
 // Páginas autenticadas — todas lazy (só carregam após login)
 const Dashboard    = lazy(() => import("./pages/Dashboard"));
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/auth/google/resultado" element={<GoogleAuthResultado />} />
 
             {/* ── Gestão interna (protegida por senha) ── */}
+            <Route path="/master/entrar"   element={<MasterLogin />} />
             <Route path="/ta-painel-gestao" element={<Admin />} />
 
             {/* ── Páginas protegidas (requerem login) ──────────── */}

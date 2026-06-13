@@ -11,6 +11,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  role?: string;
 }
 
 interface AuthState {
@@ -20,6 +21,7 @@ interface AuthState {
 
   register:        (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   login:           (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
+  masterLogin:     (email: string, password: string)               => Promise<{ ok: boolean; error?: string }>;
   setFromOAuth:    (user: AuthUser, token: string)                 => void;
   setEmailVerified: () => void;
   logout:          () => void;
@@ -71,6 +73,24 @@ export const useAuthStore = create<AuthState>()(
           else if (text.includes("429")) msg = "Demasiadas tentativas. Aguarda alguns minutos.";
           else if (text.includes("Failed to fetch") || text.includes("NetworkError")) msg = "Sem ligação ao servidor. Verifica a tua internet.";
           return { ok: false, error: msg };
+        }
+      },
+
+      masterLogin: async (email, password) => {
+        try {
+          const res = await fetch("/api/auth/master/login", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ email, password }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            return { ok: false, error: data.message ?? "Credenciais inválidas." };
+          }
+          set({ user: data.user, token: data.token, emailVerified: true });
+          return { ok: true };
+        } catch {
+          return { ok: false, error: "Sem ligação ao servidor. Verifica a tua internet." };
         }
       },
 
