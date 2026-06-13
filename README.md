@@ -92,12 +92,11 @@ pnpm install
 ```
 
 ### Variáveis de ambiente
-Cria um ficheiro `.env` na raiz ou configura no painel de secrets:
+Configura no painel de secrets do Replit:
 ```
-DATABASE_URL=         # URL da base de dados Turso (libsql://...)
-DATABASE_AUTH_TOKEN=  # Token de autenticação Turso
-JWT_SECRET=           # Chave secreta para JWT
-GMAIL_APP_PASSWORD=   # Password de app Gmail para envio de emails
+TURSO_DATABASE_URL=   # URL da base de dados Turso (libsql://...)
+TURSO_AUTH_TOKEN=     # Token de autenticação Turso
+JWT_SECRET=           # Chave secreta para JWT (HS256)
 ```
 
 ### Arrancar em modo desenvolvimento
@@ -120,22 +119,49 @@ pnpm --filter @workspace/db run push            # Push do schema DB (dev)
 
 ## Rotas da Aplicação
 
-| Rota | Acesso | Descrição |
-|---|---|---|
-| `/` | Público | Landing page |
-| `/entrar` | Público | Login |
-| `/cadastrar` | Público | Registo |
-| `/dashboard` | Auth | Painel principal |
-| `/aprender` | Auth | Lista de módulos e aulas |
-| `/aprender/:lessonId` | Auth | Lição individual |
-| `/simular` | Auth | Simulador de trading |
-| `/video-aulas` | Auth | Vídeo aulas |
-| `/duelo` | Auth | Duelos 1v1 |
-| `/biblioteca` | Auth | Livros de trading |
-| `/estrategias` | Auth | Estratégias de trading |
-| `/glossario` | Auth | Glossário de termos |
-| `/perfil` | Auth | Perfil e histórico |
-| `/ta-painel-gestao` | Admin | Painel de administração |
+### Públicas
+| Rota | Descrição |
+|------|-----------|
+| `/` | Landing page |
+| `/entrar` | Login de aluno |
+| `/cadastrar` | Registo de aluno |
+| `/termos` | Termos de serviço |
+| `/privacidade` | Política de privacidade |
+| `/esqueci-senha` | Recuperação de senha |
+| `/redefinir-senha` | Redefinição de senha |
+| `/auth/google/resultado` | Callback OAuth Google |
+
+### Autenticadas (requerem login de aluno)
+| Rota | Descrição |
+|------|-----------|
+| `/dashboard` | Painel principal |
+| `/aprender` | Lista de módulos e aulas |
+| `/aprender/:lessonId` | Lição individual |
+| `/simular` | Simulador de trading |
+| `/video-aulas` | Vídeo aulas |
+| `/duelo` | Duelos 1v1 |
+| `/biblioteca` | Livros de trading |
+| `/biblioteca/:bookId` | Leitor de livro |
+| `/estrategias` | Estratégias de trading |
+| `/glossario` | Glossário de termos |
+| `/recursos` | Recursos |
+| `/perfil` | Perfil e histórico |
+| `/configuracoes` | Configurações |
+| `/financeiro` | Painel financeiro do aluno |
+
+### Gestão interna (área restrita)
+| Rota | Descrição |
+|------|-----------|
+| `/ta-painel-gestao` | **Painel admin** — URL secreta; mostra login inline quando não autenticado; após login com conta `administrador`/`professor`/`master` abre o painel de gestão |
+| `/master/entrar` | Login da conta Master |
+| `/master/painel` | Painel Master (só role `master`) |
+
+> **Nota de segurança:** Não existe uma rota `/admin` pública. A URL `/ta-painel-gestao` é intencional e serve como acesso não-óbvio à área administrativa.
+
+### Rotas removidas
+| Rota antiga | Motivo |
+|-------------|--------|
+| `/admin/entrar` | Removida — login admin integrado directamente em `/ta-painel-gestao` |
 
 ---
 
