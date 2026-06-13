@@ -13,6 +13,7 @@ export const usersTable = sqliteTable("users", {
   passwordHash:  text("password_hash"),
   googleId:      text("google_id"),
   emailVerified: integer("email_verified").notNull().default(0),
+  role:          text("role", { enum: ["aluno", "professor", "administrador", "master"] }).notNull().default("aluno"),
   createdAt:     integer("created_at").notNull(),
   updatedAt:     integer("updated_at").notNull(),
 });

@@ -9,9 +9,12 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required");
 }
 
+export type UserRole = "aluno" | "professor" | "administrador" | "master";
+
 export interface JwtPayload {
   userId: string;
   email:  string;
+  role:   UserRole;
   jti:    string;
 }
 
@@ -20,6 +23,7 @@ declare global {
     interface Request {
       userId?:    string;
       userEmail?: string;
+      userRole?:  UserRole;
       jti?:       string;
     }
   }
@@ -58,6 +62,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   req.userId    = decoded.userId;
   req.userEmail = decoded.email;
+  req.userRole  = (decoded.role as UserRole) ?? "aluno";
   req.jti       = decoded.jti;
   next();
 }
@@ -66,6 +71,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 export function signToken(payload: Omit<JwtPayload, "jti">): string {
   const jti = randomUUID();
   return jwt.sign({ ...payload, jti }, JWT_SECRET!, { expiresIn: "7d" });
+}
+
+/**
+ * Middleware factory — restricts a route to one or more roles.
+ * Must be placed AFTER requireAuth (which sets req.userRole).
+ *
+ * Usage: router.get("/secret", requireAuth, requireRole("master", "administrador"), handler)
+ */
+export function requireRole(...roles: UserRole[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const role = req.userRole ?? "aluno";
+    if (!roles.includes(role)) {
+      res.status(403).json({ error: "forbidden", message: "Não tens permissão para aceder a este recurso." });
+      return;
+    }
+    next();
+  };
 }
 
 /**

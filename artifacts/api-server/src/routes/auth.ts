@@ -91,12 +91,12 @@ router.post("/register", validate(RegisterBody), async (req: any, res: any) => {
       req.log.warn({ reason: emailResult.reason }, "verification email failed");
     }
 
-    const token = signToken({ userId: id, email });
+    const token = signToken({ userId: id, email, role: "aluno" });
 
     return res.status(201).json({
       ok:            true,
       token,
-      user:          { id, name, email },
+      user:          { id, name, email, role: "aluno" },
       emailVerified: false,
       emailSent:     emailResult.ok,
     });
@@ -126,12 +126,12 @@ router.post("/login", validate(LoginBody), async (req: any, res: any) => {
       return res.status(401).json({ error: "invalid_credentials", message: "E-mail ou password incorrectos." });
     }
 
-    const token = signToken({ userId: row.id, email: row.email ?? "" });
+    const token = signToken({ userId: row.id, email: row.email ?? "", role: (row.role as any) ?? "aluno" });
 
     return res.json({
       ok:            true,
       token,
-      user:          { id: row.id, name: row.name ?? "", email: row.email ?? "" },
+      user:          { id: row.id, name: row.name ?? "", email: row.email ?? "", role: row.role ?? "aluno" },
       emailVerified: !!row.emailVerified,
     });
   } catch (err) {
@@ -403,7 +403,7 @@ router.get("/google/callback", async (req: any, res: any) => {
     const byGoogleId = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId)).get();
     if (byGoogleId) {
       await db.update(usersTable).set({ updatedAt: now }).where(eq(usersTable.id, byGoogleId.id));
-      const jwt = signToken({ userId: byGoogleId.id, email: byGoogleId.email ?? googleEmail });
+      const jwt = signToken({ userId: byGoogleId.id, email: byGoogleId.email ?? googleEmail, role: (byGoogleId.role as any) ?? "aluno" });
       const params = new URLSearchParams({
         token: jwt, userId: byGoogleId.id,
         name:  byGoogleId.name ?? googleName,
@@ -418,7 +418,7 @@ router.get("/google/callback", async (req: any, res: any) => {
     if (byEmail) {
       /* Link Google to existing account */
       await db.update(usersTable).set({ googleId, updatedAt: now }).where(eq(usersTable.id, byEmail.id));
-      const jwt = signToken({ userId: byEmail.id, email: byEmail.email ?? googleEmail });
+      const jwt = signToken({ userId: byEmail.id, email: byEmail.email ?? googleEmail, role: (byEmail.role as any) ?? "aluno" });
       const params = new URLSearchParams({
         token: jwt, userId: byEmail.id,
         name:  byEmail.name ?? googleName,
@@ -435,7 +435,7 @@ router.get("/google/callback", async (req: any, res: any) => {
       googleId, createdAt: now, updatedAt: now,
     });
 
-    const jwt = signToken({ userId: newId, email: googleEmail });
+    const jwt = signToken({ userId: newId, email: googleEmail, role: "aluno" });
     const params = new URLSearchParams({
       token: jwt, userId: newId,
       name:  googleName,

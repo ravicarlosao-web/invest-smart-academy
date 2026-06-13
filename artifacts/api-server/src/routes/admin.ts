@@ -224,6 +224,7 @@ router.get("/users", async (req: any, res: any) => {
   try {
     const users = await db.select({
       id: usersTable.id, name: usersTable.name, email: usersTable.email, createdAt: usersTable.createdAt,
+      role: usersTable.role,
     }).from(usersTable).orderBy(desc(usersTable.createdAt)).all();
 
     const progress = await db.select().from(progressTable).all();
@@ -278,6 +279,25 @@ router.post("/users/:userId/reset-sim", async (req: any, res: any) => {
   try {
     await db.delete(tradesTable).where(eq(tradesTable.userId, String(req.params.userId)));
     res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* Change user role — Master can set any role; Admin can only set aluno/professor */
+router.patch("/users/:userId/role", async (req: any, res: any) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body ?? {};
+    const validRoles = ["aluno", "professor", "administrador", "master"];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ error: "invalid_role", message: `Role inválido. Valores aceites: ${validRoles.join(", ")}` });
+    }
+    const user = await db.select({ id: usersTable.id, role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).get();
+    if (!user) return res.status(404).json({ error: "user_not_found" });
+    await db.update(usersTable).set({ role, updatedAt: Date.now() }).where(eq(usersTable.id, userId));
+    res.json({ ok: true, userId, role });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

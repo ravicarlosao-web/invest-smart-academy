@@ -4,6 +4,8 @@
  * Inserts demo content into dedicated DB tables if they are empty.
  * Once an admin edits content via the admin panel, the DB rows take over.
  */
+import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import {
   db, sql,
   glossaryTermsTable,
@@ -13,6 +15,7 @@ import {
   resourceItemsTable,
   curriculumLevelsTable,
   curriculumLessonsTable,
+  masterAccountTable,
 } from "@workspace/db";
 import { GLOSSARY } from "./content/glossary.js";
 import { STRATEGIES } from "./content/strategies.js";
@@ -178,5 +181,37 @@ export async function seedContent(): Promise<void> {
     await seedCurriculum();
   } catch (err) {
     console.error("[seed] error:", err);
+  }
+}
+
+/**
+ * Creates the Master account once if it doesn't exist yet.
+ * Requires MASTER_EMAIL and MASTER_PASSWORD environment variables.
+ * Safe to call on every startup — skips silently if already seeded or vars missing.
+ */
+export async function seedMasterAccount(): Promise<void> {
+  try {
+    const email    = process.env["MASTER_EMAIL"];
+    const password = process.env["MASTER_PASSWORD"];
+
+    if (!email || !password) {
+      console.info("[seed] MASTER_EMAIL/MASTER_PASSWORD not set — skipping master account seed");
+      return;
+    }
+
+    const existing = await db.run(sql.raw(`SELECT COUNT(*) as n FROM master_account`));
+    const count = Number(((existing as any).rows?.[0]?.[0] ?? (existing as any).rows?.[0]?.n ?? 0));
+    if (count > 0) {
+      console.info("[seed] master_account already seeded — skipping");
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await db.run(sql.raw(
+      `INSERT INTO master_account (id, email, password_hash, created_at) VALUES ('${randomUUID()}', '${email.replace(/'/g, "''")}', '${passwordHash.replace(/'/g, "''")}', ${Date.now()})`
+    ));
+    console.info(`[seed] master_account created for ${email}`);
+  } catch (err) {
+    console.warn("[seed] master account seed failed (non-fatal):", err);
   }
 }

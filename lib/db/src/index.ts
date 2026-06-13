@@ -208,6 +208,13 @@ export async function initDb(): Promise<void> {
       usage_count  INTEGER NOT NULL DEFAULT 0,
       last_used_at INTEGER
     )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS master_account (
+      id            TEXT PRIMARY KEY,
+      email         TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at    INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
@@ -224,6 +231,7 @@ export async function initDb(): Promise<void> {
     `ALTER TABLE users ADD COLUMN google_id TEXT`,
     `ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)`,
     `ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'aluno'`,
     `ALTER TABLE ai_usage ADD COLUMN chart_analysis_count INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE ai_usage ADD COLUMN trade_feedback_count INTEGER NOT NULL DEFAULT 0`,
   ];
