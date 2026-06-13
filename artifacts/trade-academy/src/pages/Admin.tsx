@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef, type ChangeEvent } from "react";
 import { useSEO } from "@/hooks/useSEO";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Shield, LogOut, Users, LineChart as LineChartIcon, BookOpen, Activity,
   Trash2, RotateCcw, Search, Save, AlertTriangle, Trophy, Home,
@@ -36,6 +36,89 @@ import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
 import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
 
+
+/* =========================================================================
+ * Ecrã de login integrado — mostrado em /ta-painel-gestao quando não autenticado
+ * ========================================================================= */
+function AdminGateLogin() {
+  const { login } = useAuthStore();
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw,   setShowPw]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) return;
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
+    if (!result.ok) {
+      toast.error(result.error ?? "Credenciais inválidas.");
+      return;
+    }
+    const user = useAuthStore.getState().user;
+    if (!["administrador", "professor", "master"].includes(user?.role ?? "")) {
+      useAuthStore.getState().logout();
+      toast.error("Esta conta não tem permissões administrativas.");
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <Shield className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="mt-3">Área Restrita</CardTitle>
+          <CardDescription>Acesso exclusivo para administradores e professores.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="adm-email">E-mail</Label>
+              <Input
+                id="adm-email"
+                type="email"
+                autoFocus
+                value={email}
+                autoComplete="email"
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@exemplo.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="adm-pw">Password</Label>
+              <div className="relative">
+                <Input
+                  id="adm-pw"
+                  type={showPw ? "text" : "password"}
+                  value={password}
+                  autoComplete="current-password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <Button type="submit" className="w-full" disabled={loading || !email || !password}>
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />A verificar…</> : "Entrar"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 /* =========================================================================
  * Helpers
@@ -3827,7 +3910,7 @@ export default function Admin() {
   const [active, setActive]       = useState<NavId>(isProf && !isMaster && !isAdmin ? "curriculum" : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  if (!hasJwtAccess) return <Navigate to="/admin/entrar" replace />;
+  if (!hasJwtAccess) return <AdminGateLogin />;
 
   /* Professores só podem aceder a tabs permitidas */
   const effectiveActive: NavId =
