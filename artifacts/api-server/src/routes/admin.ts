@@ -111,9 +111,12 @@ function safeTokenCompare(candidate: string): boolean {
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  /* 1. Accept x-admin-token (existing flow) */
+  /* 1. Accept x-admin-token (legacy flow — grants administrador-level access) */
   const adminToken = String(req.header("x-admin-token") ?? "");
-  if (adminToken && safeTokenCompare(adminToken)) return next();
+  if (adminToken && safeTokenCompare(adminToken)) {
+    (req as any).adminRole = "administrador";
+    return next();
+  }
 
   /* 2. Accept valid JWT with elevated role as alternative */
   const authHeader = String(req.header("Authorization") ?? "");
@@ -124,12 +127,26 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
       try {
         const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
         const elevatedRoles = ["master", "administrador", "professor"];
-        if (elevatedRoles.includes(decoded?.role)) return next();
+        if (elevatedRoles.includes(decoded?.role)) {
+          (req as any).adminRole = decoded.role as string;
+          return next();
+        }
       } catch { /* invalid / expired */ }
     }
   }
 
   return res.status(401).json({ error: "unauthorized" });
+}
+
+/**
+ * Secondary guard for destructive / privileged operations.
+ * Must follow requireAdmin in the middleware chain.
+ * Professors pass requireAdmin for content work but are blocked here.
+ */
+function requireAdminFull(req: Request, res: Response, next: NextFunction) {
+  const role = (req as any).adminRole as string | undefined;
+  if (role === "master" || role === "administrador") return next();
+  return res.status(403).json({ error: "forbidden", message: "Acesso restrito a Administradores e Master." });
 }
 
 /* POST /api/admin/login */
@@ -265,7 +282,7 @@ router.get("/users", async (req: any, res: any) => {
   }
 });
 
-router.delete("/users/:userId", async (req: any, res: any) => {
+router.delete("/users/:userId", requireAdminFull, async (req: any, res: any) => {
   try {
     const { userId } = req.params;
     await db.delete(tradesTable).where(eq(tradesTable.userId, userId));
@@ -280,7 +297,7 @@ router.delete("/users/:userId", async (req: any, res: any) => {
   }
 });
 
-router.post("/users/:userId/reset-progress", async (req: any, res: any) => {
+router.post("/users/:userId/reset-progress", requireAdminFull, async (req: any, res: any) => {
   try {
     await db.delete(progressTable).where(eq(progressTable.userId, String(req.params.userId)));
     res.json({ ok: true });
@@ -290,7 +307,7 @@ router.post("/users/:userId/reset-progress", async (req: any, res: any) => {
   }
 });
 
-router.post("/users/:userId/reset-sim", async (req: any, res: any) => {
+router.post("/users/:userId/reset-sim", requireAdminFull, async (req: any, res: any) => {
   try {
     await db.delete(tradesTable).where(eq(tradesTable.userId, String(req.params.userId)));
     res.json({ ok: true });
@@ -300,12 +317,12 @@ router.post("/users/:userId/reset-sim", async (req: any, res: any) => {
   }
 });
 
-/* Change user role — Master can set any role; Admin can only set aluno/professor */
-router.patch("/users/:userId/role", async (req: any, res: any) => {
+/* Change user role — only administrador/master; "master" cannot be granted here */
+router.patch("/users/:userId/role", requireAdminFull, async (req: any, res: any) => {
   try {
     const { userId } = req.params;
     const { role } = req.body ?? {};
-    const validRoles = ["aluno", "professor", "administrador", "master"];
+    const validRoles = ["aluno", "professor", "administrador"];
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({ error: "invalid_role", message: `Role inválido. Valores aceites: ${validRoles.join(", ")}` });
     }
@@ -320,7 +337,7 @@ router.patch("/users/:userId/role", async (req: any, res: any) => {
 });
 
 /* Verify user email manually (admin action) */
-router.patch("/users/:userId/verify-email", async (req: any, res: any) => {
+router.patch("/users/:userId/verify-email", requireAdminFull, async (req: any, res: any) => {
   try {
     const { userId } = req.params;
     const user = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userId)).get();
@@ -334,7 +351,7 @@ router.patch("/users/:userId/verify-email", async (req: any, res: any) => {
 });
 
 /* Adjust user XP */
-router.patch("/users/:userId/xp", validate(AdminXpBody), async (req: any, res: any) => {
+router.patch("/users/:userId/xp", requireAdminFull, validate(AdminXpBody), async (req: any, res: any) => {
   try {
     const { xp } = req.body as { xp: number };
     const existing = await db.select().from(progressTable).where(eq(progressTable.userId, String(req.params.userId))).get();
@@ -913,7 +930,7 @@ router.get("/subscriptions/stats", async (req: any, res: any) => {
 });
 
 /** PATCH /api/admin/subscriptions/:id/approve — aprova e ativa por 30 dias */
-router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
+router.patch("/subscriptions/:id/approve", requireAdminFull, async (req: any, res: any) => {
   try {
     const now             = Date.now();
     const expiresAt       = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
@@ -956,7 +973,7 @@ router.patch("/subscriptions/:id/approve", async (req: any, res: any) => {
 });
 
 /** PATCH /api/admin/subscriptions/:id/reject — rejeita com nota opcional */
-router.patch("/subscriptions/:id/reject", validate(AdminRejectBody), async (req: any, res: any) => {
+router.patch("/subscriptions/:id/reject", requireAdminFull, validate(AdminRejectBody), async (req: any, res: any) => {
   try {
     const { notes } = req.body;
     const now            = Date.now();
@@ -1263,7 +1280,7 @@ router.put("/email-config", async (req: any, res: any) => {
 });
 
 /** POST /api/admin/email-config/test — sends test email to adminEmail */
-router.post("/email-config/test", async (req: any, res: any) => {
+router.post("/email-config/test", requireAdminFull, async (req: any, res: any) => {
   try {
     const { to } = req.body ?? {};
     if (!to || typeof to !== "string") return res.status(400).json({ error: "missing_to" });
