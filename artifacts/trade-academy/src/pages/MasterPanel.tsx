@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { useSEO } from "@/hooks/useSEO";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
@@ -809,9 +809,8 @@ export default function MasterPanel() {
   const [active, setActive] = useState<MasterNav>("overview");
   const [collapsed, setCollapsed] = useState(false);
 
-  if (authUser?.role !== "master") {
-    navigate("/master/entrar", { replace: true });
-    return null;
+  if (!authUser || authUser.role !== "master") {
+    return <Navigate to="/master/entrar" replace />;
   }
 
   const TABS: Record<MasterNav, React.ReactNode> = {
