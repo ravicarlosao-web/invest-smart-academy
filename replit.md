@@ -77,7 +77,7 @@ Plataforma de educação em trading de língua portuguesa.
 ### Sistema actual (JWT-only)
 1. O **Master** cria contas de administrador/professor em `/master/painel` → aba Equipa → "Criar conta"
 2. O admin/professor acede a `/ta-painel-gestao` com as suas credenciais de e-mail e password
-3. O backend (`requireAdmin` middleware) aceita **apenas JWT Bearer** com role `master`/`administrador`/`professor`
+3. O backend verifica o JWT via `requireAuth` (assinatura + lista de revogação) + `requireRole` — não confia em nada vindo do frontend
 4. Não existe senha partilhada nem header `x-admin-token`
 
 ### Sistema removido
@@ -85,6 +85,37 @@ Plataforma de educação em trading de língua portuguesa.
 - ~~Header `x-admin-token`~~
 - ~~Endpoint `POST /api/admin/login`~~
 - ~~Store `useAdminStore`~~
+
+## Segurança do backend
+
+### Princípios aplicados
+- **Não confiar no frontend** — o ID do utilizador é sempre gerado pelo servidor; o cliente pode enviar campos mas eles são ignorados quando representam risco
+- **JWT + revogação** — `requireAuth` verifica a assinatura E a tabela `revoked_tokens`; logout invalida o token imediatamente
+- **Roles verificadas no servidor** — o backend nunca aceita claims de role do corpo do request; usa apenas o que está dentro do JWT assinado
+
+### Camadas de protecção
+
+| Camada | Detalhe |
+|--------|---------|
+| **Helmet** | Headers de segurança: CSP strict, `frameAncestors: none` (anti-clickjacking) |
+| **CORS** | Lista explícita de origens permitidas (Replit, Vercel); rejeita origens desconhecidas |
+| **Rate limiting (auth)** | `/api/auth` → 15 req / 15 min (previne brute force) |
+| **Rate limiting (admin)** | `/api/admin` → 60 req / 15 min (separado e mais restrito) |
+| **Rate limiting (geral)** | `/api` → 200 req / 15 min |
+| **JWT revogação** | Logout adiciona `jti` à tabela `revoked_tokens`; verificado em cada request |
+| **bcrypt** | Passwords com 12 rounds; mínimo 8 chars para contas admin/professor |
+| **Validação Zod** | Todos os endpoints de auth validados com schema Zod antes de processar |
+| **ID server-side** | `userId` gerado pelo servidor (nunca aceite do cliente) |
+| **Role check duplo** | `/api/admin`: `requireAuth + requireRole(...)` para todos; `requireAdminFull = requireRole("master","administrador")` para operações destrutivas |
+| **Master isolado** | Conta Master em tabela separada (`master_account`), nunca exposta pelos endpoints normais |
+
+### Níveis de acesso
+| Role | Acesso |
+|------|--------|
+| `aluno` | Rotas autenticadas do utilizador |
+| `professor` | Leitura de painel admin + gestão de conteúdo |
+| `administrador` | Painel admin completo + gestão de utilizadores |
+| `master` | Acesso total + criação de contas admin/professor + painel Master |
 
 ## Variáveis de ambiente necessárias
 

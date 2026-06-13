@@ -46,9 +46,11 @@ async function getGoogleConfig() {
 /** POST /api/auth/register */
 router.post("/register", validate(RegisterBody), async (req: any, res: any) => {
   try {
-    const { id, name, email, password } = req.body as {
-      id: string; name: string; email: string; password: string;
+    // ID always generated server-side — never trust the client
+    const { name, email, password } = req.body as {
+      name: string; email: string; password: string;
     };
+    const id = `user_${Date.now()}_${randomBytes(4).toString("hex")}`;
 
     const existing = await db
       .select({ id: usersTable.id })
@@ -479,9 +481,9 @@ router.post("/logout", async (req: any, res: any) => {
  * Returns a JWT with role="master". The master account lives in a separate
  * table and is never exposed through normal user endpoints.
  * ──────────────────────────────────────────────────────────────────────── */
-router.post("/master/login", async (req, res) => {
+router.post("/master/login", validate(LoginBody), async (req, res) => {
   try {
-    const { email, password } = req.body ?? {};
+    const { email, password } = req.body as { email: string; password: string };
 
     if (!email || !password) {
       return res.status(400).json({ error: "missing_fields", message: "Email e password são obrigatórios." });

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Router, type Request, type Response, type NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 import {
   db,
   usersTable,
@@ -46,41 +46,15 @@ async function createNotif(userId: string, type: string, title: string, message:
   } catch { /* best-effort */ }
 }
 
-/* ── Middleware de autenticação administrativa ────────────────────────────
- * Aceita apenas JWT Bearer com role master / administrador / professor.
- * ---------------------------------------------------------------------- */
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const authHeader = String(req.header("Authorization") ?? "");
-  if (!authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-  const jwtToken = authHeader.slice(7);
-  const secret = process.env["JWT_SECRET"];
-  if (!secret) return res.status(500).json({ error: "server_misconfigured" });
-  try {
-    const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
-    const elevatedRoles = ["master", "administrador", "professor"];
-    if (!elevatedRoles.includes(decoded?.role)) {
-      return res.status(401).json({ error: "unauthorized" });
-    }
-    (req as any).adminRole = decoded.role as string;
-    return next();
-  } catch {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-}
-
 /**
  * Guarda secundária para operações destrutivas / privilegiadas.
- * Professores passam o requireAdmin para trabalho de conteúdo mas são bloqueados aqui.
+ * Professores passam o requireAuth/requireRole mas são bloqueados aqui.
  */
-function requireAdminFull(req: Request, res: Response, next: NextFunction) {
-  const role = (req as any).adminRole as string | undefined;
-  if (role === "master" || role === "administrador") return next();
-  return res.status(403).json({ error: "forbidden", message: "Acesso restrito a Administradores e Master." });
-}
+const requireAdminFull = requireRole("master", "administrador");
 
-router.use(requireAdmin);
+// Todas as rotas /api/admin requerem JWT válido + role elevado.
+// requireAuth verifica a assinatura JWT E a lista de revogação (logout).
+router.use(requireAuth, requireRole("master", "administrador", "professor"));
 
 /* ---------------------------------------------------------------------------
  * Generic key-value helpers for admin_settings
@@ -112,8 +86,8 @@ router.post("/create-account", requireAdminFull, async (req: any, res: any) => {
     if (!["administrador", "professor"].includes(role)) {
       return res.status(400).json({ error: "invalid_role", message: "Role deve ser 'administrador' ou 'professor'." });
     }
-    if (String(password).length < 6) {
-      return res.status(400).json({ error: "password_too_short", message: "A password deve ter pelo menos 6 caracteres." });
+    if (String(password).length < 8) {
+      return res.status(400).json({ error: "password_too_short", message: "A password deve ter pelo menos 8 caracteres." });
     }
 
     const normalizedEmail = String(email).toLowerCase().trim();

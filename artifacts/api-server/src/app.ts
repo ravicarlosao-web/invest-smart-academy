@@ -97,6 +97,11 @@ const authLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
 });
 
+/** Strict limiter for admin panel — separate from general API */
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 60,
+  standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
+});
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 200,
@@ -128,6 +133,7 @@ app.use(express.urlencoded({ extended: false, limit: "16kb" }));
 
 /* ── Rate limiters ───────────────────────────────────────────────────────── */
 app.use("/api/auth",         authLimiter);
+app.use("/api/admin",        adminLimiter);
 app.use("/api",              generalLimiter);
 
 /* ── Routes ──────────────────────────────────────────────────────────────── */
