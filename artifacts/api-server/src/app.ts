@@ -97,11 +97,6 @@ const authLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
 });
 
-const adminLoginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 5,
-  standardHeaders: true, legacyHeaders: false, message: rateLimitMessage,
-  skipSuccessfulRequests: true,
-});
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 200,
@@ -120,9 +115,8 @@ app.use(
 );
 
 /* ── Body parsing — per-route limits ─────────────────────────────────────── */
-/* Auth & admin-login: small body only, no file uploads here */
+/* Auth: small body only, no file uploads here */
 app.use("/api/auth",        express.json({ limit: "50kb" }));
-app.use("/api/admin/login", express.json({ limit: "50kb" }));
 
 /* Subscription: base64 receipt can be up to 5 MB → ~7 MB base64 */
 app.use("/api/subscription", express.json({ limit: "8mb" }));
@@ -134,7 +128,6 @@ app.use(express.urlencoded({ extended: false, limit: "16kb" }));
 
 /* ── Rate limiters ───────────────────────────────────────────────────────── */
 app.use("/api/auth",         authLimiter);
-app.use("/api/admin/login",  adminLoginLimiter);
 app.use("/api",              generalLimiter);
 
 /* ── Routes ──────────────────────────────────────────────────────────────── */

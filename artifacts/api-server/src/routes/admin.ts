@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
 import {
   db,
@@ -27,8 +26,7 @@ import {
 
 const router = Router();
 
-import { createHash } from "node:crypto";
-import { AdminLoginBody, AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
+import { AdminRejectBody, AdminXpBody } from "@workspace/api-zod";
 import { sendSubscriptionApprovalEmail, sendSubscriptionRejectionEmail, sendTestEmail } from "../lib/email.js";
 import { addBusinessDays } from "../lib/receiptPurge.js";
 import { validate } from "../middlewares/validate.js";
@@ -48,135 +46,39 @@ async function createNotif(userId: string, type: string, title: string, message:
   } catch { /* best-effort */ }
 }
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"];
-if (!ADMIN_PASSWORD) {
-  throw new Error("ADMIN_PASSWORD environment variable is required");
-}
-const ADMIN_TOKEN    = createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
-const ADMIN_TOKEN_BUF = Buffer.from(ADMIN_TOKEN, "utf8");
-
-/* ── Protecção de força bruta ─────────────────────────────────────────────
- * Máx 5 tentativas falhadas por IP → bloqueio de 30 minutos.
- * Mapa limpo automaticamente para não acumular memória.
+/* ── Middleware de autenticação administrativa ────────────────────────────
+ * Aceita apenas JWT Bearer com role master / administrador / professor.
  * ---------------------------------------------------------------------- */
-const MAX_ATTEMPTS   = 5;
-const LOCKOUT_MS     = 30 * 60 * 1000; // 30 minutos
-const CLEANUP_MS     = 60 * 60 * 1000; // limpeza a cada 1h
-
-interface LoginAttempt { count: number; lockedUntil: number | null; lastAttempt: number; }
-const loginAttempts = new Map<string, LoginAttempt>();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, data] of loginAttempts) {
-    if (now - data.lastAttempt > CLEANUP_MS) loginAttempts.delete(ip);
-  }
-}, CLEANUP_MS);
-
-function getIp(req: Request): string {
-  return String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "unknown").split(",")[0].trim();
-}
-
-function isLocked(ip: string): boolean {
-  const data = loginAttempts.get(ip);
-  if (!data) return false;
-  if (data.lockedUntil && Date.now() < data.lockedUntil) return true;
-  if (data.lockedUntil && Date.now() >= data.lockedUntil) {
-    loginAttempts.delete(ip);
-  }
-  return false;
-}
-
-function recordFailure(ip: string): { attempts: number; locked: boolean } {
-  const data = loginAttempts.get(ip) ?? { count: 0, lockedUntil: null, lastAttempt: 0 };
-  data.count++;
-  data.lastAttempt = Date.now();
-  if (data.count >= MAX_ATTEMPTS) {
-    data.lockedUntil = Date.now() + LOCKOUT_MS;
-  }
-  loginAttempts.set(ip, data);
-  return { attempts: data.count, locked: data.lockedUntil != null };
-}
-
-function resetAttempts(ip: string) { loginAttempts.delete(ip); }
-
-function safeTokenCompare(candidate: string): boolean {
-  try {
-    const candidateBuf = Buffer.alloc(ADMIN_TOKEN_BUF.length);
-    Buffer.from(candidate, "utf8").copy(candidateBuf);
-    return timingSafeEqual(candidateBuf, ADMIN_TOKEN_BUF);
-  } catch {
-    return false;
-  }
-}
-
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  /* 1. Accept x-admin-token (legacy flow — grants administrador-level access) */
-  const adminToken = String(req.header("x-admin-token") ?? "");
-  if (adminToken && safeTokenCompare(adminToken)) {
-    (req as any).adminRole = "administrador";
-    return next();
-  }
-
-  /* 2. Accept valid JWT with elevated role as alternative */
   const authHeader = String(req.header("Authorization") ?? "");
-  if (authHeader.startsWith("Bearer ")) {
-    const jwtToken = authHeader.slice(7);
-    const secret = process.env["JWT_SECRET"];
-    if (secret) {
-      try {
-        const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
-        const elevatedRoles = ["master", "administrador", "professor"];
-        if (elevatedRoles.includes(decoded?.role)) {
-          (req as any).adminRole = decoded.role as string;
-          return next();
-        }
-      } catch { /* invalid / expired */ }
-    }
+  if (!authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "unauthorized" });
   }
-
-  return res.status(401).json({ error: "unauthorized" });
+  const jwtToken = authHeader.slice(7);
+  const secret = process.env["JWT_SECRET"];
+  if (!secret) return res.status(500).json({ error: "server_misconfigured" });
+  try {
+    const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
+    const elevatedRoles = ["master", "administrador", "professor"];
+    if (!elevatedRoles.includes(decoded?.role)) {
+      return res.status(401).json({ error: "unauthorized" });
+    }
+    (req as any).adminRole = decoded.role as string;
+    return next();
+  } catch {
+    return res.status(401).json({ error: "unauthorized" });
+  }
 }
 
 /**
- * Secondary guard for destructive / privileged operations.
- * Must follow requireAdmin in the middleware chain.
- * Professors pass requireAdmin for content work but are blocked here.
+ * Guarda secundária para operações destrutivas / privilegiadas.
+ * Professores passam o requireAdmin para trabalho de conteúdo mas são bloqueados aqui.
  */
 function requireAdminFull(req: Request, res: Response, next: NextFunction) {
   const role = (req as any).adminRole as string | undefined;
   if (role === "master" || role === "administrador") return next();
   return res.status(403).json({ error: "forbidden", message: "Acesso restrito a Administradores e Master." });
 }
-
-/* POST /api/admin/login */
-router.post("/login", validate(AdminLoginBody), (req: any, res: any) => {
-  const ip = getIp(req);
-
-  if (isLocked(ip)) {
-    const data = loginAttempts.get(ip);
-    const minutesLeft = data?.lockedUntil ? Math.ceil((data.lockedUntil - Date.now()) / 60000) : 30;
-    return res.status(429).json({
-      error: "too_many_attempts",
-      message: `Acesso bloqueado. Tenta novamente em ${minutesLeft} minuto(s).`,
-    });
-  }
-
-  const { passwordHash } = req.body as { passwordHash: string };
-  if (!safeTokenCompare(passwordHash)) {
-    const { attempts, locked } = recordFailure(ip);
-    const remaining = MAX_ATTEMPTS - attempts;
-    return res.status(401).json({
-      error: "invalid_password",
-      message: locked
-        ? `Acesso bloqueado por 30 minutos após ${MAX_ATTEMPTS} tentativas.`
-        : `Senha incorrecta. ${remaining > 0 ? `${remaining} tentativa(s) restante(s).` : ""}`,
-    });
-  }
-
-  resetAttempts(ip);
-  res.json({ ok: true });
-});
 
 router.use(requireAdmin);
 

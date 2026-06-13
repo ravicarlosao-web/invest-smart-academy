@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef, type ChangeEvent } from "react";
 import { useSEO } from "@/hooks/useSEO";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import {
   Shield, LogOut, Users, LineChart as LineChartIcon, BookOpen, Activity,
   Trash2, RotateCcw, Search, Save, AlertTriangle, Trophy, Home,
@@ -28,7 +28,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 
-import { useAdminStore } from "@/store/useAdminStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { api } from "@/lib/apiClient";
 import { LEVELS } from "@/data/curriculum";
@@ -37,78 +36,6 @@ import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
 import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
 
-/* =========================================================================
- * Login screen
- * ========================================================================= */
-function AdminLogin() {
-  const login = useAdminStore((s) => s.login);
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorMsg(null);
-    setLoading(true);
-    const res = await login(password);
-    setLoading(false);
-    if (!res.ok) {
-      const isLocked = res.error === "too_many_attempts";
-      setLocked(isLocked);
-      setErrorMsg(res.message ?? res.error ?? "Senha incorrecta.");
-    } else {
-      toast.success("Acesso autorizado");
-    }
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
-            <Shield className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <CardTitle className="mt-3">Área Restrita</CardTitle>
-          <CardDescription>Acesso exclusivo para administradores.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="adminpw">Senha de acesso</Label>
-              <Input
-                id="adminpw"
-                type="password"
-                autoFocus
-                value={password}
-                disabled={locked}
-                onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
-                placeholder="••••••••"
-              />
-            </div>
-            {errorMsg && (
-              <p className="text-[12px] text-destructive flex items-start gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                {errorMsg}
-              </p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading || locked}>
-              {loading ? "A verificar..." : locked ? "Bloqueado" : "Entrar"}
-            </Button>
-          </form>
-          <div className="mt-4 text-center">
-            <p className="text-[11px] text-muted-foreground">
-              Tens uma conta admin com e-mail?{" "}
-              <a href="/admin/entrar" className="underline hover:text-foreground transition-colors">
-                Entra aqui
-              </a>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 /* =========================================================================
  * Helpers
@@ -3892,27 +3819,24 @@ const PROF_ALLOWED: ReadonlySet<NavId> = new Set([
 export default function Admin() {
   useSEO({ title: "Painel de Gestão — ALUKA", noindex: true });
   const navigate                  = useNavigate();
-  const { token, logout }         = useAdminStore();
-  const authUser                  = useAuthStore((s) => s.user);
+  const { user: authUser, logout } = useAuthStore();
   const isMaster                  = authUser?.role === "master";
   const isAdmin                   = authUser?.role === "administrador";
   const isProf                    = authUser?.role === "professor";
-  /* Professor/Admin use JWT; they bypass the admin-password gate */
   const hasJwtAccess              = isMaster || isAdmin || isProf;
   const [active, setActive]       = useState<NavId>(isProf && !isMaster && !isAdmin ? "curriculum" : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  /* Gate: requires either admin-password token OR elevated JWT */
-  if (!token && !hasJwtAccess) return <AdminLogin />;
+  if (!hasJwtAccess) return <Navigate to="/admin/entrar" replace />;
 
-  /* For professor without admin token, clamp active to allowed tabs */
+  /* Professores só podem aceder a tabs permitidas */
   const effectiveActive: NavId =
-    isProf && !token && !isMaster && !isAdmin && !PROF_ALLOWED.has(active)
+    isProf && !isMaster && !isAdmin && !PROF_ALLOWED.has(active)
       ? "curriculum"
       : active;
 
   function handleSetActive(id: NavId) {
-    if (isProf && !token && !isMaster && !isAdmin && !PROF_ALLOWED.has(id)) return;
+    if (isProf && !isMaster && !isAdmin && !PROF_ALLOWED.has(id)) return;
     setActive(id);
   }
 
@@ -3964,8 +3888,8 @@ export default function Admin() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2 px-1.5">
-          {/* Negócio — hidden for Professors without admin token */}
-          {!(isProf && !token && !isMaster && !isAdmin) && (
+          {/* Negócio — oculto para Professores */}
+          {!(isProf && !isMaster && !isAdmin) && (
             <>
               {sidebarOpen && (
                 <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Negócio</p>
@@ -4046,7 +3970,7 @@ export default function Admin() {
               {NAV_ITEMS.find((n) => n.id === effectiveActive)?.label ?? "Administração"}
             </span>
             <Badge variant="outline" className="ml-1 text-[10px]">
-              {isProf && !token && !isMaster && !isAdmin ? "PROFESSOR" : "ADMIN"}
+              {isProf && !isMaster && !isAdmin ? "PROFESSOR" : "ADMIN"}
             </Badge>
           </div>
         </header>

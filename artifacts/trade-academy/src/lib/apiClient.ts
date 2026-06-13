@@ -64,31 +64,14 @@ function authRequest<T>(method: string, path: string, body?: unknown): Promise<T
   return request<T>(method, path, body, token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
-/** Helper used by admin endpoints — injects the x-admin-token header.
- *  Falls back to Authorization: Bearer <JWT> when the current user is Master. */
+/** Helper usado pelos endpoints de admin — injeta o JWT Bearer da sessão actual */
 function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {};
-
-  /* Try admin token first (regular admin flow) */
+  let token = "";
   try {
-    const raw = localStorage.getItem("trade-academy-admin");
-    const tok = (JSON.parse(raw ?? "{}") as any)?.state?.token as string ?? "";
-    if (tok) headers["x-admin-token"] = tok;
+    const raw = localStorage.getItem("trade-academy-auth");
+    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
   } catch { /* ignore */ }
-
-  /* If no admin token, check if current user is Master and use JWT */
-  if (!headers["x-admin-token"]) {
-    try {
-      const raw = localStorage.getItem("trade-academy-auth");
-      const state = (JSON.parse(raw ?? "{}") as any)?.state;
-      const elevatedRoles = ["master", "administrador", "professor"];
-      if (elevatedRoles.includes(state?.user?.role) && state?.token) {
-        headers["Authorization"] = `Bearer ${state.token}`;
-      }
-    } catch { /* ignore */ }
-  }
-
-  return request<T>(method, path, body, Object.keys(headers).length ? headers : undefined);
+  return request<T>(method, path, body, token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
 export const api = {
@@ -204,9 +187,6 @@ export const api = {
 
   /* ---------- Admin ---------- */
   admin: {
-    login: (passwordHash: string) =>
-      request<{ ok: boolean }>("POST", "/admin/login", { passwordHash }),
-
     overview: () =>
       adminRequest<{
         totals:    { users: number; trades: number; duelos: number; notifications: number };
