@@ -768,6 +768,22 @@ function AlukaIaTab() {
  * ========================================================================= */
 type AdminUser = Awaited<ReturnType<typeof api.admin.users>>[number];
 
+const ROLE_META: Record<string, { label: string; color: string }> = {
+  aluno:          { label: "Aluno",          color: "bg-muted text-muted-foreground" },
+  professor:      { label: "Professor",      color: "bg-blue-500/15 text-blue-400" },
+  administrador:  { label: "Administrador",  color: "bg-amber-500/15 text-amber-400" },
+  master:         { label: "Master",         color: "bg-purple-500/15 text-purple-400" },
+};
+
+function RoleBadge({ role }: { role?: string }) {
+  const meta = ROLE_META[role ?? "aluno"] ?? ROLE_META.aluno;
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.color}`}>
+      {meta.label}
+    </span>
+  );
+}
+
 function UsersTab() {
   const [users, setUsers]     = useState<AdminUser[] | null>(null);
   const [filter, setFilter]   = useState("");
@@ -776,6 +792,7 @@ function UsersTab() {
   const [newXp, setNewXp]     = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; email: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   async function reload() {
     setUsers(null);
@@ -826,6 +843,16 @@ function UsersTab() {
     finally { setBusy(null); }
   }
 
+  async function handleRoleChange(userId: string, newRole: string) {
+    setChangingRole(userId);
+    try {
+      await api.admin.updateUserRole(userId, newRole);
+      toast.success(`Role alterado para ${ROLE_META[newRole]?.label ?? newRole}`);
+      await reload();
+    } catch (e) { toast.error(`Falha ao alterar role: ${String(e)}`); }
+    finally { setChangingRole(null); }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -863,7 +890,8 @@ function UsersTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Aluno</TableHead>
+                <TableHead>Utilizador</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead className="text-right">XP</TableHead>
                 <TableHead className="text-right">Lições</TableHead>
                 <TableHead className="text-right">Streak</TableHead>
@@ -874,16 +902,33 @@ function UsersTab() {
             </TableHeader>
             <TableBody>
               {!users && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">A carregar...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">A carregar...</TableCell></TableRow>
               )}
               {users && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum aluno encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum utilizador encontrado.</TableCell></TableRow>
               )}
               {filtered.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
                     <div className="font-medium">{u.name || "—"}</div>
                     <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <RoleBadge role={u.role} />
+                      <select
+                        value={u.role ?? "aluno"}
+                        disabled={changingRole === u.id || u.role === "master"}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="h-6 rounded border border-border bg-background px-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+                        title={u.role === "master" ? "Role Master não pode ser alterado aqui" : "Mudar role"}
+                      >
+                        <option value="aluno">Aluno</option>
+                        <option value="professor">Professor</option>
+                        <option value="administrador">Administrador</option>
+                      </select>
+                      {changingRole === u.id && <span className="text-[10px] text-muted-foreground">…</span>}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">{u.xp}</TableCell>
                   <TableCell className="text-right font-mono">{u.completedLessons}</TableCell>
@@ -909,7 +954,7 @@ function UsersTab() {
                         <LineChartIcon className="h-3.5 w-3.5" />
                       </Button>
                       <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-                        title="Excluir aluno" disabled={deleting && deleteConfirm?.id === u.id}
+                        title="Excluir utilizador" disabled={deleting && deleteConfirm?.id === u.id}
                         onClick={() => setDeleteConfirm({ id: u.id, name: u.name ?? "", email: u.email ?? "" })}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -3831,17 +3876,37 @@ type NavId = (typeof NAV_ITEMS)[number]["id"];
 /* =========================================================================
  * Main Admin shell
  * ========================================================================= */
+/* Tabs that a Professor (with JWT) can access — content management only */
+const PROF_ALLOWED: ReadonlySet<NavId> = new Set([
+  "curriculum", "videos", "strategies", "books", "glossary", "resources",
+]);
+
 export default function Admin() {
   useSEO({ title: "Painel de Gestão — ALUKA", noindex: true });
   const navigate                  = useNavigate();
   const { token, logout }         = useAdminStore();
   const authUser                  = useAuthStore((s) => s.user);
   const isMaster                  = authUser?.role === "master";
-  const [active, setActive]       = useState<NavId>("overview");
+  const isAdmin                   = authUser?.role === "administrador";
+  const isProf                    = authUser?.role === "professor";
+  /* Professor/Admin use JWT; they bypass the admin-password gate */
+  const hasJwtAccess              = isMaster || isAdmin || isProf;
+  const [active, setActive]       = useState<NavId>(isProf && !isMaster && !isAdmin ? "curriculum" : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  /* Master JWT bypasses the admin password gate */
-  if (!token && !isMaster) return <AdminLogin />;
+  /* Gate: requires either admin-password token OR elevated JWT */
+  if (!token && !hasJwtAccess) return <AdminLogin />;
+
+  /* For professor without admin token, clamp active to allowed tabs */
+  const effectiveActive: NavId =
+    isProf && !token && !isMaster && !isAdmin && !PROF_ALLOWED.has(active)
+      ? "curriculum"
+      : active;
+
+  function handleSetActive(id: NavId) {
+    if (isProf && !token && !isMaster && !isAdmin && !PROF_ALLOWED.has(id)) return;
+    setActive(id);
+  }
 
   function handleLogout() { logout(); toast.success("Sessão encerrada"); }
 
@@ -3891,28 +3956,32 @@ export default function Admin() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2 px-1.5">
-          {/* Negócio */}
-          {sidebarOpen && (
-            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Negócio</p>
+          {/* Negócio — hidden for Professors without admin token */}
+          {!(isProf && !token && !isMaster && !isAdmin) && (
+            <>
+              {sidebarOpen && (
+                <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Negócio</p>
+              )}
+              <div className="space-y-0.5 mb-2">
+                {NAV_ITEMS.filter((n) => n.group === "negocio").map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSetActive(item.id)}
+                    title={!sidebarOpen ? item.label : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
+                      effectiveActive === item.id
+                        ? "bg-sidebar-accent text-primary font-medium"
+                        : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {sidebarOpen && <span className="truncate">{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
-          <div className="space-y-0.5 mb-2">
-            {NAV_ITEMS.filter((n) => n.group === "negocio").map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActive(item.id)}
-                title={!sidebarOpen ? item.label : undefined}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
-                  active === item.id
-                    ? "bg-sidebar-accent text-primary font-medium"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {sidebarOpen && <span className="truncate">{item.label}</span>}
-              </button>
-            ))}
-          </div>
           {/* Conteúdo */}
           {sidebarOpen && (
             <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Conteúdo</p>
@@ -3922,11 +3991,11 @@ export default function Admin() {
             {NAV_ITEMS.filter((n) => n.group === "conteudo").map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActive(item.id)}
+                onClick={() => handleSetActive(item.id)}
                 title={!sidebarOpen ? item.label : undefined}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",
-                  active === item.id
+                  effectiveActive === item.id
                     ? "bg-sidebar-accent text-primary font-medium"
                     : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
                 )}
@@ -3966,14 +4035,16 @@ export default function Admin() {
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             <span className="font-semibold text-sm">
-              {NAV_ITEMS.find((n) => n.id === active)?.label ?? "Administração"}
+              {NAV_ITEMS.find((n) => n.id === effectiveActive)?.label ?? "Administração"}
             </span>
-            <Badge variant="outline" className="ml-1 text-[10px]">ADMIN</Badge>
+            <Badge variant="outline" className="ml-1 text-[10px]">
+              {isProf && !token && !isMaster && !isAdmin ? "PROFESSOR" : "ADMIN"}
+            </Badge>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-6xl">
-          {TABS[active]}
+          {TABS[effectiveActive]}
         </main>
       </div>
     </div>

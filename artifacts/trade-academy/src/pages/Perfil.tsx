@@ -37,6 +37,8 @@ import {
   BarChart2,
   Mail,
   User,
+  GraduationCap,
+  Shield,
 } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 
@@ -131,6 +133,21 @@ export default function Perfil() {
                     <Badge className="bg-primary/15 text-primary hover:bg-primary/20">
                       <Trophy className="mr-1 h-3 w-3" />{progress.xp} XP
                     </Badge>
+                    {user?.role === "professor" && (
+                      <Badge className="bg-blue-500/15 text-blue-400 hover:bg-blue-500/20">
+                        <GraduationCap className="mr-1 h-3 w-3" />Professor
+                      </Badge>
+                    )}
+                    {user?.role === "administrador" && (
+                      <Badge className="bg-amber-500/15 text-amber-400 hover:bg-amber-500/20">
+                        <Shield className="mr-1 h-3 w-3" />Administrador
+                      </Badge>
+                    )}
+                    {user?.role === "master" && (
+                      <Badge className="bg-purple-500/15 text-purple-400 hover:bg-purple-500/20">
+                        <Crown className="mr-1 h-3 w-3" />Master
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">

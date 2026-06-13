@@ -81,7 +81,8 @@ function adminRequest<T>(method: string, path: string, body?: unknown): Promise<
     try {
       const raw = localStorage.getItem("trade-academy-auth");
       const state = (JSON.parse(raw ?? "{}") as any)?.state;
-      if (state?.user?.role === "master" && state?.token) {
+      const elevatedRoles = ["master", "administrador", "professor"];
+      if (elevatedRoles.includes(state?.user?.role) && state?.token) {
         headers["Authorization"] = `Bearer ${state.token}`;
       }
     } catch { /* ignore */ }
@@ -218,7 +219,11 @@ export const api = {
         id: string; name: string | null; email: string | null; createdAt: number;
         xp: number; streakDays: number; lastActivityDay: string | null;
         completedLessons: number; simCashBalance: number; onboarded: boolean;
+        role: string;
       }>>("GET", "/admin/users"),
+
+    updateUserRole: (userId: string, role: string) =>
+      adminRequest<{ ok: boolean; userId: string; role: string }>("PATCH", `/admin/users/${userId}/role`, { role }),
 
     deleteUser:        (userId: string) => adminRequest<{ ok: boolean }>("DELETE", `/admin/users/${userId}`),
     resetUserProgress: (userId: string) => adminRequest<{ ok: boolean }>("POST",   `/admin/users/${userId}/reset-progress`),

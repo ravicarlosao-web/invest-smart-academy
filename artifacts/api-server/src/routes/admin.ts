@@ -115,7 +115,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const adminToken = String(req.header("x-admin-token") ?? "");
   if (adminToken && safeTokenCompare(adminToken)) return next();
 
-  /* 2. Accept valid Master JWT as alternative */
+  /* 2. Accept valid JWT with elevated role as alternative */
   const authHeader = String(req.header("Authorization") ?? "");
   if (authHeader.startsWith("Bearer ")) {
     const jwtToken = authHeader.slice(7);
@@ -123,7 +123,8 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
     if (secret) {
       try {
         const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
-        if (decoded?.role === "master") return next();
+        const elevatedRoles = ["master", "administrador", "professor"];
+        if (elevatedRoles.includes(decoded?.role)) return next();
       } catch { /* invalid / expired */ }
     }
   }
