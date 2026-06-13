@@ -3,7 +3,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import {
-  db, usersTable, passwordResetTokensTable, emailVerificationsTable, adminSettingsTable, eq,
+  db, usersTable, passwordResetTokensTable, emailVerificationsTable, adminSettingsTable, masterAccountTable, eq,
 } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { signToken, revokeToken, requireAuth } from "../middlewares/auth.js";
@@ -471,6 +471,48 @@ router.post("/logout", async (req: any, res: any) => {
     }
   }
   return res.json({ ok: true });
+});
+
+/* ── Master login ─────────────────────────────────────────────────────────
+ * POST /auth/master/login
+ * Body: { email, password }
+ * Returns a JWT with role="master". The master account lives in a separate
+ * table and is never exposed through normal user endpoints.
+ * ──────────────────────────────────────────────────────────────────────── */
+router.post("/master/login", async (req, res) => {
+  try {
+    const { email, password } = req.body ?? {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "missing_fields", message: "Email e password são obrigatórios." });
+    }
+
+    const master = await db
+      .select()
+      .from(masterAccountTable)
+      .where(eq(masterAccountTable.email, String(email).toLowerCase().trim()))
+      .get();
+
+    if (!master) {
+      return res.status(401).json({ error: "invalid_credentials", message: "Credenciais inválidas." });
+    }
+
+    const valid = await bcrypt.compare(String(password), master.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "invalid_credentials", message: "Credenciais inválidas." });
+    }
+
+    const token = signToken({ userId: master.id, email: master.email, role: "master" });
+
+    return res.json({
+      ok:    true,
+      token,
+      user:  { id: master.id, email: master.email, name: "Master", role: "master" },
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "internal" });
+  }
 });
 
 export default router;
