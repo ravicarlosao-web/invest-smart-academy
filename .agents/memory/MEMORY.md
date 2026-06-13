@@ -1,0 +1,1 @@
+- [Master Panel & Role System](master-panel-roles.md) — Ala Master em `/master/painel`; backend aceita JWT de master/administrador/professor no `requireAdmin`; apiClient usa `api.adminSubscriptions.stats()` (não `api.admin.subscription.stats()`).

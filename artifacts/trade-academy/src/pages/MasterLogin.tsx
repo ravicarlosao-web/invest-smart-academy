@@ -31,7 +31,7 @@ export default function MasterLogin() {
     const result = await masterLogin(email, password);
     setLoading(false);
     if (result.ok) {
-      navigate("/ta-painel-gestao");
+      navigate("/master/painel");
     } else {
       toast.error(result.error ?? "Credenciais inválidas.");
     }
