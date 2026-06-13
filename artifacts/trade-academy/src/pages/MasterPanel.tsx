@@ -181,11 +181,40 @@ function EquipaTab() {
   const [adding, setAdding] = useState<"administrador" | "professor" | null>(null);
   const [query, setQuery] = useState("");
 
+  // Modal de criação de nova conta
+  const [creating, setCreating] = useState<"administrador" | "professor" | null>(null);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", password: "" });
+  const [createBusy, setCreateBusy] = useState(false);
+  const [showCreatePw, setShowCreatePw] = useState(false);
+
   async function reload() {
     setUsers(null);
     setUsers(await api.admin.users());
   }
   useEffect(() => { reload().catch(() => toast.error("Erro ao carregar utilizadores")); }, []);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!creating) return;
+    setCreateBusy(true);
+    try {
+      await api.admin.createAccount({
+        name: createForm.name,
+        email: createForm.email,
+        password: createForm.password,
+        role: creating,
+      });
+      toast.success(`Conta de ${ROLE_LABELS[creating]} criada com sucesso`);
+      setCreating(null);
+      setCreateForm({ name: "", email: "", password: "" });
+      await reload();
+    } catch (err: any) {
+      const msg = err?.body?.message ?? err?.message ?? "Erro ao criar conta";
+      toast.error(msg);
+    } finally {
+      setCreateBusy(false);
+    }
+  }
 
   const admins   = useMemo(() => users?.filter((u) => u.role === "administrador") ?? [], [users]);
   const profs    = useMemo(() => users?.filter((u) => u.role === "professor") ?? [], [users]);
@@ -232,14 +261,25 @@ function EquipaTab() {
             <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
             <span className="rounded-full bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">{list.length}</span>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1.5 border border-zinc-700 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100"
-            onClick={() => { setAdding(roleKey); setQuery(""); }}
-          >
-            <UserPlus className="h-3.5 w-3.5" /> {addLabel}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 border border-zinc-700 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100"
+              onClick={() => { setAdding(roleKey); setQuery(""); }}
+            >
+              <UserPlus className="h-3.5 w-3.5" /> {addLabel}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 border border-amber-700/50 text-amber-400 hover:border-amber-500/70 hover:text-amber-300"
+              onClick={() => { setCreating(roleKey); setCreateForm({ name: "", email: "", password: "" }); }}
+              title="Criar nova conta com e-mail e password"
+            >
+              <UserPlus className="h-3.5 w-3.5" /> Criar conta
+            </Button>
+          </div>
         </div>
 
         {!users && (
@@ -298,7 +338,7 @@ function EquipaTab() {
         addLabel="Adicionar Professor"
       />
 
-      {/* Add member panel */}
+      {/* Modal: promover utilizador existente */}
       {adding && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl flex flex-col max-h-[80vh]">
@@ -306,7 +346,7 @@ function EquipaTab() {
               <div className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-amber-400" />
                 <h3 className="font-semibold text-zinc-100">
-                  Adicionar {ROLE_LABELS[adding]}
+                  Promover utilizador a {ROLE_LABELS[adding]}
                 </h3>
               </div>
               <button onClick={() => setAdding(null)} className="text-zinc-500 hover:text-zinc-200 transition-colors">
@@ -350,6 +390,96 @@ function EquipaTab() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: criar nova conta admin/professor */}
+      {creating && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 p-4">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-amber-400" />
+                <h3 className="font-semibold text-zinc-100">
+                  Criar conta de {ROLE_LABELS[creating]}
+                </h3>
+              </div>
+              <button onClick={() => { setCreating(null); setCreateForm({ name: "", email: "", password: "" }); }}
+                className="text-zinc-500 hover:text-zinc-200 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-400">Nome completo</label>
+                <Input
+                  placeholder="Ex: Ana Silva"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  required
+                  autoFocus
+                  className="bg-zinc-900 border-zinc-700 text-zinc-200 placeholder-zinc-600"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-400">E-mail</label>
+                <Input
+                  type="email"
+                  placeholder="admin@exemplo.com"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                  required
+                  className="bg-zinc-900 border-zinc-700 text-zinc-200 placeholder-zinc-600"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-400">Password</label>
+                <div className="relative">
+                  <Input
+                    type={showCreatePw ? "text" : "password"}
+                    placeholder="Mínimo 6 caracteres"
+                    value={createForm.password}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                    required
+                    minLength={6}
+                    className="pr-10 bg-zinc-900 border-zinc-700 text-zinc-200 placeholder-zinc-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePw((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showCreatePw
+                      ? <EyeOff className="h-4 w-4" />
+                      : <Eye className="h-4 w-4" />
+                    }
+                  </button>
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-600">
+                Esta conta poderá fazer login em <strong className="text-zinc-500">/admin/entrar</strong> com as credenciais acima.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 border border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                  onClick={() => { setCreating(null); setCreateForm({ name: "", email: "", password: "" }); }}
+                  disabled={createBusy}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createBusy || !createForm.name || !createForm.email || createForm.password.length < 6}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+                >
+                  {createBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Criar conta"}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

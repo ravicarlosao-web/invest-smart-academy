@@ -96,6 +96,14 @@ function AdminLogin() {
               {loading ? "A verificar..." : locked ? "Bloqueado" : "Entrar"}
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            <p className="text-[11px] text-muted-foreground">
+              Tens uma conta admin com e-mail?{" "}
+              <a href="/admin/entrar" className="underline hover:text-foreground transition-colors">
+                Entra aqui
+              </a>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

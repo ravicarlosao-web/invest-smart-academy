@@ -319,6 +319,9 @@ export const api = {
         counts:  { total: number; active: number; pending: number; expired: number; rejected: number };
         revenue: { mrr: number; totalReceived: number; pendingRevenue: number; newLast30: number; newActiveLast30: number };
       }>("GET", "/admin/finance"),
+
+    createAccount: (data: { name: string; email: string; password: string; role: "administrador" | "professor" }) =>
+      adminRequest<{ ok: boolean; user: { id: string; name: string; email: string; role: string } }>("POST", "/admin/create-account", data),
   },
 
   /* ---------- Public content (students) ---------- */

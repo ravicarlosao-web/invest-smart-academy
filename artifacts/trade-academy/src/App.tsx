@@ -24,6 +24,7 @@ const NotFound             = lazy(() => import("./pages/NotFound"));
 
 // Painel admin — lazy
 const Admin        = lazy(() => import("./pages/Admin"));
+const AdminLogin   = lazy(() => import("./pages/AdminLogin"));
 const MasterLogin  = lazy(() => import("./pages/MasterLogin"));
 const MasterPanel  = lazy(() => import("./pages/MasterPanel"));
 
@@ -73,8 +74,9 @@ const App = () => (
             <Route path="/auth/google/resultado" element={<GoogleAuthResultado />} />
 
             {/* ── Gestão interna (protegida por senha) ── */}
-            <Route path="/master/entrar"   element={<MasterLogin />} />
-            <Route path="/master/painel"   element={<MasterPanel />} />
+            <Route path="/admin/entrar"     element={<AdminLogin />} />
+            <Route path="/master/entrar"    element={<MasterLogin />} />
+            <Route path="/master/painel"    element={<MasterPanel />} />
             <Route path="/ta-painel-gestao" element={<Admin />} />
 
             {/* ── Páginas protegidas (requerem login) ──────────── */}

@@ -198,6 +198,52 @@ async function setSetting(key: string, value: unknown): Promise<void> {
 }
 
 /* ---------------------------------------------------------------------------
+ * Criar conta admin/professor directamente (sem registo prévio)
+ * Apenas master e administrador podem criar contas.
+ * ------------------------------------------------------------------------- */
+router.post("/create-account", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const { name, email, password, role } = req.body ?? {};
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: "missing_fields", message: "Nome, email, password e role são obrigatórios." });
+    }
+    if (!["administrador", "professor"].includes(role)) {
+      return res.status(400).json({ error: "invalid_role", message: "Role deve ser 'administrador' ou 'professor'." });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: "password_too_short", message: "A password deve ter pelo menos 6 caracteres." });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+
+    const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, normalizedEmail)).get();
+    if (existing) {
+      return res.status(409).json({ error: "email_taken", message: "Este e-mail já está registado." });
+    }
+
+    const bcrypt = await import("bcryptjs");
+    const passwordHash = await bcrypt.default.hash(String(password), 12);
+    const now = Date.now();
+    const id  = `user_${now}_${Math.random().toString(36).slice(2, 7)}`;
+
+    await db.insert(usersTable).values({
+      id, name: String(name), email: normalizedEmail,
+      passwordHash, emailVerified: 1,
+      role: role as "administrador" | "professor",
+      createdAt: now, updatedAt: now,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      user: { id, name: String(name), email: normalizedEmail, role },
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
  * Overview
  * ------------------------------------------------------------------------- */
 router.get("/overview", async (req: any, res: any) => {
