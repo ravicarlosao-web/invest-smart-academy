@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { timingSafeEqual } from "node:crypto";
+import jwt from "jsonwebtoken";
 import {
   db,
   usersTable,
@@ -110,11 +111,24 @@ function safeTokenCompare(candidate: string): boolean {
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const token = String(req.header("x-admin-token") ?? "");
-  if (!token || !safeTokenCompare(token)) {
-    return res.status(401).json({ error: "unauthorized" });
+  /* 1. Accept x-admin-token (existing flow) */
+  const adminToken = String(req.header("x-admin-token") ?? "");
+  if (adminToken && safeTokenCompare(adminToken)) return next();
+
+  /* 2. Accept valid Master JWT as alternative */
+  const authHeader = String(req.header("Authorization") ?? "");
+  if (authHeader.startsWith("Bearer ")) {
+    const jwtToken = authHeader.slice(7);
+    const secret = process.env["JWT_SECRET"];
+    if (secret) {
+      try {
+        const decoded = jwt.verify(jwtToken, secret, { algorithms: ["HS256"] }) as any;
+        if (decoded?.role === "master") return next();
+      } catch { /* invalid / expired */ }
+    }
   }
-  next();
+
+  return res.status(401).json({ error: "unauthorized" });
 }
 
 /* POST /api/admin/login */

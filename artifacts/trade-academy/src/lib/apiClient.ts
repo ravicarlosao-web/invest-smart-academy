@@ -64,16 +64,30 @@ function authRequest<T>(method: string, path: string, body?: unknown): Promise<T
   return request<T>(method, path, body, token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
-/** Helper used by admin endpoints — injects the x-admin-token header */
+/** Helper used by admin endpoints — injects the x-admin-token header.
+ *  Falls back to Authorization: Bearer <JWT> when the current user is Master. */
 function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  let token = "";
+  const headers: Record<string, string> = {};
+
+  /* Try admin token first (regular admin flow) */
   try {
     const raw = localStorage.getItem("trade-academy-admin");
-    if (raw) token = (JSON.parse(raw)?.state?.token as string) ?? "";
-  } catch {
-    /* ignore */
+    const tok = (JSON.parse(raw ?? "{}") as any)?.state?.token as string ?? "";
+    if (tok) headers["x-admin-token"] = tok;
+  } catch { /* ignore */ }
+
+  /* If no admin token, check if current user is Master and use JWT */
+  if (!headers["x-admin-token"]) {
+    try {
+      const raw = localStorage.getItem("trade-academy-auth");
+      const state = (JSON.parse(raw ?? "{}") as any)?.state;
+      if (state?.user?.role === "master" && state?.token) {
+        headers["Authorization"] = `Bearer ${state.token}`;
+      }
+    } catch { /* ignore */ }
   }
-  return request<T>(method, path, body, token ? { "x-admin-token": token } : undefined);
+
+  return request<T>(method, path, body, Object.keys(headers).length ? headers : undefined);
 }
 
 export const api = {

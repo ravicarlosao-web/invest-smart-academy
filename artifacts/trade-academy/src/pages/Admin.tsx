@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 
 import { useAdminStore } from "@/store/useAdminStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { api } from "@/lib/apiClient";
 import { LEVELS } from "@/data/curriculum";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
@@ -3834,10 +3835,13 @@ export default function Admin() {
   useSEO({ title: "Painel de Gestão — ALUKA", noindex: true });
   const navigate                  = useNavigate();
   const { token, logout }         = useAdminStore();
+  const authUser                  = useAuthStore((s) => s.user);
+  const isMaster                  = authUser?.role === "master";
   const [active, setActive]       = useState<NavId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  if (!token) return <AdminLogin />;
+  /* Master JWT bypasses the admin password gate */
+  if (!token && !isMaster) return <AdminLogin />;
 
   function handleLogout() { logout(); toast.success("Sessão encerrada"); }
 
