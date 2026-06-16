@@ -122,7 +122,7 @@ router.post("/create-account", requireAdminFull, async (req: any, res: any) => {
 /* ---------------------------------------------------------------------------
  * Overview
  * ------------------------------------------------------------------------- */
-router.get("/overview", async (req: any, res: any) => {
+router.get("/overview", requireAdminFull, async (req: any, res: any) => {
   try {
     const [usersCnt]   = await db.select({ c: sql<number>`count(*)` }).from(usersTable).all();
     const [tradesCnt]  = await db.select({ c: sql<number>`count(*)` }).from(tradesTable).all();
@@ -174,7 +174,7 @@ router.get("/overview", async (req: any, res: any) => {
 /* ---------------------------------------------------------------------------
  * Users
  * ------------------------------------------------------------------------- */
-router.get("/users", async (req: any, res: any) => {
+router.get("/users", requireAdminFull, async (req: any, res: any) => {
   try {
     const users = await db.select({
       id: usersTable.id, name: usersTable.name, email: usersTable.email, createdAt: usersTable.createdAt,
@@ -289,7 +289,7 @@ router.patch("/users/:userId/xp", requireAdminFull, validate(AdminXpBody), async
 /* ---------------------------------------------------------------------------
  * Simulator monitor
  * ------------------------------------------------------------------------- */
-router.get("/simulator", async (req: any, res: any) => {
+router.get("/simulator", requireAdminFull, async (req: any, res: any) => {
   try {
     const recent = await db.select().from(tradesTable).orderBy(desc(tradesTable.closedAt)).limit(50).all();
 
@@ -761,7 +761,7 @@ router.put("/videos", async (req: any, res: any) => {
  * ------------------------------------------------------------------------- */
 
 /** GET /api/admin/subscriptions  — lista todas as subscrições com info do utilizador */
-router.get("/subscriptions", async (req: any, res: any) => {
+router.get("/subscriptions", requireAdminFull, async (req: any, res: any) => {
   try {
     const now    = Date.now();
     const status = req.query.status as string | undefined;
@@ -799,7 +799,7 @@ router.get("/subscriptions", async (req: any, res: any) => {
 });
 
 /** GET /api/admin/subscriptions/:id/receipt — devolve comprovativo */
-router.get("/subscriptions/:id/receipt", async (req: any, res: any) => {
+router.get("/subscriptions/:id/receipt", requireAdminFull, async (req: any, res: any) => {
   try {
     const sub = await db
       .select()
@@ -823,7 +823,7 @@ router.get("/subscriptions/:id/receipt", async (req: any, res: any) => {
 });
 
 /** GET /api/admin/subscriptions/stats — contagem por status */
-router.get("/subscriptions/stats", async (req: any, res: any) => {
+router.get("/subscriptions/stats", requireAdminFull, async (req: any, res: any) => {
   try {
     const now  = Date.now();
     const subs = await db.select().from(subscriptionsTable).all();
@@ -940,7 +940,7 @@ router.patch("/subscriptions/:id/reject", requireAdminFull, validate(AdminReject
  * Plan Config — GET/PUT /admin/plan-config
  * Stores { priceAoa, planName } in admin_settings under key "plan.config"
  * ------------------------------------------------------------------------- */
-router.get("/plan-config", async (req: any, res: any) => {
+router.get("/plan-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const cfg = await getSetting<{ priceAoa: number; planName: string }>(
       "plan.config",
@@ -953,7 +953,7 @@ router.get("/plan-config", async (req: any, res: any) => {
   }
 });
 
-router.put("/plan-config", async (req: any, res: any) => {
+router.put("/plan-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const { priceAoa, planName } = req.body as { priceAoa?: number; planName?: string };
     if (priceAoa !== undefined && (typeof priceAoa !== "number" || priceAoa <= 0)) {
@@ -978,7 +978,7 @@ router.put("/plan-config", async (req: any, res: any) => {
  * Finance Overview — GET /admin/finance
  * Revenue summary combining subscription stats with plan pricing
  * ------------------------------------------------------------------------- */
-router.get("/finance", async (req: any, res: any) => {
+router.get("/finance", requireAdminFull, async (req: any, res: any) => {
   try {
     const cfg = await getSetting<{ priceAoa: number; planName: string }>(
       "plan.config",
@@ -1055,7 +1055,7 @@ function maskKey(key: string): string {
   return key.slice(0, 8) + "•".repeat(Math.min(key.length - 12, 20)) + key.slice(-4);
 }
 
-router.get("/ai-config", async (req: any, res: any) => {
+router.get("/ai-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const stored = await getSetting<Partial<AiCfg>>("ai.config", {});
     const cfg: AiCfg = { ...AI_CFG_DEFAULT, ...stored };
@@ -1076,7 +1076,7 @@ router.get("/ai-config", async (req: any, res: any) => {
   }
 });
 
-router.put("/ai-config", async (req: any, res: any) => {
+router.put("/ai-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const { geminiTextKey, geminiTextEnabled, geminiImageKey, geminiImageEnabled } =
       req.body as Partial<AiCfg>;
@@ -1094,7 +1094,7 @@ router.put("/ai-config", async (req: any, res: any) => {
   }
 });
 
-router.post("/ai-config/test", async (req: any, res: any) => {
+router.post("/ai-config/test", requireAdminFull, async (req: any, res: any) => {
   try {
     const { type = "text" } = req.body as { type?: "text" | "image" };
     const cfg: AiCfg = { ...AI_CFG_DEFAULT, ...await getSetting<Partial<AiCfg>>("ai.config", {}) };
@@ -1149,7 +1149,7 @@ router.post("/ai-config/test", async (req: any, res: any) => {
  * ========================================================================= */
 
 /** GET /api/admin/email-config — returns config status (never returns passwords) */
-router.get("/email-config", async (req: any, res: any) => {
+router.get("/email-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "email.config")).get();
     let cfg: any = {};
@@ -1171,7 +1171,7 @@ router.get("/email-config", async (req: any, res: any) => {
 });
 
 /** PUT /api/admin/email-config — saves Gmail SMTP config (gmailAppPassword may be empty to keep existing) */
-router.put("/email-config", async (req: any, res: any) => {
+router.put("/email-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const { gmailAppPassword, gmailUser, fromName, adminEmail } = req.body ?? {};
     const now = Date.now();
@@ -1235,7 +1235,7 @@ const SEO_DEFAULTS = {
 /* =========================================================================
  * Google OAuth configuration
  * ========================================================================= */
-router.get("/google-oauth", async (req: any, res: any) => {
+router.get("/google-oauth", requireAdminFull, async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "auth.google")).get();
     let cfg: any = {};
@@ -1260,7 +1260,7 @@ router.get("/google-oauth", async (req: any, res: any) => {
 });
 
 /** POST /api/admin/google-oauth/test — validates stored credentials against Google */
-router.post("/google-oauth/test", async (req: any, res: any) => {
+router.post("/google-oauth/test", requireAdminFull, async (req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "auth.google")).get();
     let cfg: any = {};
@@ -1317,7 +1317,7 @@ router.post("/google-oauth/test", async (req: any, res: any) => {
   }
 });
 
-router.put("/google-oauth", async (req: any, res: any) => {
+router.put("/google-oauth", requireAdminFull, async (req: any, res: any) => {
   try {
     const { clientId, clientSecret, enabled } = req.body ?? {};
     const now = Date.now();
@@ -1361,7 +1361,7 @@ router.get("/social-config", async (req: any, res: any) => {
   }
 });
 
-router.put("/social-config", async (req: any, res: any) => {
+router.put("/social-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const { youtube, instagram, tiktok, x, facebook } = req.body ?? {};
     const current = await getSetting("social.config", SOCIAL_DEFAULTS);
@@ -1392,7 +1392,7 @@ router.get("/seo-config", async (req: any, res: any) => {
   }
 });
 
-router.put("/seo-config", async (req: any, res: any) => {
+router.put("/seo-config", requireAdminFull, async (req: any, res: any) => {
   try {
     const { siteName, shortName, domain, description, twitterHandle, themeColor, priceAoa, geo, geoCity } = req.body ?? {};
     const now = Date.now();
