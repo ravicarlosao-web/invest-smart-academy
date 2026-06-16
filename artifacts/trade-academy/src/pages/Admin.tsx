@@ -389,16 +389,26 @@ function OverviewTab() {
  * Settings tab — Plan Configuration
  * ========================================================================= */
 function SettingsTab() {
-  const [cfg, setCfg]       = useState<{ priceAoa: number; planName: string } | null>(null);
+  type BankCfg = { banco: string; conta: string; titular: string; iban: string; descricao: string };
+  const BANK_EMPTY: BankCfg = { banco: "", conta: "", titular: "", iban: "", descricao: "" };
+
+  const [cfg, setCfg]             = useState<{ priceAoa: number; planName: string } | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [editName, setEditName]   = useState("");
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [loading, setLoading]     = useState(true);
+
+  const [bank, setBank]             = useState<BankCfg | null>(null);
+  const [bankEdit, setBankEdit]     = useState<BankCfg>(BANK_EMPTY);
+  const [savingBank, setSavingBank] = useState(false);
 
   useEffect(() => {
     api.admin.getPlanConfig()
       .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
       .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
+    api.admin.getBankConfig()
+      .then((c) => { setBank(c as BankCfg); setBankEdit(c as BankCfg); })
+      .catch(() => {});
   }, []);
 
   async function save() {
@@ -414,6 +424,20 @@ function SettingsTab() {
   }
 
   const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
+
+  async function saveBank() {
+    setSavingBank(true);
+    try {
+      await api.admin.saveBankConfig(bankEdit);
+      setBank({ ...bankEdit });
+      toast.success("Dados bancários guardados");
+    } catch { toast.error("Falha ao guardar dados bancários"); }
+    finally { setSavingBank(false); }
+  }
+
+  const bankDirty = bank
+    ? (Object.keys(bankEdit) as (keyof BankCfg)[]).some((k) => bankEdit[k] !== bank[k])
+    : false;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -503,6 +527,57 @@ function SettingsTab() {
               </li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      {/* ── Dados Bancários ─────────────────────────────────────────────── */}
+      <div className="pt-2">
+        <h2 className="text-xl font-bold">Dados Bancários</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Conta de destino para os pagamentos dos alunos. Estes dados aparecem na página de pagamento.
+        </p>
+      </div>
+
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="h-4 w-4 text-primary" /> Transferência Bancária
+          </CardTitle>
+          <CardDescription>
+            Preenche os dados reais da conta para onde os alunos transferem o pagamento. Os campos em branco aparecem como "—" na página do aluno.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {([
+            { key: "banco",     label: "Banco",       placeholder: "ex: Banco BFA" },
+            { key: "titular",   label: "Titular",     placeholder: "ex: ALUKA, Lda." },
+            { key: "conta",     label: "Nº de conta", placeholder: "ex: 0040 0000 0001 2345 6789 0" },
+            { key: "iban",      label: "IBAN",        placeholder: "ex: AO06 0040 0000 0001 2345 6789 0" },
+            { key: "descricao", label: "Descrição",   placeholder: "ex: Mensalidade ALUKA" },
+          ] as { key: keyof BankCfg; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={`bank-${key}`}>{label}</Label>
+              <Input
+                id={`bank-${key}`}
+                value={bankEdit[key]}
+                onChange={(e) => setBankEdit((b) => ({ ...b, [key]: e.target.value }))}
+                placeholder={placeholder}
+                className="max-w-sm font-mono text-sm"
+              />
+            </div>
+          ))}
+
+          <div className="pt-2 flex items-center gap-3">
+            <Button onClick={saveBank} disabled={savingBank || !bankDirty}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {savingBank ? "A guardar…" : "Guardar dados bancários"}
+            </Button>
+            {!bankDirty && bank && bank.conta && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 text-bull" /> Guardado
+              </span>
+            )}
+          </div>
         </CardContent>
       </Card>
 

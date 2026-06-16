@@ -3,6 +3,7 @@ import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { PaymentWall } from "@/components/PaymentWall";
@@ -215,7 +216,7 @@ export default function Financeiro() {
       </Card>
 
       {/* ── Histórico ── */}
-      {history.length > 1 && (
+      {history.length > 0 && (
         <Card className="overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border bg-surface-1 px-5 py-3">
             <Clock className="h-4 w-4 text-primary" />
@@ -293,10 +294,27 @@ export default function Financeiro() {
         </ol>
       </Card>
 
-      {/* PaymentWall modal */}
-      {showPaywall && (
-        <PaymentWall onClose={() => { setShowPaywall(false); if (user?.id) { fetchSub(user.id); fetchHistory(user.id); } }} />
-      )}
+      {/* PaymentWall — Dialog modal */}
+      <Dialog
+        open={showPaywall}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowPaywall(false);
+            if (user?.id) { fetchSub(user.id); fetchHistory(user.id); }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          <div className="p-5">
+            <PaymentWall
+              onClose={() => {
+                setShowPaywall(false);
+                if (user?.id) { fetchSub(user.id); fetchHistory(user.id); }
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

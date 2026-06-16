@@ -241,6 +241,11 @@ export const api = {
     savePlanConfig: (cfg: { priceAoa: number; planName: string }) =>
       adminRequest<{ ok: boolean }>("PUT", "/admin/plan-config", cfg),
 
+    getBankConfig: () =>
+      adminRequest<BankConfig>("GET", "/admin/bank-config"),
+    saveBankConfig: (cfg: Partial<BankConfig>) =>
+      adminRequest<{ ok: boolean }>("PUT", "/admin/bank-config", cfg),
+
     getAiConfig: () =>
       adminRequest<{
         textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
@@ -342,6 +347,8 @@ export const api = {
       authRequest<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
     getReceipt: (userId: string, subId: string) =>
       authRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
+    getBankConfig: () =>
+      authRequest<BankConfig>("GET", "/bank-config"),
   },
 
   /* ---------- Subscrições (admin) ---------- */
@@ -382,6 +389,14 @@ export type SubscriptionData = {
 
 export type SubscriptionWithUser = SubscriptionData & {
   user: { id: string; name: string; email: string };
+};
+
+export type BankConfig = {
+  banco:     string;
+  conta:     string;
+  titular:   string;
+  iban:      string;
+  descricao: string;
 };
 
 export type SeoConfig = {

@@ -206,6 +206,19 @@ router.get("/curriculum", async (_req: any, res: any) => {
   }
 });
 
+/* ── Bank config — authenticated (alunos logged-in) ─────────────────── */
+router.get("/bank-config", requireAuth, async (_req: any, res: any) => {
+  try {
+    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "bank.config")).get();
+    let cfg: any = {};
+    try { cfg = row ? JSON.parse(row.value) : {}; } catch { cfg = {}; }
+    const defaults = { banco: "Banco BFA", conta: "", titular: "", iban: "", descricao: "Mensalidade ALUKA" };
+    res.json({ ...defaults, ...cfg });
+  } catch {
+    res.json({ banco: "Banco BFA", conta: "", titular: "", iban: "", descricao: "Mensalidade ALUKA" });
+  }
+});
+
 /* ── Public plan config — price shown on landing page ────────────────── */
 router.get("/plan-config", async (_req: any, res: any) => {
   try {

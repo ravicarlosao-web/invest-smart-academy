@@ -4,14 +4,14 @@ import { z } from "zod";
 
 /**
  * subscriptions
- * Manual payment subscription management — 5.000 AOA/mês.
+ * Manual payment subscription management — 15.000 AOA/mês (ver plan.config em admin_settings).
  * Status flow: pending → active → expired | rejected
  */
 export const subscriptionsTable = sqliteTable("subscriptions", {
   id:               text("id").primaryKey(),              // "sub_<ts>_<rand>"
   userId:           text("user_id").notNull(),
   status:           text("status").notNull().default("pending"), // "pending" | "active" | "expired" | "rejected"
-  amount:           integer("amount").notNull().default(5000),   // AOA
+  amount:           integer("amount").notNull().default(15000),  // AOA — valor real lido do plan.config no momento do pedido
   paymentReference: text("payment_reference"),            // referência bancária fornecida pelo aluno
   receiptData:      text("receipt_data"),                 // base64 do comprovativo (PDF/imagem)
   receiptMimeType:  text("receipt_mime_type"),            // ex: "image/jpeg", "application/pdf"

@@ -1052,6 +1052,46 @@ router.put("/plan-config", requireAdminFull, async (req: any, res: any) => {
 });
 
 /* ---------------------------------------------------------------------------
+ * Bank Config — GET/PUT /admin/bank-config
+ * Stores { banco, conta, titular, iban, descricao } under key "bank.config"
+ * ------------------------------------------------------------------------- */
+const BANK_DEFAULTS = {
+  banco:     "Banco BFA",
+  conta:     "",
+  titular:   "",
+  iban:      "",
+  descricao: "Mensalidade ALUKA",
+};
+
+router.get("/bank-config", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const cfg = await getSetting<typeof BANK_DEFAULTS>("bank.config", BANK_DEFAULTS);
+    res.json(cfg);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.put("/bank-config", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const { banco, conta, titular, iban, descricao } = req.body as Partial<typeof BANK_DEFAULTS>;
+    const current = await getSetting<typeof BANK_DEFAULTS>("bank.config", BANK_DEFAULTS);
+    await setSetting("bank.config", {
+      banco:     banco     !== undefined ? banco     : current.banco,
+      conta:     conta     !== undefined ? conta     : current.conta,
+      titular:   titular   !== undefined ? titular   : current.titular,
+      iban:      iban      !== undefined ? iban      : current.iban,
+      descricao: descricao !== undefined ? descricao : current.descricao,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
  * Finance Overview — GET /admin/finance
  * Revenue summary combining subscription stats with plan pricing
  * ------------------------------------------------------------------------- */
@@ -1071,6 +1111,18 @@ router.get("/finance", requireAdminFull, async (req: any, res: any) => {
     }).from(subscriptionsTable).all();
 
     const now = Date.now();
+
+    /* Persistir expiração de subscrições activas já vencidas */
+    for (const sub of subs as any[]) {
+      if (sub.status === "active" && sub.expiresAt != null && sub.expiresAt <= now) {
+        await db
+          .update(subscriptionsTable)
+          .set({ status: "expired", updatedAt: now })
+          .where(eq(subscriptionsTable.id, sub.id));
+        sub.status = "expired";
+      }
+    }
+
     const active   = subs.filter((s: any) => s.status === "active" && (s.expiresAt == null || s.expiresAt > now));
     const pending  = subs.filter((s: any) => s.status === "pending");
     const expired  = subs.filter((s: any) => s.status === "expired" || (s.status === "active" && s.expiresAt != null && s.expiresAt <= now));

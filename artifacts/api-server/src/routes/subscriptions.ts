@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
-import { db, subscriptionsTable, notificationsTable, eq, desc, and } from "@workspace/db";
+import { db, subscriptionsTable, notificationsTable, adminSettingsTable, eq, desc, and } from "@workspace/db";
 import { SubscriptionRequestBody, SubscriptionReferenceBody } from "@workspace/api-zod";
 import { validate } from "../middlewares/validate.js";
 
@@ -113,13 +113,18 @@ router.get("/:userId/history", async (req: any, res: any) => {
       .orderBy(desc(subscriptionsTable.createdAt))
       .all();
 
-    const result = subs.map((sub: any) => {
+    const result: any[] = [];
+    for (const sub of subs as any[]) {
       if (sub.status === "active" && sub.expiresAt && sub.expiresAt < now) {
+        await db
+          .update(subscriptionsTable)
+          .set({ status: "expired", updatedAt: now })
+          .where(eq(subscriptionsTable.id, sub.id));
         sub.status = "expired";
       }
       const { receiptData: _rd, ...rest } = sub;
-      return { ...rest, hasReceipt: !!sub.receiptData };
-    });
+      result.push({ ...rest, hasReceipt: !!sub.receiptData });
+    }
 
     res.json({ subscriptions: result });
   } catch (err) {
@@ -199,12 +204,28 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req: a
       return res.status(409).json({ error: "already_active", message: "A tua subscrição já está ativa." });
     }
 
+    /* Ler preço configurado pelo admin (plan.config) — fallback 15000 AOA */
+    let priceAoa = 15000;
+    try {
+      const planRow = await db
+        .select()
+        .from(adminSettingsTable)
+        .where(eq(adminSettingsTable.key, "plan.config"))
+        .get();
+      if (planRow?.value) {
+        const parsed = JSON.parse(planRow.value);
+        if (typeof parsed?.priceAoa === "number" && parsed.priceAoa > 0) {
+          priceAoa = parsed.priceAoa;
+        }
+      }
+    } catch { /* manter fallback */ }
+
     const id = genId();
     await db.insert(subscriptionsTable).values({
       id,
       userId: String(req.params.userId),
       status:           "pending",
-      amount:           15000,
+      amount:           priceAoa,
       paymentReference: paymentReference ?? null,
       receiptData:      receiptData ?? null,
       receiptMimeType:  receiptMimeType ?? null,

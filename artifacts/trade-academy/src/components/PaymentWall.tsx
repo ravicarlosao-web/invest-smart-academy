@@ -1,23 +1,24 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   CreditCard, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Copy, Check, Upload, FileText, Image, X,
+  Copy, Check, Upload, FileText, Image, X, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePlanConfig } from "@/hooks/usePlanConfig";
-
-const BANK_DETAILS = {
-  banco:     "Banco BFA",
-  conta:     "1234 5678 9012 3456",
-  titular:   "ALUKA, Lda.",
-  iban:      "AO06 0040 0000 0123 4567 8901 2",
-  descricao: "Mensalidade ALUKA",
-} as const;
+import { api, type BankConfig } from "@/lib/apiClient";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_SIZE_MB = 5;
+
+const BANK_LABELS: Record<string, string> = {
+  banco:     "Banco",
+  conta:     "Nº de conta",
+  titular:   "Titular",
+  iban:      "IBAN",
+  descricao: "Descrição",
+};
 
 interface ReceiptFile {
   data:     string;  // base64
@@ -34,15 +35,25 @@ export function PaymentWall({ onClose }: Props) {
   const user         = useAuthStore((s) => s.user);
   const { subscription, requestPayment, updateReference, loading } = useSubscriptionStore();
 
-  const [step, setStep]       = useState<"info" | "form" | "done">("info");
+  const [step, setStep]           = useState<"info" | "form" | "done">("info");
   const [reference, setReference] = useState("");
-  const [receipt, setReceipt] = useState<ReceiptFile | null>(null);
+  const [receipt, setReceipt]     = useState<ReceiptFile | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [error, setError]     = useState<string | null>(null);
-  const [copied, setCopied]   = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
+  const [copied, setCopied]       = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [bankConfig, setBankConfig] = useState<BankConfig | null>(null);
+  const [bankLoading, setBankLoading] = useState(true);
+
+  useEffect(() => {
+    api.subscription.getBankConfig()
+      .then((cfg) => { setBankConfig(cfg); setBankLoading(false); })
+      .catch(() => setBankLoading(false));
+  }, []);
+
   const copy = (text: string, key: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       setCopied(key);
       setTimeout(() => setCopied(null), 2000);
@@ -118,7 +129,6 @@ export function PaymentWall({ onClose }: Props) {
           </p>
         </div>
 
-        {/* Referência submetida */}
         {subscription.paymentReference && (
           <div className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-sm">
             <span className="text-muted-foreground">Referência: </span>
@@ -126,7 +136,6 @@ export function PaymentWall({ onClose }: Props) {
           </div>
         )}
 
-        {/* Comprovativo submetido */}
         {subscription.hasReceipt && (
           <div className="flex items-center gap-2 rounded-lg border border-bull/30 bg-bull/5 px-4 py-2 text-sm text-bull">
             <CheckCircle2 className="h-4 w-4" />
@@ -134,7 +143,6 @@ export function PaymentWall({ onClose }: Props) {
           </div>
         )}
 
-        {/* Pode adicionar referência ou comprovativo */}
         {(!subscription.paymentReference || !subscription.hasReceipt) && (
           <div className="w-full max-w-sm space-y-3">
             <p className="text-xs text-muted-foreground text-center">
@@ -224,6 +232,7 @@ export function PaymentWall({ onClose }: Props) {
 
   // ─── Formulário ─────────────────────────────────────────────────────────
   if (step === "form") {
+    const canSubmit = reference.trim().length > 0 || receipt !== null;
     return (
       <div className="flex flex-col gap-4 py-2">
         <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
@@ -262,13 +271,19 @@ export function PaymentWall({ onClose }: Props) {
           />
         </div>
 
+        {!canSubmit && (
+          <p className="text-xs text-muted-foreground text-center">
+            Adiciona a referência bancária ou anexa o comprovativo para enviar o pedido.
+          </p>
+        )}
+
         {error && <p className="text-sm text-bear">{error}</p>}
 
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setStep("info")} className="flex-1">
             Voltar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="flex-1">
+          <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="flex-1">
             {loading ? "A enviar…" : "Enviar pedido"}
           </Button>
         </div>
@@ -316,28 +331,40 @@ export function PaymentWall({ onClose }: Props) {
         <p className="text-xs text-muted-foreground">
           Faz uma transferência bancária com os dados abaixo e depois clica em <strong>"Confirmar pagamento"</strong>.
         </p>
-        <div className="space-y-1.5 mt-2">
-          {Object.entries(BANK_DETAILS).map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between gap-2 text-sm">
-              <span className="capitalize text-muted-foreground">{key}</span>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-xs">{value}</span>
-                {(key === "conta" || key === "iban") && (
-                  <button
-                    onClick={() => copy(value, key)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copiar"
-                  >
-                    {copied === key ? <Check className="h-3 w-3 text-bull" /> : <Copy className="h-3 w-3" />}
-                  </button>
-                )}
+
+        {bankLoading ? (
+          <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-xs">A carregar dados bancários…</span>
+          </div>
+        ) : bankConfig && (bankConfig.conta || bankConfig.iban) ? (
+          <div className="space-y-1.5 mt-2">
+            {(Object.entries(bankConfig) as [string, string][]).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground shrink-0">{BANK_LABELS[key] ?? key}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-mono text-xs truncate">{value || "—"}</span>
+                  {(key === "conta" || key === "iban") && value && (
+                    <button
+                      onClick={() => copy(value, key)}
+                      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      title="Copiar"
+                    >
+                      {copied === key ? <Check className="h-3 w-3 text-bull" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground py-2 text-center">
+            Dados bancários a ser configurados. Contacta o suporte para informações de pagamento.
+          </p>
+        )}
       </div>
 
-      <Button onClick={() => setStep("form")} className="w-full">
+      <Button onClick={() => setStep("form")} className="w-full" disabled={bankLoading}>
         Confirmar pagamento
       </Button>
 
