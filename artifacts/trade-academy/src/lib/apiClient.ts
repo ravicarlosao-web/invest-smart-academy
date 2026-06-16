@@ -302,6 +302,18 @@ export const api = {
 
     createAccount: (data: { name: string; email: string; password: string; role: "administrador" | "professor" }) =>
       adminRequest<{ ok: boolean; user: { id: string; name: string; email: string; role: string } }>("POST", "/admin/create-account", data),
+
+    getProfessorLogs: (qs?: string) =>
+      adminRequest<{
+        logs: Array<{
+          id: string; professorId: string; professorName: string; professorEmail: string;
+          action: string; resourceType: string; resourceName: string; details: string | null; createdAt: number;
+        }>;
+        total: number; pages: number; page: number; limit: number;
+      }>("GET", `/admin/professor-logs${qs ? "?" + qs : ""}`),
+
+    purgeProfessorLogs: () =>
+      adminRequest<{ ok: boolean; deleted: number }>("DELETE", "/admin/professor-logs/purge"),
   },
 
   /* ---------- Public content (students) ---------- */

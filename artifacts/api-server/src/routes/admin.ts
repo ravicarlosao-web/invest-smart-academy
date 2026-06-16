@@ -17,6 +17,7 @@ import {
   resourceItemsTable,
   curriculumLevelsTable,
   curriculumLessonsTable,
+  professorLogsTable,
   eq,
   desc,
   asc,
@@ -44,6 +45,36 @@ async function createNotif(userId: string, type: string, title: string, message:
       link: link ?? null, isRead: 0, createdAt: Date.now(),
     });
   } catch { /* best-effort */ }
+}
+
+/**
+ * Regista uma acção de conteúdo (professor/admin) na tabela professor_logs.
+ * Melhor-esforço — nunca bloqueia a operação principal.
+ */
+async function logAction(
+  req: any,
+  action: string,
+  resourceType: string,
+  resourceName: string,
+  details?: string,
+): Promise<void> {
+  try {
+    const user = req.user;
+    if (!user) return;
+    const now = Date.now();
+    const id  = `plog_${now}_${Math.random().toString(36).slice(2, 8)}`;
+    await db.insert(professorLogsTable).values({
+      id,
+      professorId:    String(user.id    ?? ""),
+      professorName:  String(user.name  ?? user.email ?? ""),
+      professorEmail: String(user.email ?? ""),
+      action,
+      resourceType,
+      resourceName,
+      details: details ?? null,
+      createdAt: now,
+    });
+  } catch { /* best-effort — nunca falha a operação principal */ }
 }
 
 /**
@@ -392,6 +423,7 @@ router.post("/curriculum-db/levels", async (req: any, res: any) => {
       createdAt:  now,
       updatedAt:  now,
     });
+    logAction(req, "added", "curriculum_level", String(title ?? "Novo Nível"), `Dificuldade: ${difficulty ?? "iniciante"}`);
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -419,8 +451,10 @@ router.put("/curriculum-db/levels/:id", async (req: any, res: any) => {
 router.delete("/curriculum-db/levels/:id", async (req: any, res: any) => {
   try {
     const id = Number(req.params.id);
+    const levelInfo: any = await db.select({ title: curriculumLevelsTable.title }).from(curriculumLevelsTable).where(eq(curriculumLevelsTable.id, id)).get();
     await db.delete(curriculumLessonsTable).where(eq(curriculumLessonsTable.levelId, id));
     await db.delete(curriculumLevelsTable).where(eq(curriculumLevelsTable.id, id));
+    logAction(req, "removed", "curriculum_level", String(levelInfo?.title ?? `Nível #${id}`));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -450,6 +484,7 @@ router.post("/curriculum-db/lessons", async (req: any, res: any) => {
       createdAt: now,
       updatedAt: now,
     });
+    logAction(req, "added", "curriculum_lesson", String(title ?? "Nova Lição"), `XP: ${xp ?? 20}`);
     res.json({ ok: true, id: lessonId });
   } catch (err) {
     req.log.error(err);
@@ -478,7 +513,9 @@ router.put("/curriculum-db/lessons/:id", async (req: any, res: any) => {
 
 router.delete("/curriculum-db/lessons/:id", async (req: any, res: any) => {
   try {
+    const lessonInfo: any = await db.select({ title: curriculumLessonsTable.title }).from(curriculumLessonsTable).where(eq(curriculumLessonsTable.id, String(req.params.id))).get();
     await db.delete(curriculumLessonsTable).where(eq(curriculumLessonsTable.id, String(req.params.id)));
+    logAction(req, "removed", "curriculum_lesson", String(lessonInfo?.title ?? `Lição #${req.params.id}`));
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -525,6 +562,7 @@ router.put("/strategies", async (req: any, res: any) => {
   try {
     const items: any[] = Array.isArray(req.body) ? req.body : [];
     const now = Date.now();
+    const oldStrategies = await db.select({ id: strategiesTable.id, name: strategiesTable.name }).from(strategiesTable).all();
     await db.delete(strategiesTable);
     if (items.length > 0) {
       await db.insert(strategiesTable).values(items.map((it: any, i: any) => ({
@@ -552,6 +590,16 @@ router.put("/strategies", async (req: any, res: any) => {
         createdAt:      now,
         updatedAt:      now,
       })));
+    }
+    // Logging: detectar o que foi adicionado/removido por comparação de IDs
+    const oldIdSet = new Set(oldStrategies.map((r: any) => r.id));
+    const newIdSet = new Set(items.filter((it: any) => it.id).map((it: any) => String(it.id)));
+    const added    = items.filter((it: any) => it.id && !oldIdSet.has(String(it.id)));
+    const removed  = oldStrategies.filter((r: any) => !newIdSet.has(r.id));
+    for (const it of added)   logAction(req, "added",   "strategy", String(it.name || "Nova estratégia"));
+    for (const it of removed) logAction(req, "removed", "strategy", String((it as any).name || "Estratégia"));
+    if (added.length === 0 && removed.length === 0 && items.length > 0) {
+      logAction(req, "updated", "strategy", `${items.length} estratégia(s)`);
     }
     res.json({ ok: true, count: items.length });
   } catch (err) {
@@ -588,6 +636,7 @@ router.put("/books", async (req: any, res: any) => {
   try {
     const items: any[] = Array.isArray(req.body) ? req.body : [];
     const now = Date.now();
+    const oldBooks = await db.select({ id: booksTable.id, title: booksTable.title }).from(booksTable).all();
     await db.delete(booksTable);
     if (items.length > 0) {
       await db.insert(booksTable).values(items.map((it: any, i: any) => ({
@@ -604,6 +653,15 @@ router.put("/books", async (req: any, res: any) => {
         createdAt:   now,
         updatedAt:   now,
       })));
+    }
+    const oldBookIdSet = new Set(oldBooks.map((r: any) => r.id));
+    const newBookIdSet = new Set(items.filter((it: any) => it.id).map((it: any) => String(it.id)));
+    const addedBooks   = items.filter((it: any) => it.id && !oldBookIdSet.has(String(it.id)));
+    const removedBooks = oldBooks.filter((r: any) => !newBookIdSet.has(r.id));
+    for (const it of addedBooks)   logAction(req, "added",   "book", String(it.title || "Novo livro"));
+    for (const it of removedBooks) logAction(req, "removed", "book", String((it as any).title || "Livro"));
+    if (addedBooks.length === 0 && removedBooks.length === 0 && items.length > 0) {
+      logAction(req, "updated", "book", `${items.length} livro(s)`);
     }
     res.json({ ok: true, count: items.length });
   } catch (err) {
@@ -635,6 +693,8 @@ router.put("/glossary", async (req: any, res: any) => {
   try {
     const items: any[] = Array.isArray(req.body) ? req.body : [];
     const now = Date.now();
+    const [oldGlossaryCount] = await db.select({ c: sql`COUNT(*)` }).from(glossaryTermsTable).all();
+    const prevGlossaryCount  = Number((oldGlossaryCount as any)?.c ?? 0);
     await db.delete(glossaryTermsTable);
     if (items.length > 0) {
       /* glossaryTermsTable has autoIncrement PK — insert in batches of 100 */
@@ -652,6 +712,10 @@ router.put("/glossary", async (req: any, res: any) => {
         );
       }
     }
+    const diffGlossary = items.length - prevGlossaryCount;
+    if (diffGlossary > 0)      logAction(req, "added",   "glossary", `${diffGlossary} termo(s)`, `Total: ${items.length}`);
+    else if (diffGlossary < 0) logAction(req, "removed", "glossary", `${Math.abs(diffGlossary)} termo(s)`, `Total: ${items.length}`);
+    else if (items.length > 0) logAction(req, "updated", "glossary", `${items.length} termo(s)`);
     res.json({ ok: true, count: items.length });
   } catch (err) {
     req.log.error(err);
@@ -693,6 +757,8 @@ router.put("/resources", async (req: any, res: any) => {
   try {
     const sections: any[] = Array.isArray(req.body) ? req.body : [];
     const now = Date.now();
+    const [oldResCount] = await db.select({ c: sql`COUNT(*)` }).from(resourceItemsTable).all();
+    const prevResCount  = Number((oldResCount as any)?.c ?? 0);
     await db.delete(resourceItemsTable);
     await db.delete(resourceSectionsTable);
     for (let si = 0; si < sections.length; si++) {
@@ -725,6 +791,11 @@ router.put("/resources", async (req: any, res: any) => {
         );
       }
     }
+    const newResCount = sections.reduce((sum: number, s: any) => sum + (Array.isArray(s.items) ? s.items.length : 0), 0);
+    const diffRes = newResCount - prevResCount;
+    if (diffRes > 0)        logAction(req, "added",   "resource", `${diffRes} recurso(s)`, `Secções: ${sections.length}`);
+    else if (diffRes < 0)   logAction(req, "removed", "resource", `${Math.abs(diffRes)} recurso(s)`, `Secções: ${sections.length}`);
+    else if (newResCount > 0) logAction(req, "updated", "resource", `${newResCount} recurso(s)`);
     res.json({ ok: true, sections: sections.length });
   } catch (err) {
     req.log.error(err);
@@ -748,7 +819,13 @@ router.get("/videos", async (req: any, res: any) => {
 router.put("/videos", async (req: any, res: any) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
+    const prevVideos: any[] = await getSetting("content.videos", []);
+    const prevVideoCount = prevVideos.length;
     await setSetting("content.videos", items);
+    const diffVid = items.length - prevVideoCount;
+    if (diffVid > 0)         logAction(req, "added",   "video", `${diffVid} vídeo(s)`, `Total: ${items.length}`);
+    else if (diffVid < 0)    logAction(req, "removed", "video", `${Math.abs(diffVid)} vídeo(s)`, `Total: ${items.length}`);
+    else if (items.length > 0) logAction(req, "updated", "video", `${items.length} vídeo(s)`);
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
@@ -1425,6 +1502,72 @@ router.put("/seo-config", requireAdminFull, async (req: any, res: any) => {
     res.status(500).json({ error: "internal" });
   }
 });
+
+/* ---------------------------------------------------------------------------
+ * Professor activity logs
+ * GET  /admin/professor-logs         — lista paginada (master + administrador)
+ * DELETE /admin/professor-logs/purge — purga logs com mais de 60 dias
+ * ------------------------------------------------------------------------- */
+router.get("/professor-logs", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const page   = Math.max(1, Number(req.query.page  ?? 1));
+    const limit  = Math.min(100, Math.max(1, Number(req.query.limit ?? 50)));
+    const offset = (page - 1) * limit;
+
+    const all: any[] = await db
+      .select()
+      .from(professorLogsTable)
+      .orderBy(desc(professorLogsTable.createdAt))
+      .all();
+
+    let rows = all;
+    const { professorEmail, action, resourceType } = req.query;
+    if (professorEmail) {
+      const q = String(professorEmail).toLowerCase();
+      rows = rows.filter((r: any) => r.professorEmail.toLowerCase().includes(q));
+    }
+    if (action)       rows = rows.filter((r: any) => r.action       === String(action));
+    if (resourceType) rows = rows.filter((r: any) => r.resourceType === String(resourceType));
+
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+
+    res.json({ logs: rows.slice(offset, offset + limit), total, pages, page, limit });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.delete("/professor-logs/purge", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000; // 60 dias
+    const toDelete: any[] = await db
+      .select({ id: professorLogsTable.id })
+      .from(professorLogsTable)
+      .where(sql`${professorLogsTable.createdAt} < ${cutoff}`)
+      .all();
+    if (toDelete.length > 0) {
+      await db
+        .delete(professorLogsTable)
+        .where(sql`${professorLogsTable.createdAt} < ${cutoff}`);
+    }
+    res.json({ ok: true, deleted: toDelete.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ── Auto-purga diária: elimina logs com mais de 60 dias ─────────────────── */
+setInterval(async () => {
+  const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
+  try {
+    await db
+      .delete(professorLogsTable)
+      .where(sql`${professorLogsTable.createdAt} < ${cutoff}`);
+  } catch { /* best-effort */ }
+}, 24 * 60 * 60 * 1000); // cada 24 h
 
 export default router;
 

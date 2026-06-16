@@ -15,3 +15,4 @@ export * from "./revokedTokens.js";
 export * from "./emailVerifications.js";
 export * from "./aiUsage.js";
 export * from "./masterAccount.js";
+export * from "./professorLogs.js";

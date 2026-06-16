@@ -11,7 +11,7 @@ import {
   Banknote, Settings, RefreshCw, ArrowUpRight, UserCheck, UserX, Hourglass,
   Brain, Eye, EyeOff, Loader2, Wifi, WifiOff, Headphones, Upload, Volume2,
   Mail, Send, CheckCircle, Globe, Plug, Copy, ToggleLeft, ToggleRight,
-  Building2, ArrowLeftRight, Video, Share2, AlertCircle,
+  Building2, ArrowLeftRight, Video, Share2, AlertCircle, ClipboardList,
 } from "lucide-react";
 import type { SubscriptionWithUser, SeoConfig, SocialConfig } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
 import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
 import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
+import { ProfessorLogsTab } from "./ProfessorLogsTab";
 
 
 /* =========================================================================
@@ -3875,6 +3876,7 @@ const NAV_ITEMS = [
   { id: "overview",       label: "Dashboard",             icon: BarChart3,      group: "negocio" },
   { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
+  { id: "professor-logs", label: "Logs de Professores",  icon: ClipboardList,  group: "negocio" },
   { id: "email",          label: "Email / SendGrid",      icon: Mail,           group: "negocio" },
   { id: "seo",            label: "SEO & Domínio",         icon: Globe,          group: "negocio" },
   { id: "social",         label: "Redes Sociais",         icon: Share2,         group: "negocio" },
@@ -3935,6 +3937,7 @@ export default function Admin() {
     integracoes:   <IntegracoesTb />,
     "aluka-ia":    <AlukaIaTab />,
     settings:      <SettingsTab />,
+    "professor-logs": <ProfessorLogsTab />,
     curriculum:    <CurriculumTab />,
     videos:        <VideosTab />,
     strategies:    <StrategiesTab />,

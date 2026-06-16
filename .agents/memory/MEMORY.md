@@ -1,1 +1,2 @@
 - [Master Panel & Role System](master-panel-roles.md) — Ala Master em `/master/painel`; backend aceita JWT de master/administrador/professor no `requireAdmin`; apiClient usa `api.adminSubscriptions.stats()` (não `api.admin.subscription.stats()`).
+- [Drizzle-kit push ESM workaround](drizzle-kit-push.md) — `pnpm --filter @workspace/db run push` falha com "require is not defined in ES module scope"; usar DDL directo via `@libsql/client` como alternativa.

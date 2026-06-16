@@ -11,7 +11,7 @@ import {
   LogOut, Home, Search, Zap, BookOpen, TrendingUp, BarChart3,
   UserPlus, Trash2, RefreshCw, Globe, DollarSign, CheckCircle2,
   AlertCircle, ExternalLink, Building2, Layers, Eye, EyeOff,
-  Save, X, ArrowUpRight, Activity,
+  Save, X, ArrowUpRight, Activity, ClipboardList,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,10 @@ import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { ProfessorLogsTab } from "./ProfessorLogsTab";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
-type MasterNav = "overview" | "equipa" | "utilizadores" | "plataforma";
+type MasterNav = "overview" | "equipa" | "utilizadores" | "plataforma" | "logs";
 type MUser = Awaited<ReturnType<typeof api.admin.users>>[number];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -797,6 +798,7 @@ const MASTER_NAV: Array<{ id: MasterNav; label: string; icon: React.ElementType;
   { id: "equipa",       label: "Equipa",         icon: Users,         sub: "Admins & Professores" },
   { id: "utilizadores", label: "Utilizadores",   icon: Shield,        sub: "Gestão de roles" },
   { id: "plataforma",   label: "Plataforma",     icon: Building2,     sub: "White-label" },
+  { id: "logs",         label: "Logs de Professores", icon: ClipboardList, sub: "Actividade de conteúdo" },
 ];
 
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
@@ -818,6 +820,7 @@ export default function MasterPanel() {
     equipa:       <EquipaTab />,
     utilizadores: <UtilizadoresTab />,
     plataforma:   <PlataformaTab />,
+    logs:         <ProfessorLogsTab />,
   };
 
   function handleLogout() {
