@@ -445,7 +445,7 @@ router.get("/google/callback", async (req: any, res: any) => {
     /* Check if user already linked to this Google account */
     const byGoogleId = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId)).get();
     if (byGoogleId) {
-      await db.update(usersTable).set({ updatedAt: now }).where(eq(usersTable.id, byGoogleId.id));
+      await db.update(usersTable).set({ updatedAt: now, emailVerified: 1 }).where(eq(usersTable.id, byGoogleId.id));
       const jwt = signToken({ userId: byGoogleId.id, email: byGoogleId.email ?? googleEmail, role: (byGoogleId.role as any) ?? "aluno" });
       const params = new URLSearchParams({
         token: jwt, userId: byGoogleId.id,
@@ -459,8 +459,8 @@ router.get("/google/callback", async (req: any, res: any) => {
     /* Check if email already exists (password account) */
     const byEmail = await db.select().from(usersTable).where(eq(usersTable.email, googleEmail)).get();
     if (byEmail) {
-      /* Link Google to existing account */
-      await db.update(usersTable).set({ googleId, updatedAt: now }).where(eq(usersTable.id, byEmail.id));
+      /* Link Google to existing account and mark email as verified */
+      await db.update(usersTable).set({ googleId, updatedAt: now, emailVerified: 1 }).where(eq(usersTable.id, byEmail.id));
       const jwt = signToken({ userId: byEmail.id, email: byEmail.email ?? googleEmail, role: (byEmail.role as any) ?? "aluno" });
       const params = new URLSearchParams({
         token: jwt, userId: byEmail.id,
@@ -471,11 +471,11 @@ router.get("/google/callback", async (req: any, res: any) => {
       return res.redirect(`${fe}/auth/google/resultado?${params}`);
     }
 
-    /* New user — create account */
+    /* New user — create account (email already verified by Google) */
     const newId = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await db.insert(usersTable).values({
       id: newId, name: googleName, email: googleEmail,
-      googleId, createdAt: now, updatedAt: now,
+      googleId, emailVerified: 1, createdAt: now, updatedAt: now,
     });
 
     const jwt = signToken({ userId: newId, email: googleEmail, role: "aluno" });
