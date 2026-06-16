@@ -586,9 +586,9 @@ function SettingsTab() {
 }
 
 /* =========================================================================
- * Aluka IA tab — Google Gemini dual-model config
+ * Users tab — (AlukaIaTab moved to MasterPanel)
  * ========================================================================= */
-function AlukaIaTab() {
+function AlukaIaTab_UNUSED() {
   type GeminiCfg = {
     textConfigured: boolean; textEnabled: boolean; textKeyPreview: string;
     imageConfigured: boolean; imageEnabled: boolean; imageKeyPreview: string;
@@ -3952,11 +3952,6 @@ const NAV_ITEMS = [
   { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
   { id: "professor-logs", label: "Logs de Professores",  icon: ClipboardList,  group: "negocio" },
-  { id: "email",          label: "Email / SendGrid",      icon: Mail,           group: "negocio" },
-  { id: "seo",            label: "SEO & Domínio",         icon: Globe,          group: "negocio" },
-  { id: "social",         label: "Redes Sociais",         icon: Share2,         group: "negocio" },
-  { id: "integracoes",    label: "Integrações",           icon: Plug,           group: "negocio" },
-  { id: "aluka-ia",       label: "Aluka IA",              icon: Brain,          group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
   { id: "curriculum",     label: "Trilha de Aprendizado", icon: GraduationCap,  group: "conteudo" },
   { id: "videos",         label: "Vídeo Aulas",           icon: PlayCircle,     group: "conteudo" },
@@ -4006,11 +4001,6 @@ export default function Admin() {
     overview:      <OverviewTab />,
     subscriptions: <SubscriptionsTab />,
     users:         <UsersTab />,
-    email:         <EmailConfigTab />,
-    seo:           <SeoSettingsTab />,
-    social:        <SocialTab />,
-    integracoes:   <IntegracoesTb />,
-    "aluka-ia":    <AlukaIaTab />,
     settings:      <SettingsTab />,
     "professor-logs": <ProfessorLogsTab />,
     curriculum:    <CurriculumTab />,
