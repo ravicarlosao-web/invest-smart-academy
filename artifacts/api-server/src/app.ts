@@ -73,10 +73,9 @@ app.use(
       if (!origin) return cb(null, true);
       // Check explicit allow-list
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      // Allow Vercel preview deployments for this project (startsWith avoids ReDoS)
-      // Production: aluka.vercel.app (already in allowedOrigins above)
-      // Previews:   aluka-<hash>.vercel.app
-      if (origin.startsWith("https://aluka") && origin.endsWith(".vercel.app")) return cb(null, true);
+      // Vercel production is already in the explicit allowedOrigins list above.
+      // Preview deploy URLs are NOT allowed generically — any Vercel user could register
+      // aluka-<anything>.vercel.app. Add preview domains via the ALLOWED_ORIGIN env var.
       // Allow all Replit dev/preview domains (frontend and API run on different subdomains)
       // Parse hostname to strip any explicit port (e.g. origin may be https://foo.replit.dev:3001)
       try {

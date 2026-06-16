@@ -25,6 +25,36 @@ setInterval(() => {
   for (const [k, ts] of oauthStates) if (ts < cutoff) oauthStates.delete(k);
 }, 5 * 60 * 1000);
 
+/* ── Email verification attempt limiter (per-user, in-memory) ───────────
+ * Prevents brute-forcing the 6-digit code (1 M combinations) by limiting
+ * failed attempts to MAX_VERIFY_ATTEMPTS per VERIFY_ATTEMPT_WINDOW_MS.
+ * On success the counter is cleared immediately.
+ * ──────────────────────────────────────────────────────────────────────── */
+const MAX_VERIFY_ATTEMPTS      = 5;
+const VERIFY_ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 min
+
+const verifyAttempts = new Map<string, { count: number; resetAt: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of verifyAttempts) if (v.resetAt < now) verifyAttempts.delete(k);
+}, 60_000);
+
+function recordVerifyAttempt(userId: string): boolean {
+  const now   = Date.now();
+  const entry = verifyAttempts.get(userId);
+  if (!entry || entry.resetAt < now) {
+    verifyAttempts.set(userId, { count: 1, resetAt: now + VERIFY_ATTEMPT_WINDOW_MS });
+    return true; // allowed
+  }
+  if (entry.count >= MAX_VERIFY_ATTEMPTS) return false; // blocked
+  entry.count++;
+  return true; // allowed
+}
+
+function clearVerifyAttempts(userId: string): void {
+  verifyAttempts.delete(userId);
+}
+
 function buildCallbackUrl(req: any): string {
   const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0]?.trim() ?? req.protocol ?? "https";
   const host  = (req.headers["x-forwarded-host"] as string | undefined) ?? (req.headers["host"] as string) ?? "";
@@ -227,6 +257,14 @@ router.post("/verify-email", requireAuth, async (req: any, res: any) => {
       return res.status(400).json({ error: "invalid_code", message: "Código inválido." });
     }
 
+    /* Per-user brute-force protection: max 5 failed attempts per 15 min */
+    if (!recordVerifyAttempt(userId)) {
+      return res.status(429).json({
+        error:   "too_many_attempts",
+        message: "Demasiadas tentativas. Aguarda 15 minutos e tenta novamente.",
+      });
+    }
+
     // Find latest unused code for this user
     const row = await db
       .select()
@@ -238,6 +276,9 @@ router.post("/verify-email", requireAuth, async (req: any, res: any) => {
     if (!row)              return res.status(400).json({ error: "no_pending_verification", message: "Nenhum código de verificação pendente." });
     if (row.code !== code) return res.status(400).json({ error: "invalid_code", message: "Código incorrecto." });
     if (row.expiresAt < Date.now()) return res.status(400).json({ error: "code_expired", message: "Código expirado. Solicita um novo." });
+
+    /* Success — clear attempt counter */
+    clearVerifyAttempts(userId);
 
     const now = Date.now();
     await db.update(emailVerificationsTable).set({ used: 1 }).where(eq(emailVerificationsTable.id, row.id));

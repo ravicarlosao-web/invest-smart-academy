@@ -3,10 +3,9 @@ import { z } from "zod";
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 
 export const RegisterBody = z.object({
-  id:       z.string().min(1).max(128).regex(/^[a-zA-Z0-9_\-.:@]+$/, "ID inválido"),
   name:     z.string().min(1, "Nome obrigatório").max(100).trim(),
   email:    z.string().email("E-mail inválido").max(254).toLowerCase(),
-  password: z.string().min(6, "Password deve ter pelo menos 6 caracteres").max(200),
+  password: z.string().min(8, "Password deve ter pelo menos 8 caracteres").max(200),
 });
 
 export const LoginBody = z.object({

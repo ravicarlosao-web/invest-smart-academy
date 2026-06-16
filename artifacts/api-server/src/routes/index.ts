@@ -500,6 +500,17 @@ router.post("/ai/chart-analysis", requireAuth, requireEmailVerified, async (req:
             showRsi, rsiValue, rsiPeriod, showMacd, macdValue, signalValue,
             imageBase64 } = req.body as any;
 
+    /* Validate imageBase64 before use: must be valid base64 and within size limits */
+    if (imageBase64 !== undefined && imageBase64 !== null) {
+      if (
+        typeof imageBase64 !== "string" ||
+        imageBase64.length > 350_000 ||
+        !/^[A-Za-z0-9+/]={0,2}$/.test(imageBase64.slice(-4)) ||
+        !/^[A-Za-z0-9+/=]+$/.test(imageBase64)
+      ) {
+        return res.status(400).json({ error: "invalid_image", message: "Imagem inválida ou demasiado grande." });
+      }
+    }
     const hasImage = !!imageBase64 && cfg.geminiImageEnabled && !!cfg.geminiImageKey;
     const hasText  = cfg.geminiTextEnabled && !!cfg.geminiTextKey;
 
@@ -561,7 +572,7 @@ REGRAS:
   } catch (err: any) {
     req.log?.error(err);
     if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
-    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
+    res.status(500).json({ error: "internal", message: "Erro interno ao contactar a IA." });
   }
 });
 
@@ -624,7 +635,7 @@ ${JSON.stringify(trade, null, 2)}`;
   } catch (err: any) {
     req.log?.error(err);
     if (err?.isQuotaError) return res.status(429).json({ error: "quota_exceeded", message: "Limite de pedidos à IA atingido. Tenta novamente em alguns segundos." });
-    res.status(500).json({ error: "internal", message: err?.message ?? "Erro interno ao contactar a IA." });
+    res.status(500).json({ error: "internal", message: "Erro interno ao contactar a IA." });
   }
 });
 
