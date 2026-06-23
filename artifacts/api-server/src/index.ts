@@ -4,6 +4,7 @@ import { logger } from "./lib/logger.js";
 import { initDb } from "@workspace/db";
 import { seedContent, seedMasterAccount } from "./seed.js";
 import { startSubscriptionExpiryJob } from "./lib/subscriptionExpiry.js";
+import { startSubscriptionExpiryWarningJob } from "./lib/subscriptionExpiryWarning.js";
 import { startReceiptPurgeJob } from "./lib/receiptPurge.js";
 import { startTokenCleanupJob } from "./lib/tokenCleanup.js";
 
@@ -53,6 +54,9 @@ await seedMasterAccount();
 
 /* Start background job — expires overdue active subscriptions every 5 min */
 startSubscriptionExpiryJob();
+
+/* Start background job — warns users 3 days before subscription expires (every 6h) */
+startSubscriptionExpiryWarningJob();
 
 /* Start background job — purges receipt data 2 business days after decision */
 startReceiptPurgeJob();

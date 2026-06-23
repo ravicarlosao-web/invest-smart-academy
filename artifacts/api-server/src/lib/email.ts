@@ -227,6 +227,40 @@ export async function sendSubscriptionRejectionEmail(opts: {
   return sendMail({ to: opts.to, subject: "Subscrição não aprovada — ALUKA", html });
 }
 
+/** Aviso de expiração de subscrição — enviado ~3 dias antes */
+export async function sendSubscriptionExpiryWarningEmail(opts: {
+  to: string;
+  name: string;
+  expiresAt: number;
+  daysLeft: number;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const expireDate = new Date(opts.expiresAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+
+  const html = baseTemplate(`
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="display:inline-block;background:#f59e0b15;border-radius:50%;width:60px;height:60px;line-height:60px;font-size:28px;">⏳</div>
+    </div>
+    <h2 style="color:#e2e8f0;margin:0 0 12px;font-size:20px;text-align:center;">A tua subscrição expira em breve</h2>
+    <p style="color:#94a3b8;margin:0 0 20px;line-height:1.6;">
+      Olá <strong style="color:#e2e8f0;">${escHtml(opts.name)}</strong>,<br><br>
+      A tua subscrição Premium expira em <strong style="color:#f59e0b;">${opts.daysLeft} ${opts.daysLeft === 1 ? "dia" : "dias"}</strong>, a <strong style="color:#e2e8f0;">${escHtml(expireDate)}</strong>.<br><br>
+      Para continuares a ter acesso aos níveis Intermediário e Avançado, renova a tua subscrição antes dessa data.
+    </p>
+    <div style="background:#f59e0b12;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:4px;margin:16px 0;">
+      <p style="color:#fbbf24;margin:0;font-size:13px;">
+        💡 Faz a transferência bancária e envia o comprovativo na plataforma para renovar.
+      </p>
+    </div>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${APP_URL}/aprender" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
+        Renovar subscrição
+      </a>
+    </div>
+  `);
+
+  return sendMail({ to: opts.to, subject: `A tua subscrição expira em ${opts.daysLeft} ${opts.daysLeft === 1 ? "dia" : "dias"} — ALUKA`, html });
+}
+
 /** Email de teste */
 export async function sendTestEmail(opts: {
   to: string;
