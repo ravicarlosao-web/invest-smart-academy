@@ -3,7 +3,7 @@
   "short_name": "ALUKA",
   "description": "A primeira plataforma angolana de educação em trading. Aulas gratuitas de Forex, acções e cripto, simulador com $10.000 demo, estratégias profissionais. 100% em português.",
   "start_url": "/",
-  "id": "https://aluka.app/",
+  "id": "https://aluka.ao/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],

@@ -66,7 +66,7 @@ export function TradeShareModal({ trade, open, onClose }: Props) {
       `Entrada: ${fmtPrice(trade.entryPrice, prec)} → Saída: ${fmtPrice(trade.exitPrice, prec)}`,
       `P&L: ${fmtUSD(trade.pnl)} (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%)`,
       `Saída: ${reasonLabel}`,
-      `aluka.app`,
+      `aluka.ao`,
     ].join("\n");
     navigator.clipboard.writeText(text);
     setCopied(true);

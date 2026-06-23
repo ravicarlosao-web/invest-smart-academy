@@ -7,12 +7,12 @@
 
   <!-- ── Página inicial — prioridade máxima ─────────────────────────────── -->
   <url>
-    <loc>https://aluka.app/</loc>
+    <loc>https://aluka.ao/</loc>
     <lastmod>2026-05-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://aluka.app/opengraph.jpg</image:loc>
+      <image:loc>https://aluka.ao/opengraph.jpg</image:loc>
       <image:title>ALUKA — Curso de Trading em Português | Grátis</image:title>
       <image:caption>A plataforma angolana de educação em trading: 40+ aulas, Aluka IA, simulador com 5 tipos de gráfico</image:caption>
     </image:image>
@@ -20,7 +20,7 @@
 
   <!-- ── Registo — alta prioridade de conversão ─────────────────────────── -->
   <url>
-    <loc>https://aluka.app/cadastrar</loc>
+    <loc>https://aluka.ao/cadastrar</loc>
     <lastmod>2026-05-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
@@ -28,7 +28,7 @@
 
   <!-- ── Login ───────────────────────────────────────────────────────────── -->
   <url>
-    <loc>https://aluka.app/entrar</loc>
+    <loc>https://aluka.ao/entrar</loc>
     <lastmod>2026-05-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -36,7 +36,7 @@
 
   <!-- ── Termos de Serviço ──────────────────────────────────────────────── -->
   <url>
-    <loc>https://aluka.app/termos</loc>
+    <loc>https://aluka.ao/termos</loc>
     <lastmod>2026-05-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
@@ -44,7 +44,7 @@
 
   <!-- ── Política de Privacidade ───────────────────────────────────────── -->
   <url>
-    <loc>https://aluka.app/privacidade</loc>
+    <loc>https://aluka.ao/privacidade</loc>
     <lastmod>2026-05-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>

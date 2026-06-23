@@ -53,7 +53,8 @@ function buildAllowedOrigins(): string[] {
   const vercelProdUrl = process.env["VERCEL_PROJECT_PRODUCTION_URL"];
   if (vercelProdUrl) origins.push(`https://${vercelProdUrl}`);
 
-  // Hardcoded Vercel production domain as reliable fallback
+  // Production domains — aluka.ao (primary) + legacy fallback
+  origins.push("https://aluka.ao", "https://www.aluka.ao");
   origins.push("https://aluka.vercel.app");
 
   if (process.env["NODE_ENV"] !== "production") {

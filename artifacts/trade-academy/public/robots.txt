@@ -125,4 +125,4 @@ Disallow: /financeiro
 Crawl-delay: 5
 
 # ── Sitemap ───────────────────────────────────────────────────────────────────
-Sitemap: https://aluka.app/sitemap.xml
+Sitemap: https://aluka.ao/sitemap.xml

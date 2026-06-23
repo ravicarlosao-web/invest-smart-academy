@@ -3364,7 +3364,7 @@ function SeoSettingsTab() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Domínio</CardTitle>
           <CardDescription className="text-xs">
-            Sem "https://" — ex: <code className="bg-muted px-1 rounded">aluka.app</code>
+            Sem "https://" — ex: <code className="bg-muted px-1 rounded">aluka.ao</code>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -3373,7 +3373,7 @@ function SeoSettingsTab() {
             <div className="flex items-center mt-1">
               <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 py-2 text-xs text-muted-foreground">https://</span>
               <Input
-                placeholder="aluka.app"
+                placeholder="aluka.ao"
                 value={cfg.domain}
                 onChange={(e) => set("domain", e.target.value.replace(/^https?:\/\//, "").replace(/\/$/, ""))}
                 className="rounded-l-none font-mono text-sm"

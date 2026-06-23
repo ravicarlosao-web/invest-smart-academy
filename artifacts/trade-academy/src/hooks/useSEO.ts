@@ -8,7 +8,7 @@ interface SEOOptions {
 }
 
 const SITE_NAME = "ALUKA";
-const BASE_URL = "https://aluka.app";
+const BASE_URL = "https://aluka.ao";
 
 export function useSEO({ title, description, noindex = false, canonical }: SEOOptions) {
   useEffect(() => {

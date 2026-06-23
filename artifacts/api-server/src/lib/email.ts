@@ -13,7 +13,7 @@
 import nodemailer from "nodemailer";
 import { db, adminSettingsTable, eq } from "@workspace/db";
 
-const APP_URL = process.env["APP_URL"] ?? "https://aluka.vercel.app";
+const APP_URL = process.env["APP_URL"] ?? "https://aluka.ao";
 
 const GMAIL_USER    = "aluka.co.ao@gmail.com";
 const SENDER_NAME   = "ALUKA";

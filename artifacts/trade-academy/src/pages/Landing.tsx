@@ -310,7 +310,7 @@ export default function Landing() {
             <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
             <div className="w-3 h-3 rounded-full bg-green-500/50" />
             <div className="flex-1 mx-4 bg-white/5 rounded px-3 py-0.5 text-xs text-gray-600">
-              aluka.app/simulador
+              aluka.ao/simulador
             </div>
           </div>
 
