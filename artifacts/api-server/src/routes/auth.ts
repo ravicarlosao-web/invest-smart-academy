@@ -56,6 +56,10 @@ function clearVerifyAttempts(userId: string): void {
 }
 
 function buildCallbackUrl(req: any): string {
+  const appUrl = process.env["APP_URL"];
+  if (appUrl) {
+    return `${appUrl.replace(/\/$/, "")}/api/auth/google/callback`;
+  }
   const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0]?.trim() ?? req.protocol ?? "https";
   const host  = (req.headers["x-forwarded-host"] as string | undefined) ?? (req.headers["host"] as string) ?? "";
   return `${proto}://${host}/api/auth/google/callback`;
