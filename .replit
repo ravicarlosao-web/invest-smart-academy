@@ -78,4 +78,4 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-APP_URL = "https://aluka.ao"
+APP_URL = "https://www.aluka.ao"
