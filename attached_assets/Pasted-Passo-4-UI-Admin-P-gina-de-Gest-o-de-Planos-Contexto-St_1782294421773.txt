@@ -1,0 +1,156 @@
+Passo 4 — UI Admin: Página de Gestão de Planos
+
+Contexto:
+- Stack frontend: React 18 + Vite + TypeScript + Tailwind + shadcn/ui + Zustand
+- Painel admin em: /ta-painel-gestao (tabs existentes)
+- As rotas de backend já existem:
+  GET/POST/PUT/DELETE /api/admin/plans
+  GET/POST/DELETE     /api/admin/plans/:id/permissions
+  PATCH               /api/admin/plans/:id/set-default
+- Conteúdo disponível para associar a planos:
+  → Lições: GET /api/content/curriculum (níveis + lições)
+  → Livros: GET /api/content/books
+  → Estratégias: GET /api/content/strategies
+  → Recursos: GET /api/content/resources (resource_sections)
+  → Vídeos: GET /api/content/videos
+
+Preciso que faças o seguinte:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE A — Nova tab "planos" no painel admin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+No ficheiro do painel admin, adiciona uma nova tab "planos"
+visível apenas para roles: "administrador" e "master".
+
+A tab deve ter dois painéis lado a lado (ou em mobile: empilhados):
+
+PAINEL ESQUERDO — Lista de Planos
+┌─────────────────────────────────┐
+│  Planos  [+ Novo Plano]         │
+├─────────────────────────────────┤
+│  🟢 Plano Gratuito    DEFAULT   │
+│  0 AOA · Ilimitado              │
+│  12 permissões · 0 subs activas │
+├─────────────────────────────────┤
+│  🟢 Plano Mensal                │
+│  15.000 AOA · 30 dias           │
+│  8 permissões · 3 subs activas  │
+├─────────────────────────────────┤
+│  🔴 Plano Anual (inactivo)      │
+│  120.000 AOA · 365 dias         │
+└─────────────────────────────────┘
+
+Cada card de plano:
+- Clicável → carrega detalhes no painel direito
+- Badge "DEFAULT" se is_default = 1
+- Indicador verde/vermelho de is_active
+- Mostra: preço, duração, nº de permissões, nº de subs activas
+
+PAINEL DIREITO — Detalhes do Plano Seleccionado
+Dividido em 2 secções com tabs internas:
+
+[Configuração] [Permissões]
+
+Tab "Configuração":
+- Campo: Nome do plano (text input)
+- Campo: Descrição (textarea)
+- Campo: Preço em AOA (number input, desabilitado se is_default=1)
+- Campo: Duração — select com opções:
+    7 dias | 30 dias | 90 dias | 180 dias | 365 dias | Personalizado
+  Se "Personalizado" → input numérico em dias
+- Toggle: Plano activo (desabilitado se is_default=1)
+- Botão: "Definir como Plano Gratuito/Default" 
+  (só aparece se is_default=0)
+- Botão: Guardar alterações
+- Botão: Apagar plano 
+  (desabilitado se is_default=1 ou tiver subs activas)
+
+Tab "Permissões":
+Esta é a parte mais importante.
+Mostra o conteúdo da plataforma organizado por tipo,
+com checkboxes para o admin seleccionar o que este plano inclui.
+
+Layout da tab Permissões:
+
+[Lições] [Livros] [Estratégias] [Vídeos] [Recursos]
+
+Sub-tab "Lições":
+→ Agrupa por nível (curriculum_levels)
+→ Checkbox no nível = selecciona/desselecciona todas as lições
+→ Checkbox individual por lição
+→ Exemplo:
+  ☑ Nível 1 — Fundamentos (seleccionar tudo)
+    ☑ intro-trading — Introdução ao Trading
+    ☑ o-que-e-mercado — O que é o Mercado?
+    ☐ analise-tecnica — Análise Técnica
+  ☐ Nível 2 — Intermediário (seleccionar tudo)
+    ☐ ...
+
+Sub-tab "Livros":
+→ Lista todos os livros com checkbox
+→ ☑ nome do livro — autor
+
+Sub-tab "Estratégias":
+→ Lista todas as estratégias com checkbox
+
+Sub-tab "Vídeos":
+→ Lista todos os vídeos com checkbox
+→ Agrupado por level (Iniciante / Intermediário / Avançado)
+
+Sub-tab "Recursos":
+→ Lista resource_sections com checkbox
+
+Comportamento dos checkboxes:
+- Checked = existe entrada em plan_permissions para este conteúdo
+- Ao marcar → POST /api/admin/plans/:id/permissions
+- Ao desmarcar → DELETE /api/admin/plans/:id/permissions/:permId
+- Actualização imediata (sem botão "guardar permissões")
+- Loading state enquanto o request está em curso
+- Toast de confirmação em cada acção
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE B — Modal "Criar Novo Plano"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ao clicar em [+ Novo Plano]:
+Abre um Dialog (shadcn) com:
+- Nome do plano (obrigatório)
+- Descrição (opcional)
+- Preço em AOA (obrigatório, mínimo 0)
+- Duração: select 7/30/90/180/365/Personalizado
+- Toggle: Definir como plano default?
+  (aviso: "Isto vai remover o default do plano actual")
+- Botão: Criar Plano
+
+Após criar → selecciona automaticamente o novo plano 
+no painel esquerdo → abre na tab Permissões 
+para o admin configurar imediatamente o conteúdo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE C — Integração no fluxo de subscrição
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Na página de aprovação de subscrições (/api/admin/subscriptions),
+quando o admin aprova uma subscrição:
+
+PATCH /api/admin/subscriptions/:id/approve
+
+Este endpoint já existe. Precisa de ser actualizado para:
+1. Receber planId no body (opcional — se não vier, usa o plano 
+   não-default mais recente activo, ou o único plano pago existente)
+2. Guardar o planId na subscrição ao aprovar
+3. Calcular expiresAt usando durationDays do plano:
+   expiresAt = approvedAt + (plan.durationDays * 24 * 60 * 60 * 1000)
+   (em vez do hardcoded 30 dias actual)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE — Mostra-me no final:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. O nome e caminho do ficheiro criado para a tab de planos
+2. Confirma que a tab aparece no painel admin com o role correcto
+3. Mostra o componente de Permissões (a parte mais crítica)
+   — só essa secção, não o ficheiro todo
+4. Confirma a alteração no endpoint de aprovação de subscrições
+5. Servidor a funcionar sem erros

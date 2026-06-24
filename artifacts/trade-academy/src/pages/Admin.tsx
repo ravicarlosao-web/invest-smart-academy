@@ -36,6 +36,7 @@ import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
 import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
 import { ProfessorLogsTab } from "./ProfessorLogsTab";
+import { PlanosTab } from "./PlanosTab";
 
 
 /* =========================================================================
@@ -3950,6 +3951,7 @@ function IntegracoesTb() {
 const NAV_ITEMS = [
   { id: "overview",       label: "Dashboard",             icon: BarChart3,      group: "negocio" },
   { id: "subscriptions",  label: "Subscrições",           icon: CreditCard,     group: "negocio" },
+  { id: "planos",         label: "Planos",                icon: Tag,            group: "negocio" },
   { id: "users",          label: "Alunos",                icon: Users,          group: "negocio" },
   { id: "professor-logs", label: "Logs de Professores",  icon: ClipboardList,  group: "negocio" },
   { id: "settings",       label: "Configurações",         icon: Settings,       group: "negocio" },
@@ -4000,6 +4002,7 @@ export default function Admin() {
   const TABS: Record<NavId, React.ReactNode> = {
     overview:      <OverviewTab />,
     subscriptions: <SubscriptionsTab />,
+    planos:        <PlanosTab />,
     users:         <UsersTab />,
     settings:      <SettingsTab />,
     "professor-logs": <ProfessorLogsTab />,
