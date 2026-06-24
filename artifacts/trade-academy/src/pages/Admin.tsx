@@ -2328,6 +2328,12 @@ export function VideosTab() {
   const [filterSearch, setFilterSearch] = useState("");
   const [filterCat, setFilterCat]       = useState("Todas");
 
+  /* ── Plans + permissions state ── */
+  const [availablePlans,  setAvailablePlans]  = useState<import("@/lib/apiClient").AdminPlan[]>([]);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
+  const [existingPerms,   setExistingPerms]   = useState<Record<string, string>>({}); // planId → permId
+  const [loadingPerms,    setLoadingPerms]    = useState(false);
+
   useEffect(() => {
     api.admin.getVideos()
       .then((r) => {
@@ -2341,6 +2347,12 @@ export function VideosTab() {
         setLoaded(true);
       })
       .catch(() => { toast.error("Erro ao carregar vídeos"); setLoaded(true); });
+  }, []);
+
+  useEffect(() => {
+    api.adminPlans.list()
+      .then((plans) => setAvailablePlans(plans.filter((p) => p.isActive === 1)))
+      .catch(() => {});
   }, []);
 
   async function save(updated: VideoLesson[]) {
@@ -2358,16 +2370,64 @@ export function VideosTab() {
     setEditing({ id: uid(), ...BLANK_VIDEO, order: (videos.length + 1) * 10 });
     setIsNew(true);
     setPreview(null);
+    setSelectedPlanIds(new Set());
+    setExistingPerms({});
   }
 
-  function openEdit(v: VideoLesson) { setEditing({ ...v }); setIsNew(false); setPreview(null); }
+  async function openEdit(v: VideoLesson) {
+    setEditing({ ...v });
+    setIsNew(false);
+    setPreview(null);
+    setSelectedPlanIds(new Set());
+    setExistingPerms({});
+    if (availablePlans.length === 0) return;
+    setLoadingPerms(true);
+    try {
+      const permsMap: Record<string, string> = {};
+      const selected = new Set<string>();
+      await Promise.all(
+        availablePlans.map(async (plan) => {
+          const planWithPerms = await api.adminPlans.get(plan.id);
+          const match = planWithPerms.permissions.find(
+            (p) => p.contentType === "video" && p.contentId === v.id,
+          );
+          if (match) { permsMap[plan.id] = match.id; selected.add(plan.id); }
+        }),
+      );
+      setExistingPerms(permsMap);
+      setSelectedPlanIds(selected);
+    } catch { /* silently ignore */ }
+    finally { setLoadingPerms(false); }
+  }
 
-  function handleCommit() {
+  async function handleCommit() {
     if (!editing) return;
+    if (selectedPlanIds.size === 0) return;
     const updated = isNew
       ? [...videos, editing]
       : videos.map((v) => v.id === editing.id ? editing : v);
-    save(updated);
+    setSaving(true);
+    try {
+      await api.admin.saveVideos(updated);
+      setVideos(updated.sort((a, b) => a.order - b.order));
+      /* Sync plan permissions */
+      const videoId = editing.id;
+      await Promise.all(
+        availablePlans.map(async (plan) => {
+          const isSelected    = selectedPlanIds.has(plan.id);
+          const existingPermId = existingPerms[plan.id];
+          if (isSelected && !existingPermId) {
+            await api.adminPlans.addPermission(plan.id, "video", videoId);
+          } else if (!isSelected && existingPermId) {
+            await api.adminPlans.removePermission(plan.id, existingPermId);
+          }
+        }),
+      );
+      toast.success(isNew ? "Vídeo adicionado" : "Vídeo actualizado");
+      setEditing(null);
+      setPreview(null);
+    } catch { toast.error("Falha ao salvar"); }
+    finally { setSaving(false); }
   }
 
   function moveUp(id: string) {
@@ -2535,8 +2595,56 @@ export function VideosTab() {
               </p>
             </div>
 
+            {/* ── Planos com acesso ── */}
+            <div className="rounded-lg border border-border/60 p-4 space-y-3">
+              <div>
+                <Label className="text-sm font-medium">Planos com acesso</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Selecciona os planos que incluem este vídeo</p>
+              </div>
+              {loadingPerms ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  A carregar permissões...
+                </div>
+              ) : availablePlans.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Nenhum plano activo encontrado.</p>
+              ) : (
+                <div className="space-y-2">
+                  {/* default plan first, then the rest */}
+                  {[...availablePlans].sort((a, b) => b.isDefault - a.isDefault).map((plan) => (
+                    <label key={plan.id} className="flex items-center gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border accent-primary"
+                        checked={selectedPlanIds.has(plan.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedPlanIds);
+                          if (e.target.checked) next.add(plan.id); else next.delete(plan.id);
+                          setSelectedPlanIds(next);
+                        }}
+                      />
+                      <span className="text-sm group-hover:text-foreground transition-colors">
+                        {plan.name}
+                        {plan.isDefault === 1 && (
+                          <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">Gratuito</span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {selectedPlanIds.size === 0 && !loadingPerms && availablePlans.length > 0 && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <span>⚠</span> Selecciona pelo menos um plano para este vídeo
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-2">
-              <Button onClick={handleCommit} disabled={saving || !editing.title || !editing.creator || !editing.videoUrl.trim()}>
+              <Button
+                onClick={handleCommit}
+                disabled={saving || !editing.title || !editing.creator || !editing.videoUrl.trim() || selectedPlanIds.size === 0}
+              >
                 <Save className="mr-1.5 h-3.5 w-3.5" />
                 {saving ? "Salvando..." : isNew ? "Adicionar vídeo" : "Guardar alterações"}
               </Button>

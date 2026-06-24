@@ -1,0 +1,76 @@
+No formulário de criação/edição de vídeos do painel admin
+(tab "Vídeo Aulas"), preciso adicionar um campo obrigatório
+de associação a planos.
+
+Campos actuais visíveis:
+- Criador / Canal
+- Nome da aula
+- Nível da aula
+- Ordem de exibição
+- Categoria
+- Tags
+- Link do vídeo
+- XP mínimo para desbloquear
+- Duração
+- Descrição
+
+ADICIONAR — campo "Planos com acesso" obrigatório:
+
+1. Localiza o componente do formulário de vídeos
+   (VideosTab.tsx ou a secção de vídeos em Admin.tsx)
+
+2. Adiciona um campo ANTES do botão "Guardar alterações":
+
+   Label: "Planos com acesso"
+   Sublabel: "Selecciona os planos que incluem este vídeo"
+   
+   Comportamento:
+   - Busca GET /api/admin/plans ao montar o componente
+     (filtra is_active = 1)
+   - Mostra checkboxes, um por plano:
+     ☑ Plano Gratuito
+     ☑ Plano Mensal  
+     ☐ Plano Anual
+   - O plano default (is_default=1) aparece primeiro
+   - Mínimo 1 plano seleccionado obrigatório
+     → se nenhum estiver seleccionado, botão "Guardar" 
+       fica desactivado + mensagem:
+       "Selecciona pelo menos um plano para este vídeo"
+
+3. Ao GUARDAR (criar ou editar vídeo):
+   DEPOIS de guardar o vídeo com sucesso:
+   
+   a) Busca as permissões actuais do vídeo:
+      GET /api/admin/plans (para cada plano, verifica
+      se existe plan_permission com contentType="video" 
+      e contentId=video.id)
+   
+   b) Para planos ADICIONADOS (estava desmarcado, ficou marcado):
+      POST /api/admin/plans/:planId/permissions
+      body: { contentType: "video", contentId: video.id }
+   
+   c) Para planos REMOVIDOS (estava marcado, ficou desmarcado):
+      DELETE /api/admin/plans/:planId/permissions/:permId
+
+4. Ao EDITAR um vídeo existente:
+   - Ao abrir o formulário, pré-selecciona os planos
+     que já têm permissão para este vídeo
+   - Para isso, ao carregar o formulário de edição:
+     busca quais planos têm contentType="video" 
+     e contentId=video.id em plan_permissions
+
+5. Ao criar vídeo NOVO:
+   - Nenhum plano pré-seleccionado por defeito
+   - Admin obrigado a escolher pelo menos 1
+
+IMPORTANTE — mesma lógica para o painel master:
+Se a tab de vídeos existir também em MasterPanel.tsx,
+aplica exactamente a mesma alteração.
+
+Mostra-me no final:
+1. O campo de planos adicionado ao formulário (JSX completo
+   dessa secção — não o ficheiro todo)
+2. A lógica de sync de permissões ao guardar
+3. A lógica de pré-selecção ao editar
+4. Confirmação se foi aplicado também no master
+5. Frontend sem erros
