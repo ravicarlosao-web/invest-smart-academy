@@ -379,14 +379,13 @@ function useVideos() {
 
 function isUnlocked(
   video: VideoLesson,
-  idx: number,
-  allVideos: VideoLesson[],
+  _idx: number,
+  _allVideos: VideoLesson[],
   userXp: number,
-  watchedIds: string[],
+  _watchedIds: string[],
 ): boolean {
   if (video.requiredXp && userXp < video.requiredXp) return false;
-  if (idx === 0) return true;
-  return watchedIds.includes(allVideos[idx - 1].id);
+  return true;
 }
 
 /* =========================================================================
