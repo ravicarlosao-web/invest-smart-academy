@@ -545,7 +545,7 @@ function EquipaTab() {
                 </div>
               </div>
               <p className="text-[11px] text-zinc-600">
-                Esta conta poderá fazer login em <strong className="text-zinc-500">/admin/entrar</strong> com as credenciais acima.
+                Esta conta poderá fazer login em <strong className="text-zinc-500">/ta-painel-gestao</strong> com as credenciais acima.
               </p>
               <div className="flex gap-2 pt-1">
                 <Button

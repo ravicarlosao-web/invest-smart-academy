@@ -45,7 +45,7 @@ import { PlanosTab } from "./PlanosTab";
  * Ecrã de login integrado — mostrado em /ta-painel-gestao quando não autenticado
  * ========================================================================= */
 function AdminGateLogin() {
-  const { login } = useAuthStore();
+  const { login, masterLogin } = useAuthStore();
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [showPw,   setShowPw]   = useState(false);
@@ -55,17 +55,27 @@ function AdminGateLogin() {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
+
+    // Tenta login normal (administrador / professor)
     const result = await login(email, password);
-    setLoading(false);
-    if (!result.ok) {
-      toast.error(result.error ?? "Credenciais inválidas.");
+
+    if (result.ok) {
+      setLoading(false);
+      const user = useAuthStore.getState().user;
+      if (!["administrador", "professor", "master"].includes(user?.role ?? "")) {
+        useAuthStore.getState().logout();
+        toast.error("Esta conta não tem permissões administrativas.");
+      }
       return;
     }
-    const user = useAuthStore.getState().user;
-    if (!["administrador", "professor", "master"].includes(user?.role ?? "")) {
-      useAuthStore.getState().logout();
-      toast.error("Esta conta não tem permissões administrativas.");
+
+    // Se falhou, tenta login master (conta master está numa tabela separada)
+    const masterResult = await masterLogin(email, password);
+    setLoading(false);
+    if (!masterResult.ok) {
+      toast.error(result.error ?? "Credenciais inválidas.");
     }
+    // Se masterLogin ok, o componente re-renderiza com role="master" e mostra o painel
   }
 
   return (
