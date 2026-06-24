@@ -741,7 +741,7 @@ export default function Simular() {
 
   return (
     <>
-    <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4">
+    <div className="container max-w-[1400px] py-3 lg:py-6 space-y-3 sm:space-y-4 overflow-x-hidden">
       {/* Cabeçalho — row 1: símbolo + preço */}
       <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
@@ -811,9 +811,9 @@ export default function Simular() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px] min-w-0">
         {/* Coluna principal — chart + tables (appears below order panel on mobile) */}
-        <div className="space-y-4 order-last lg:order-first">
+        <div className="space-y-4 order-last lg:order-first min-w-0">
           {/* Gráfico */}
           <Card className="overflow-hidden">
             {/* Toolbar row 1: Timeframes (horizontally scrollable on mobile) */}
@@ -1079,7 +1079,7 @@ export default function Simular() {
         </div>
 
         {/* Painel de ordem — aparece primeiro em mobile */}
-        <div className="order-first lg:order-last">
+        <div className="order-first lg:order-last min-w-0">
         <OrderPanel
           symbol={symbol}
           lastPrice={lastPrice}
@@ -2197,15 +2197,15 @@ function OrderPanel({
       </div>
 
       {/* SL / TP */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2">
         <div>
-          <Label className="text-[11px] uppercase tracking-wider text-bear">Stop loss</Label>
+          <Label className="text-[11px] uppercase tracking-wider text-bear truncate block">Stop loss</Label>
           <Input type="number" inputMode="decimal" placeholder="Opcional"
             value={sl} onChange={(e) => setSl(e.target.value)}
             className={`mt-1 font-mono ${slInvalid ? "border-bear" : ""}`} />
         </div>
         <div>
-          <Label className="text-[11px] uppercase tracking-wider text-bull">Take profit</Label>
+          <Label className="text-[11px] uppercase tracking-wider text-bull truncate block">Take profit</Label>
           <Input type="number" inputMode="decimal" placeholder="Opcional"
             value={tp} onChange={(e) => setTp(e.target.value)}
             className={`mt-1 font-mono ${tpInvalid ? "border-bear" : ""}`} />
