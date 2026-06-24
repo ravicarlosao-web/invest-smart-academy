@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { BottomNav } from "./BottomNav";
+import { MobileNavDrawer } from "./MobileNavDrawer";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { NotificationCenter } from "./NotificationCenter";
-import { Flame, LogOut } from "lucide-react";
+import { Flame, LogOut, Menu } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ThemeToggle } from "./ThemeToggle";
@@ -21,6 +23,9 @@ const titles: Record<string, string> = {
   "/duelo": "Duelos",
   "/biblioteca": "Biblioteca",
   "/estrategias": "Estratégias",
+  "/video-aulas": "Vídeo Aulas",
+  "/planos": "Planos",
+  "/financeiro": "Financeiro",
 };
 
 export default function AppLayout() {
@@ -29,6 +34,8 @@ export default function AppLayout() {
   const streak    = useAppStore((s) => s.progress.streakDays);
   const onboarded = useAppStore((s) => s.onboarded);
   const { user, logout } = useAuthStore();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const baseKey = "/" + (pathname.split("/")[1] ?? "");
   const title = titles[baseKey] ?? titles[pathname] ?? "ALUKA";
@@ -52,10 +59,22 @@ export default function AppLayout() {
           {/* Header */}
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 px-3 backdrop-blur-md sm:px-4">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              {/* Sidebar trigger — only desktop */}
+              {/* Hamburger — mobile only */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 md:hidden text-muted-foreground hover:text-foreground shrink-0"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Abrir menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
+              {/* Sidebar trigger — desktop only */}
               <span className="hidden md:block">
                 <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
               </span>
+
               <h1 className="text-sm font-semibold tracking-tight sm:text-base truncate">{title}</h1>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
@@ -92,8 +111,11 @@ export default function AppLayout() {
         </div>
       </div>
 
+      {/* Mobile slide-in nav drawer */}
+      <MobileNavDrawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
+
       {/* Bottom navigation — mobile only */}
-      <BottomNav />
+      <BottomNav onOpenMenu={() => setMobileMenuOpen(true)} />
 
       {!onboarded && <OnboardingOverlay />}
     </SidebarProvider>
