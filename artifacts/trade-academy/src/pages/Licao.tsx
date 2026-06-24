@@ -53,6 +53,17 @@ export default function Licao() {
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
 
+  // Reset all lesson state whenever lessonId changes or new lesson data arrives
+  useEffect(() => {
+    setPhase("content");
+    setContentIdx(0);
+    setQIdx(0);
+    setAudioOpen(false);
+    setSelected(null);
+    setRevealed(false);
+    setCorrectCount(0);
+  }, [lessonId, found?.lesson.id]);
+
   if (!found) {
     return (
       <div className="container py-12 text-center">
@@ -94,8 +105,16 @@ export default function Licao() {
   const stepProgress = ((currentStep + (phase === "result" ? 1 : 0)) / totalSteps) * 100;
 
   const advanceContent = () => {
-    if (contentIdx < lesson.content.length - 1) setContentIdx(contentIdx + 1);
-    else setPhase("quiz");
+    if (contentIdx < lesson.content.length - 1) {
+      setContentIdx(contentIdx + 1);
+    } else if (lesson.questions.length > 0) {
+      setPhase("quiz");
+    } else {
+      // No questions — complete lesson directly
+      completeLesson(lesson.id, lesson.xp, 100);
+      toast.success(`+${lesson.xp} XP`, { description: "Aula concluída!" });
+      setPhase("result");
+    }
   };
 
   const submitAnswer = () => {
@@ -169,7 +188,7 @@ export default function Licao() {
         </Card>
       )}
 
-      {phase === "content" && (
+      {phase === "content" && lesson.content[contentIdx] && (
         <ContentStep
           item={lesson.content[contentIdx]}
           stepLabel={`${contentIdx + 1}/${lesson.content.length}`}
@@ -178,7 +197,7 @@ export default function Licao() {
         />
       )}
 
-      {phase === "quiz" && (
+      {phase === "quiz" && lesson.questions[qIdx] && (
         <QuizStep
           question={lesson.questions[qIdx]}
           stepLabel={`Pergunta ${qIdx + 1}/${lesson.questions.length}`}
