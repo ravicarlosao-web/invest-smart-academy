@@ -18,8 +18,6 @@ type Answer = number | boolean | MarkLine[];
 
 type Phase = "content" | "quiz" | "result";
 
-const PREMIUM_DIFFICULTIES = ["intermediario", "avancado"];
-
 export default function Licao() {
   const { priceAoa } = usePlanConfig();
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -65,7 +63,7 @@ export default function Licao() {
   }
 
   // Bloquear acesso direto a lições premium sem subscrição
-  if (PREMIUM_DIFFICULTIES.includes(found.level.difficulty) && !hasActiveSubscription()) {
+  if (["intermediario", "avancado"].includes(found.level.difficulty) && !hasActiveSubscription()) {
     return (
       <div className="container py-12">
         <div className="mx-auto max-w-md text-center space-y-4">

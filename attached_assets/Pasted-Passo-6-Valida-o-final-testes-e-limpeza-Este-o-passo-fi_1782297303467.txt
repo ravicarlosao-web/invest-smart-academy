@@ -1,0 +1,125 @@
+Passo 6 — Validação final, testes e limpeza
+
+Este é o passo final. Precisamos de verificar que tudo
+funciona de ponta a ponta e limpar código legado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE A — Verificar endpoint de subscrição (request)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mostra-me o conteúdo actual de:
+POST /api/subscription/:userId/request
+
+Verificar se:
+1. Recebe planId no body
+2. Guarda plan_id na tabela subscriptions
+3. Guarda duration_days capturado do plano no momento do pedido
+4. Se planId não vier no body → usa o plano não-default mais
+   barato activo como fallback (não o plano gratuito)
+
+Se algum destes pontos falhar → corrige agora.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE B — Verificar endpoint de aprovação (admin)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mostra-me o conteúdo actual de:
+PATCH /api/admin/subscriptions/:id/approve
+
+Verificar se:
+1. Lê o planId da subscrição (guardado no pedido)
+2. Busca durationDays do plano correspondente
+3. Calcula expiresAt = approvedAt + durationDays * 86400000
+4. Se o plano não existir mais → usa 30 dias como fallback
+
+Se algum destes pontos falhar → corrige agora.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE C — Verificar GET /api/plans/my-plan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Este endpoint é chamado pelo frontend para saber
+o plano activo do utilizador. Verificar se:
+
+1. Busca subscrição activa (status=active, expires_at > now)
+2. Se não tiver sub activa → retorna o plano default (is_default=1)
+3. Retorna:
+   {
+     plan: { id, name, priceAoa, durationDays },
+     permissions: ["lesson:intro-trading", "book:book_123", ...],
+     isDefault: true/false,
+     subscription: { status, expiresAt } | null
+   }
+4. O frontend usa este endpoint para saber o que mostrar
+   como bloqueado/desbloqueado
+
+Se algum destes pontos falhar → corrige agora.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE D — Limpeza de código legado
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Em admin_settings, a chave "plan.config" já não é
+   a fonte de verdade dos planos. Verifica se ainda é
+   usada em algum sítio no backend:
+   → GET /api/plan-config
+   → PUT /api/admin/plan-config
+   Se sim, mantém por compatibilidade mas adiciona
+   comentário: "// LEGADO — substituído por tabela plans"
+
+2. Verifica se data/videos.ts ainda é importado
+   em algum componente do frontend.
+   Se sim → remove a importação e usa sempre
+   GET /api/content/videos
+
+3. Verifica se ainda existe alguma referência a
+   PREMIUM_DIFFICULTIES em qualquer ficheiro do frontend.
+   Se sim → remove.
+
+4. Verifica se o job automático de expiração de
+   subscrições (que corre a cada 5 minutos) ainda
+   funciona correctamente com o novo sistema.
+   Mostra o código do job.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE E — Teste de fluxo completo (simulado)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sem criar utilizadores reais, verifica o seguinte
+fazendo chamadas directas à API:
+
+TESTE 1 — Plano gratuito default:
+→ GET /api/plans/my-plan (com token de um aluno sem sub)
+→ Deve retornar o plano "plan_free_default"
+→ Deve retornar permissions = [] (plano gratuito sem permissões)
+
+TESTE 2 — Conteúdo sem permissões = acessível:
+→ GET /api/content/curriculum (com token de aluno sem sub)
+→ Todas as lições devem ter accessible = true
+  (regra de transição: sem permissões definidas = livre)
+
+TESTE 3 — Plano criado com permissões:
+→ POST /api/admin/plans (criar plano "Plano Teste" 999 AOA 7 dias)
+→ POST /api/admin/plans/:id/permissions 
+  (adicionar 1 lição: contentType="lesson", contentId="intro-trading")
+→ GET /api/content/curriculum (com token de aluno sem sub)
+→ A lição "intro-trading" deve ter accessible = false
+→ As restantes lições devem ter accessible = true
+
+TESTE 4 — Verificar que plan_free_default não foi afectado:
+→ GET /api/admin/plans/plan_free_default
+→ is_default deve ser 1
+→ Não deve ser possível apagá-lo:
+  DELETE /api/admin/plans/plan_free_default → deve retornar 400
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE — Mostra-me no final:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Resultado de cada verificação das Partes A, B, C
+   (OK ou o que foi corrigido)
+2. Lista do que foi limpo na Parte D
+3. Resultado dos 4 testes da Parte E
+   (resposta JSON de cada chamada)
+4. Estado final: frontend + API sem erros
+5. Resumo de TUDO o que foi construído nos 6 passos

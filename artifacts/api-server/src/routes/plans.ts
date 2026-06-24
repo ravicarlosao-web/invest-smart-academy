@@ -342,17 +342,17 @@ userRouter.get("/my-plan", async (req: any, res: any) => {
       .where(eq(planPermissionsTable.planId, planId))
       .all();
 
+    const isDefault = !subscription; // true when falling back to the default plan
+
     res.json({
       plan,
+      isDefault,
       subscription: subscription ? {
-        id:       subscription.id,
-        status:   subscription.status,
+        id:        subscription.id,
+        status:    subscription.status,
         expiresAt: subscription.expiresAt,
       } : null,
-      permissions: perms.map((p: any) => ({
-        contentType: p.contentType,
-        contentId:   p.contentId,
-      })),
+      permissions: perms.map((p: any) => `${p.contentType}:${p.contentId}`),
     });
   } catch (err: any) {
     req.log?.error(err);

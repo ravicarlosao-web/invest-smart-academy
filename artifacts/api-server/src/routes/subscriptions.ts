@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
-import { db, subscriptionsTable, notificationsTable, adminSettingsTable, eq, desc, and } from "@workspace/db";
+import { db, subscriptionsTable, notificationsTable, adminSettingsTable, plansTable, eq, desc, and, asc } from "@workspace/db";
 import { SubscriptionRequestBody, SubscriptionReferenceBody } from "@workspace/api-zod";
 import { validate } from "../middlewares/validate.js";
 
@@ -205,28 +205,66 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req: a
       return res.status(409).json({ error: "already_active", message: "A tua subscrição já está ativa." });
     }
 
-    /* Ler preço configurado pelo admin (plan.config) — fallback 15000 AOA */
+    /* Resolve planId — se não vier no body, usa o plano não-default mais barato activo */
+    let resolvedPlanId: string | null = planId;
+    let durationDays: number | null   = null;
     let priceAoa = 15000;
-    try {
-      const planRow = await db
-        .select()
-        .from(adminSettingsTable)
-        .where(eq(adminSettingsTable.key, "plan.config"))
-        .get();
-      if (planRow?.value) {
-        const parsed = JSON.parse(planRow.value);
-        if (typeof parsed?.priceAoa === "number" && parsed.priceAoa > 0) {
-          priceAoa = parsed.priceAoa;
+
+    if (resolvedPlanId) {
+      /* Plano explícito — captura preço e duração no momento do pedido */
+      try {
+        const plan = await db
+          .select({ priceAoa: plansTable.priceAoa, durationDays: plansTable.durationDays })
+          .from(plansTable)
+          .where(eq(plansTable.id, resolvedPlanId))
+          .get();
+        if (plan) {
+          priceAoa     = plan.priceAoa;
+          durationDays = plan.durationDays;
         }
+      } catch { /* manter fallbacks */ }
+    } else {
+      /* Sem planId → fallback: plano não-default mais barato activo */
+      try {
+        const cheapest = await db
+          .select({ id: plansTable.id, priceAoa: plansTable.priceAoa, durationDays: plansTable.durationDays })
+          .from(plansTable)
+          .where(and(eq(plansTable.isActive, 1), eq(plansTable.isDefault, 0)))
+          .orderBy(asc(plansTable.priceAoa))
+          .limit(1)
+          .get();
+        if (cheapest) {
+          resolvedPlanId = cheapest.id;
+          priceAoa       = cheapest.priceAoa;
+          durationDays   = cheapest.durationDays;
+        }
+      } catch { /* manter fallback */ }
+
+      /* LEGADO — se ainda não há planos na tabela, lê plan.config */
+      if (!resolvedPlanId) {
+        try {
+          const planRow = await db
+            .select()
+            .from(adminSettingsTable)
+            .where(eq(adminSettingsTable.key, "plan.config")) // LEGADO — substituído por tabela plans
+            .get();
+          if (planRow?.value) {
+            const parsed = JSON.parse(planRow.value);
+            if (typeof parsed?.priceAoa === "number" && parsed.priceAoa > 0) {
+              priceAoa = parsed.priceAoa;
+            }
+          }
+        } catch { /* manter fallback */ }
       }
-    } catch { /* manter fallback */ }
+    }
 
     const id = genId();
     await db.insert(subscriptionsTable).values({
       id,
       userId: String(req.params.userId),
       status:           "pending",
-      planId:           planId ?? null,
+      planId:           resolvedPlanId,
+      durationDays:     durationDays,
       amount:           priceAoa,
       paymentReference: paymentReference ?? null,
       receiptData:      receiptData ?? null,

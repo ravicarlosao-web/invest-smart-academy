@@ -140,8 +140,10 @@ router.get("/curriculum", async (req: any, res: any) => {
     ]);
 
     const result = levels.map((lv: any) => {
-      // Um nível inteiro pode estar desbloqueado via "level" permission
+      // Nível acessível directamente (gated por "level" permission ou não gated)
       const levelAccessible = canAccess(String(lv.id), levelMap.gatedIds, levelMap.userPerms);
+      // O utilizador tem permissão explícita de nível → desbloqueia todas as lições do nível
+      const levelUnlockedByPermission = levelMap.userPerms.has(String(lv.id));
 
       return {
         id:         lv.id,
@@ -154,8 +156,9 @@ router.get("/curriculum", async (req: any, res: any) => {
           .filter((ls: any) => !overrides[ls.id]?.hidden)
           .map((ls: any) => {
             const ov = overrides[ls.id] ?? {};
-            // Acessível se o nível inteiro está desbloqueado OU a lição directamente
-            const accessible = levelAccessible || canAccess(ls.id, lessonMap.gatedIds, lessonMap.userPerms);
+            // Acessível se a lição directamente o permite OU o utilizador tem permissão explícita do nível
+            // Nota: levelAccessible=true quando o nível NÃO está gated — mas isso não deve desbloquear lições gated
+            const accessible = canAccess(ls.id, lessonMap.gatedIds, lessonMap.userPerms) || levelUnlockedByPermission;
             return {
               id:           ls.id,
               title:        ov.title        ?? ls.title,

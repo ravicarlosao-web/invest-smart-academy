@@ -938,14 +938,14 @@ router.patch("/subscriptions/:id/approve", requireAdminFull, async (req: any, re
     const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
-    /* Resolve planId — vem do body ou detecta o plano pago mais recente */
-    let resolvedPlanId: string | null = req.body?.planId ?? null;
+    /* Resolve planId — prioridade: (1) guardado na sub, (2) body override, (3) plano pago mais barato */
+    let resolvedPlanId: string | null = sub.planId ?? req.body?.planId ?? null;
     if (!resolvedPlanId) {
       const paidPlan = await db
         .select({ id: plansTable.id })
         .from(plansTable)
         .where(and(eq(plansTable.isActive, 1), eq(plansTable.isDefault, 0)))
-        .orderBy(desc(plansTable.createdAt))
+        .orderBy(asc(plansTable.priceAoa))
         .limit(1)
         .get();
       resolvedPlanId = paidPlan?.id ?? null;
@@ -1042,6 +1042,7 @@ router.patch("/subscriptions/:id/reject", requireAdminFull, validate(AdminReject
 /* ---------------------------------------------------------------------------
  * Plan Config — GET/PUT /admin/plan-config
  * Stores { priceAoa, planName } in admin_settings under key "plan.config"
+ * LEGADO — substituído por tabela plans; mantido por compatibilidade com frontend antigo
  * ------------------------------------------------------------------------- */
 router.get("/plan-config", requireAdminFull, async (req: any, res: any) => {
   try {

@@ -224,7 +224,7 @@ router.get("/bank-config", requireAuth, async (_req: any, res: any) => {
   }
 });
 
-/* ── Public plan config — price shown on landing page ────────────────── */
+/* ── Public plan config — LEGADO: substituído por tabela plans ────────── */
 router.get("/plan-config", async (_req: any, res: any) => {
   try {
     const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
