@@ -233,8 +233,11 @@ export async function sendSubscriptionExpiryWarningEmail(opts: {
   name: string;
   expiresAt: number;
   daysLeft: number;
+  planName?: string | null;
 }): Promise<{ ok: boolean; reason?: string }> {
   const expireDate = new Date(opts.expiresAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+  const planLabel  = opts.planName ?? "subscrição Premium";
+  const daysStr    = `${opts.daysLeft} ${opts.daysLeft === 1 ? "dia" : "dias"}`;
 
   const html = baseTemplate(`
     <div style="text-align:center;margin-bottom:20px;">
@@ -243,8 +246,8 @@ export async function sendSubscriptionExpiryWarningEmail(opts: {
     <h2 style="color:#e2e8f0;margin:0 0 12px;font-size:20px;text-align:center;">A tua subscrição expira em breve</h2>
     <p style="color:#94a3b8;margin:0 0 20px;line-height:1.6;">
       Olá <strong style="color:#e2e8f0;">${escHtml(opts.name)}</strong>,<br><br>
-      A tua subscrição Premium expira em <strong style="color:#f59e0b;">${opts.daysLeft} ${opts.daysLeft === 1 ? "dia" : "dias"}</strong>, a <strong style="color:#e2e8f0;">${escHtml(expireDate)}</strong>.<br><br>
-      Para continuares a ter acesso aos níveis Intermediário e Avançado, renova a tua subscrição antes dessa data.
+      O teu <strong style="color:#e2e8f0;">${escHtml(planLabel)}</strong> expira em <strong style="color:#f59e0b;">${daysStr}</strong>, a <strong style="color:#e2e8f0;">${escHtml(expireDate)}</strong>.<br><br>
+      Para continuares a ter acesso aos níveis Intermediário e Avançado, renova antes dessa data.
     </p>
     <div style="background:#f59e0b12;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:4px;margin:16px 0;">
       <p style="color:#fbbf24;margin:0;font-size:13px;">
@@ -258,7 +261,7 @@ export async function sendSubscriptionExpiryWarningEmail(opts: {
     </div>
   `);
 
-  return sendMail({ to: opts.to, subject: `A tua subscrição expira em ${opts.daysLeft} ${opts.daysLeft === 1 ? "dia" : "dias"} — ALUKA`, html });
+  return sendMail({ to: opts.to, subject: `O teu ${planLabel} expira em ${daysStr} — ALUKA`, html });
 }
 
 /** Email de teste */

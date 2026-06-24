@@ -13,6 +13,7 @@ import {
   db,
   subscriptionsTable,
   notificationsTable,
+  plansTable,
   usersTable,
   eq,
   and,
@@ -53,6 +54,15 @@ async function sendExpiryWarnings(): Promise<void> {
 
     logger.info({ count: subs.length }, `[${JOB_NAME}] Found ${subs.length} subscription(s) expiring within ${WARNING_DAYS} days`);
 
+    /* 1b. Pré-carregar mapa de planos para lookup O(1) */
+    const planRows = await db
+      .select({ id: plansTable.id, name: plansTable.name })
+      .from(plansTable)
+      .all();
+    const planMap: Record<string, string> = Object.fromEntries(
+      planRows.map((p: any) => [p.id, p.name]),
+    );
+
     for (const sub of subs) {
       try {
         /* 2. Verificar se já foi enviado aviso recentemente (dedup por janela de 96h) */
@@ -71,9 +81,11 @@ async function sendExpiryWarnings(): Promise<void> {
         const alreadySent = existing.some((n: any) => n.createdAt >= dedupCutoff);
         if (alreadySent) continue;
 
-        /* 3. Calcular dias restantes */
+        /* 3. Calcular dias restantes + nome do plano */
         const msLeft   = sub.expiresAt - now;
         const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+        const planName = sub.planId ? (planMap[sub.planId] ?? null) : null;
+        const planLabel = planName ?? "subscrição Premium";
 
         /* 4. Criar notificação in-app */
         const notifId = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -82,7 +94,7 @@ async function sendExpiryWarnings(): Promise<void> {
           userId:    sub.userId,
           type:      "expiry_warning",
           title:     NOTIF_TITLE,
-          message:   `A tua subscrição Premium expira em ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}. Renova para manter o acesso aos níveis Intermediário e Avançado.`,
+          message:   `O teu ${planLabel} expira em ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}. Renova para manter o acesso aos níveis Intermediário e Avançado.`,
           link:      "/aprender",
           isRead:    0,
           createdAt: now,
@@ -101,6 +113,7 @@ async function sendExpiryWarnings(): Promise<void> {
             name:      userRow.name ?? "utilizador",
             expiresAt: sub.expiresAt,
             daysLeft,
+            planName,
           })
             .then((r) => {
               if (!r.ok) logger.warn({ reason: r.reason, userId: sub.userId }, `[${JOB_NAME}] Email warning failed`);
