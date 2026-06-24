@@ -373,6 +373,12 @@ export const api = {
       adminRequest<AdminPlanPermission>("POST", `/admin/plans/${planId}/permissions`, { contentType, contentId }),
     removePermission: (planId: string, permId: string) =>
       adminRequest<{ ok: boolean }>("DELETE", `/admin/plans/${planId}/permissions/${permId}`),
+    report: () =>
+      adminRequest<{
+        planId: string; planName: string; priceAoa: number; durationDays: number;
+        isActive: number; active: number; pending: number; expired: number;
+        rejected: number; total: number; mrr: number; totalReceived: number; newLast30: number;
+      }[]>("GET", "/admin/plans/report"),
   },
 
   /* ---------- Conteúdo (autenticado — retorna campo accessible por item) ---------- */

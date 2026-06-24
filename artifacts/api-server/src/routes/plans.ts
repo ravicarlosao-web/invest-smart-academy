@@ -267,6 +267,65 @@ adminRouter.delete("/:id/permissions/:permId", requireAdminFull, async (req: any
   }
 });
 
+/* ---------------------------------------------------------------------------
+ * GET /api/admin/plans/report — relatório de subscrições agrupado por plano
+ * ------------------------------------------------------------------------- */
+adminRouter.get("/report", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const now   = Date.now();
+    const plans = await db.select().from(plansTable).orderBy(asc(plansTable.createdAt)).all();
+    const subs  = await db.select({
+      planId:    subscriptionsTable.planId,
+      status:    subscriptionsTable.status,
+      amount:    subscriptionsTable.amount,
+      expiresAt: subscriptionsTable.expiresAt,
+      createdAt: subscriptionsTable.createdAt,
+    }).from(subscriptionsTable).all();
+
+    const cutoff30 = now - 30 * 24 * 60 * 60 * 1000;
+
+    const effective = subs.map((s: any) => ({
+      ...s,
+      eff:
+        s.status === "active" && s.expiresAt != null && s.expiresAt <= now
+          ? "expired"
+          : s.status,
+    }));
+
+    const report = plans.map((p: any) => {
+      const ps       = effective.filter((s: any) => s.planId === p.id);
+      const active   = ps.filter((s: any) => s.eff === "active");
+      const pending  = ps.filter((s: any) => s.eff === "pending");
+      const expired  = ps.filter((s: any) => s.eff === "expired");
+      const rejected = ps.filter((s: any) => s.eff === "rejected");
+      const totalReceived = [...active, ...expired].reduce(
+        (sum: number, s: any) => sum + (Number(s.amount) || p.priceAoa), 0,
+      );
+      return {
+        planId:       p.id,
+        planName:     p.name,
+        priceAoa:     p.priceAoa,
+        durationDays: p.durationDays,
+        isActive:     p.isActive,
+        active:       active.length,
+        pending:      pending.length,
+        expired:      expired.length,
+        rejected:     rejected.length,
+        total:        ps.length,
+        mrr:          active.length * p.priceAoa,
+        totalReceived,
+        newLast30:    ps.filter((s: any) => Number(s.createdAt) >= cutoff30).length,
+      };
+    });
+
+    report.sort((a: any, b: any) => b.active - a.active);
+    res.json(report);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 /* ════════════════════════════════════════════════════════════════════════════
  * USER ROUTES — montado em /api/plans  (requireAuth já aplicado no router pai)
  * ════════════════════════════════════════════════════════════════════════════ */

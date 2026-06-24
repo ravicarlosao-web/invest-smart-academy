@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef, type ChangeEvent } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
 import { useSEO } from "@/hooks/useSEO";
 import { useNavigate } from "react-router-dom";
 import {
@@ -164,22 +166,26 @@ function StatCard({
   );
 }
 
+type PlanReport = Awaited<ReturnType<typeof api.adminPlans.report>>[number];
+
 function OverviewTab() {
-  const [fin, setFin]       = useState<FinanceData | null>(null);
-  const [users, setUsers]   = useState<Awaited<ReturnType<typeof api.admin.users>> | null>(null);
+  const [fin, setFin]           = useState<FinanceData | null>(null);
+  const [users, setUsers]       = useState<Awaited<ReturnType<typeof api.admin.users>> | null>(null);
   const [pendSubs, setPendSubs] = useState<SubscriptionWithUser[] | null>(null);
-  const [busy, setBusy]     = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [planReport, setPlanReport] = useState<PlanReport[] | null>(null);
+  const [busy, setBusy]         = useState<string | null>(null);
+  const [loading, setLoading]   = useState(true);
 
   async function load() {
     setLoading(true);
     try {
-      const [f, u, subs] = await Promise.all([
+      const [f, u, subs, pr] = await Promise.all([
         api.admin.finance(),
         api.admin.users(),
         api.adminSubscriptions.list("pending"),
+        api.adminPlans.report(),
       ]);
-      setFin(f); setUsers(u); setPendSubs(subs);
+      setFin(f); setUsers(u); setPendSubs(subs); setPlanReport(pr);
     } catch (e) { toast.error("Erro ao carregar dados: " + String(e)); }
     finally { setLoading(false); }
   }
@@ -382,6 +388,86 @@ function OverviewTab() {
           </Card>
         )}
       </section>
+
+      {/* ── Relatório por Plano ───────────────────────────────── */}
+      {planReport && planReport.length > 0 && (
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+            Relatório por Plano
+          </h3>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {/* Tabela */}
+            <Card className="overflow-hidden border-border/60">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Plano</TableHead>
+                    <TableHead className="text-center">Activos</TableHead>
+                    <TableHead className="text-center">Pendentes</TableHead>
+                    <TableHead className="text-center">Expirados</TableHead>
+                    <TableHead className="text-right">MRR</TableHead>
+                    <TableHead className="text-right">Total recebido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {planReport.map((p) => (
+                    <TableRow key={p.planId}>
+                      <TableCell>
+                        <p className="font-medium text-sm">{p.planName}</p>
+                        <p className="text-[11px] text-muted-foreground">{p.priceAoa.toLocaleString("pt-AO")} AOA · {p.durationDays}d</p>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn("font-bold text-sm", p.active > 0 ? "text-bull" : "text-muted-foreground")}>{p.active}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn("font-bold text-sm", p.pending > 0 ? "text-warning" : "text-muted-foreground")}>{p.pending}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-sm text-muted-foreground">{p.expired}</span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-bull">
+                        {p.mrr > 0 ? p.mrr.toLocaleString("pt-AO") : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {p.totalReceived > 0 ? p.totalReceived.toLocaleString("pt-AO") : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+            {/* Gráfico de barras */}
+            <Card className="border-border/60 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">Subscrições activas por plano</p>
+              <ChartContainer config={Object.fromEntries(planReport.map((p) => [p.planId, { label: p.planName, color: "hsl(var(--primary))" }]))}>
+                <BarChart data={planReport.map((p) => ({ name: p.planName, activos: p.active, pendentes: p.pending }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    formatter={(val: number, name: string) => [val, name === "activos" ? "Activos" : "Pendentes"]}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="activos" fill="hsl(var(--chart-1, 142 71% 45%))" radius={[4, 4, 0, 0]} maxBarSize={48} />
+                  <Bar dataKey="pendentes" fill="hsl(var(--chart-3, 40 96% 55%))" radius={[4, 4, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ChartContainer>
+            </Card>
+          </div>
+          {/* Novos nos últimos 30 dias por plano */}
+          {planReport.some((p) => p.newLast30 > 0) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {planReport.filter((p) => p.newLast30 > 0).map((p) => (
+                <div key={p.planId} className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs">
+                  <span className="text-muted-foreground">{p.planName}:</span>{" "}
+                  <span className="font-bold text-foreground">{p.newLast30} novo{p.newLast30 !== 1 ? "s" : ""}</span>{" "}
+                  <span className="text-muted-foreground">nos últimos 30 dias</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

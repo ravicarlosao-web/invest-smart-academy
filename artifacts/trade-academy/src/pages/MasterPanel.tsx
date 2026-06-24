@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
 import { useSEO } from "@/hooks/useSEO";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -92,12 +94,14 @@ function VisaoGeralTab() {
   const [overview, setOverview] = useState<any>(null);
   const [users, setUsers] = useState<MUser[] | null>(null);
   const [subStats, setSubStats] = useState<any>(null);
+  const [planReport, setPlanReport] = useState<any[] | null>(null);
 
   useEffect(() => {
     Promise.all([
       api.admin.overview().then(setOverview).catch(() => null),
       api.admin.users().then(setUsers).catch(() => null),
       api.adminSubscriptions.stats().then(setSubStats).catch(() => null),
+      api.adminPlans.report().then(setPlanReport).catch(() => null),
     ]);
   }, []);
 
@@ -177,6 +181,81 @@ function VisaoGeralTab() {
           ))}
         </div>
       </div>
+
+      {/* Relatório por Plano */}
+      {planReport && planReport.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Relatório por Plano</h3>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Tabela */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-800">
+                    <TableHead className="text-zinc-400">Plano</TableHead>
+                    <TableHead className="text-center text-zinc-400">Activos</TableHead>
+                    <TableHead className="text-center text-zinc-400">Pendentes</TableHead>
+                    <TableHead className="text-center text-zinc-400">Expirados</TableHead>
+                    <TableHead className="text-right text-zinc-400">MRR</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {planReport.map((p: any) => (
+                    <TableRow key={p.planId} className="border-zinc-800/60">
+                      <TableCell>
+                        <p className="font-medium text-sm text-zinc-200">{p.planName}</p>
+                        <p className="text-[11px] text-zinc-500">{p.priceAoa.toLocaleString("pt-AO")} AOA</p>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn("font-bold text-sm", p.active > 0 ? "text-emerald-400" : "text-zinc-600")}>{p.active}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn("font-bold text-sm", p.pending > 0 ? "text-amber-400" : "text-zinc-600")}>{p.pending}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-sm text-zinc-600">{p.expired}</span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-emerald-400">
+                        {p.mrr > 0 ? p.mrr.toLocaleString("pt-AO") : <span className="text-zinc-600">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Gráfico */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">Activos por plano</p>
+              <ChartContainer config={Object.fromEntries(planReport.map((p: any) => [p.planId, { label: p.planName, color: "#10b981" }]))}>
+                <BarChart data={planReport.map((p: any) => ({ name: p.planName, activos: p.active, pendentes: p.pending }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#71717a" }} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#71717a" }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    formatter={(val: number, name: string) => [val, name === "activos" ? "Activos" : "Pendentes"]}
+                    contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "#e4e4e7" }}
+                  />
+                  <Bar dataKey="activos" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={48} />
+                  <Bar dataKey="pendentes" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </div>
+          {/* Novos últimos 30 dias */}
+          {planReport.some((p: any) => p.newLast30 > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {planReport.filter((p: any) => p.newLast30 > 0).map((p: any) => (
+                <div key={p.planId} className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-1.5 text-xs">
+                  <span className="text-zinc-400">{p.planName}:</span>{" "}
+                  <span className="font-bold text-zinc-200">{p.newLast30} novo{p.newLast30 !== 1 ? "s" : ""}</span>{" "}
+                  <span className="text-zinc-500">nos últimos 30 dias</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
