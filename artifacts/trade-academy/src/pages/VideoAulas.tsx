@@ -218,6 +218,7 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
       style={{ aspectRatio: "16/9" }}
       onMouseMove={revealControls}
       onMouseLeave={() => { setShowCtrls(false); setShowVolSlider(false); }}
+      onTouchStart={revealControls}
     >
       {/* ── YT iframe injected here ──────────────────────────────────── */}
       <div id={divId} className="absolute inset-0 w-full h-full pointer-events-none" />
@@ -239,7 +240,18 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
       </div>
 
       {/* ── Barrier invisível — bloqueia TODOS os controlos do YouTube ─ */}
-      <div className="absolute inset-0 z-20" onClick={togglePlay} style={{ cursor: "default" }} />
+      <div
+        className="absolute inset-0 z-20"
+        style={{ cursor: "default" }}
+        onClick={(e) => {
+          const isTouch = e.nativeEvent instanceof PointerEvent && e.nativeEvent.pointerType === "touch";
+          if (isTouch && !showCtrls) {
+            revealControls();
+          } else {
+            togglePlay();
+          }
+        }}
+      />
 
       {/* ── Buffering spinner ─────────────────────────────────────────── */}
       {buffering && (
