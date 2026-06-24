@@ -33,7 +33,37 @@ export default function Licao() {
 
   useEffect(() => {
     api.content.curriculum()
-      .then((data) => { if (Array.isArray(data) && data.length > 0) setLevels(data as LevelDef[]); })
+      .then((apiData) => {
+        if (!Array.isArray(apiData) || apiData.length === 0) return;
+        // Merge API metadata (accessible, title overrides, etc.) into static data
+        // WITHOUT replacing content/questions (API curriculum list omits them)
+        setLevels((prev) =>
+          prev.map((staticLevel) => {
+            const apiLevel = (apiData as any[]).find((l: any) => l.id === staticLevel.id);
+            if (!apiLevel) return staticLevel;
+            return {
+              ...staticLevel,
+              // bring in plan-access metadata from API
+              accessible: apiLevel.accessible,
+              lessons: staticLevel.lessons.map((staticLesson) => {
+                const apiLesson = (apiLevel.lessons ?? []).find((l: any) => l.id === staticLesson.id);
+                if (!apiLesson) return staticLesson;
+                return {
+                  ...staticLesson,
+                  // override metadata that the admin may have customised
+                  title:        apiLesson.title        ?? staticLesson.title,
+                  summary:      apiLesson.summary      ?? staticLesson.summary,
+                  xp:           apiLesson.xp           ?? staticLesson.xp,
+                  audioUrl:     apiLesson.audioUrl     ?? staticLesson.audioUrl,
+                  audioEnabled: apiLesson.audioEnabled ?? staticLesson.audioEnabled,
+                  accessible:   apiLesson.accessible,
+                  // content & questions always kept from static fallback
+                };
+              }),
+            };
+          })
+        );
+      })
       .catch(() => {/* keep static fallback */});
   }, []);
 
