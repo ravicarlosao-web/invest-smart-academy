@@ -1,0 +1,102 @@
+Passo 3 — Migração dos vídeos + Proteger rotas de conteúdo
+
+Contexto:
+- Middleware checkPlanAccess já existe em 
+  artifacts/api-server/src/middlewares/planAccess.ts
+- Rotas de planos já existem e funcionam
+- Os vídeos estão em data/videos.ts no frontend (estáticos)
+- A tabela videos já existe na BD (criada no Passo 1)
+- As rotas de conteúdo actuais servem tudo sem verificação:
+  GET /api/content/curriculum
+  GET /api/content/books
+  GET /api/content/strategies
+  GET /api/content/resources
+
+Preciso que faças 3 coisas:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE A — Migrar vídeos para a BD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Mostra-me o conteúdo completo de data/videos.ts 
+   (ou onde quer que estejam os dados estáticos de vídeos)
+
+2. Cria um script de seed: apps/api/src/seed/seedVideos.ts
+   Que insira todos os vídeos de data/videos.ts na tabela videos
+   com a lógica:
+   - Se o vídeo já existir (mesmo id) → ignorar (INSERT OR IGNORE)
+   - id = o id que já existe no array estático
+   - Mapear os campos: creator, title, level, category, 
+     tags (JSON.stringify), videoUrl, description, sortOrder
+   - createdAt e updatedAt = Date.now()
+
+3. Adiciona a chamada ao seed no initDb() em lib/db/src/index.ts
+   depois do seed do plano gratuito:
+   await seedVideos(db);
+
+4. Cria a rota pública de vídeos no backend:
+   GET /api/content/videos  
+   → serve os vídeos da BD (não mais do frontend estático)
+   → requer auth (JWT válido)
+   → NÃO usa checkPlanAccess ainda — apenas serve a lista
+      (o controlo por plano é feito no frontend por enquanto)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE B — Proteger rotas de conteúdo existentes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Nas rotas de conteúdo existentes, adiciona verificação real:
+
+GET /api/content/curriculum
+→ Continua a servir a estrutura de níveis + lições (para o Aprender.tsx)
+→ MAS adiciona a cada lição um campo: "accessible": true/false
+  baseado no checkPlanAccess do utilizador autenticado
+→ Requer auth (JWT válido)
+→ Se o utilizador não estiver autenticado → 401
+
+GET /api/content/books
+→ Requer auth
+→ Adiciona a cada livro: "accessible": true/false
+→ Livros sem plan_permissions associados = acessíveis por todos
+  (para não quebrar o sistema actual durante a transição)
+
+GET /api/content/strategies
+→ Requer auth  
+→ Adiciona a cada estratégia: "accessible": true/false
+→ Mesma lógica: sem permissão definida = acessível
+
+GET /api/content/resources
+→ Requer auth
+→ Adiciona a cada resource_section: "accessible": true/false
+→ Mesma lógica: sem permissão = acessível
+
+IMPORTANTE — Regra de transição:
+Se um conteúdo NÃO tiver nenhuma entrada em plan_permissions
+para nenhum plano → deve ser considerado acessível para todos.
+Isto garante que o conteúdo existente não quebra durante a migração.
+Só fica bloqueado quando o admin explicitamente o associar a um plano.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE C — Rota de lição individual protegida
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GET /api/content/curriculum/:lessonId
+→ Requer auth
+→ Usa checkPlanAccess("lesson", lessonId) como middleware
+→ Se não tiver acesso → 403 PLAN_ACCESS_DENIED
+→ Se tiver acesso → serve o conteúdo completo da lição
+  (content[], questions[])
+
+Esta é a rota crítica — é aqui que o backend realmente bloqueia
+o conteúdo de uma lição específica.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE — Mostra-me no final:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. O conteúdo de data/videos.ts (antes de migrar)
+2. O ficheiro apps/api/src/seed/seedVideos.ts completo
+3. As alterações feitas nas rotas de conteúdo existentes
+   (mostra só as partes alteradas, não o ficheiro todo)
+4. A nova rota GET /api/content/curriculum/:lessonId completa
+5. Confirma que o servidor arranca sem erros após as alterações

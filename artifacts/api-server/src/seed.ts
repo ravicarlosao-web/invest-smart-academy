@@ -22,6 +22,7 @@ import { STRATEGIES } from "./content/strategies.js";
 import { BOOKS_CATALOG } from "./content/books.js";
 import { RESOURCES } from "./content/resources.js";
 import { LEVELS } from "./content/curriculum.js";
+import { seedVideos } from "./seed/seedVideos.js";
 
 const NOW = Date.now();
 
@@ -179,6 +180,7 @@ export async function seedContent(): Promise<void> {
     await seedBooks();
     await seedResources();
     await seedCurriculum();
+    await seedVideos(db);
   } catch (err) {
     console.error("[seed] error:", err);
   }
