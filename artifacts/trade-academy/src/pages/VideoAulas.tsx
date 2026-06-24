@@ -253,9 +253,21 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
         }}
       />
 
+      {/* ── Botão fullscreen sempre visível ──────────────────────────── */}
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+        className="absolute bottom-2 right-2 z-40 flex items-center justify-center w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 hover:text-white transition-all hover:scale-110 backdrop-blur-sm"
+        title={isFullscreen ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
+      >
+        {isFullscreen
+          ? <Minimize2 className="h-4 w-4" />
+          : <Maximize2 className="h-4 w-4" />
+        }
+      </button>
+
       {/* ── Buffering spinner ─────────────────────────────────────────── */}
       {buffering && (
-        <div className="absolute inset-0 z-25 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
           <Loader2 className="h-10 w-10 animate-spin text-white/70" />
         </div>
       )}
@@ -356,16 +368,7 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
             <span className="text-white/60 text-[11px] font-mono tabular-nums w-10 shrink-0">
               {fmtTime(duration)}
             </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-              className="text-white/80 hover:text-white transition-all hover:scale-110 ml-1 shrink-0"
-              title={isFullscreen ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
-            >
-              {isFullscreen
-                ? <Minimize2 className="h-5 w-5" />
-                : <Maximize2 className="h-5 w-5" />
-              }
-            </button>
+          
           </div>
         </div>
       </div>
