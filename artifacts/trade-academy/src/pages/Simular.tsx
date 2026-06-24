@@ -766,8 +766,8 @@ export default function Simular() {
             </span>
           </div>
         </div>
-        {/* Stat pills — wrap on mobile */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:gap-4 text-right">
+        {/* Stat pills — 2x2 grid on mobile, row on desktop */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:flex sm:flex-wrap sm:items-center sm:gap-3 text-right">
           <Stat label="Saldo" value={fmtUSD(cash)} />
           <Stat label="Margem" value={fmtUSD(usedMargin)} />
           <Stat label="P&L" value={fmtUSD(upnl)} accent={upnl >= 0 ? "bull" : "bear"} />
@@ -816,22 +816,24 @@ export default function Simular() {
         <div className="space-y-4 order-last lg:order-first">
           {/* Gráfico */}
           <Card className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-1 px-3 py-2">
-              <div className="flex flex-wrap items-center gap-1">
-                {TIMEFRAMES.map((t, i) => (
-                  <button
-                    key={t.label}
-                    onClick={() => setTfIdx(i)}
-                    className={`rounded px-2 py-1 font-mono text-[11px] font-semibold transition-colors sm:px-2.5 ${
-                      i === tfIdx ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-2"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-                <CandleCountdown intervalSec={tf.seconds} />
-              </div>
-              <div className="flex items-center gap-2">
+            {/* Toolbar row 1: Timeframes (horizontally scrollable on mobile) */}
+            <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-surface-1 px-3 py-2 scrollbar-none">
+              {TIMEFRAMES.map((t, i) => (
+                <button
+                  key={t.label}
+                  onClick={() => setTfIdx(i)}
+                  className={`shrink-0 rounded px-2 py-1 font-mono text-[11px] font-semibold transition-colors sm:px-2.5 ${
+                    i === tfIdx ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-2"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <CandleCountdown intervalSec={tf.seconds} />
+            </div>
+            {/* Toolbar row 2: Chart controls (horizontally scrollable on mobile) */}
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-border bg-surface-1 px-3 py-1.5 scrollbar-none">
+              <div className="flex items-center gap-2 shrink-0">
                 {/* ── Seletor de tipo de gráfico ── */}
                 <Popover>
                   <PopoverTrigger asChild>
@@ -2162,12 +2164,12 @@ function OrderPanel({
             {leverage}×
           </span>
         </div>
-        <div className="mt-1.5 grid grid-cols-7 gap-1">
+        <div className="mt-1.5 grid grid-cols-4 gap-1 sm:grid-cols-7">
           {LEVERAGE_OPTIONS.map((lv) => (
             <button
               key={lv}
               onClick={() => setLeverage(lv)}
-              className={`rounded px-1 py-1 font-mono text-[11px] font-semibold transition-colors ${
+              className={`rounded px-1 py-1.5 font-mono text-[11px] font-semibold transition-colors ${
                 leverage === lv ? "bg-primary text-primary-foreground" : "bg-surface-2 text-muted-foreground hover:bg-surface-1"
               }`}
             >{lv}×</button>
