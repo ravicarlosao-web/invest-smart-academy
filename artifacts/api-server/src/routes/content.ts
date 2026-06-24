@@ -331,11 +331,14 @@ router.get("/resources", async (req: any, res: any) => {
  * ════════════════════════════════════════════════════════════════════════════ */
 router.get("/videos", async (req: any, res: any) => {
   try {
+    const userId = req.userId as string;
     const rows = await db
       .select()
       .from(videosTable)
       .orderBy(asc(videosTable.sortOrder), asc(videosTable.createdAt))
       .all();
+
+    const { gatedIds, userPerms } = await buildAccessMap(userId, "video");
 
     res.json(rows.map((v: any) => ({
       id:          v.id,
@@ -347,6 +350,7 @@ router.get("/videos", async (req: any, res: any) => {
       videoUrl:    v.videoUrl,
       description: v.description ?? undefined,
       order:       v.sortOrder,
+      accessible:  canAccess(v.id, gatedIds, userPerms),
     })));
   } catch (err: any) {
     req.log?.error(err);

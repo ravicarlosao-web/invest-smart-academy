@@ -9,7 +9,7 @@ interface SubscriptionState {
 
   fetch:           (userId: string) => Promise<void>;
   fetchHistory:    (userId: string) => Promise<void>;
-  requestPayment:  (userId: string, opts?: { reference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) => Promise<{ ok: boolean; error?: string }>;
+  requestPayment:  (userId: string, opts?: { reference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string; planId?: string }) => Promise<{ ok: boolean; error?: string }>;
   updateReference: (userId: string, opts: { reference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) => Promise<{ ok: boolean; error?: string }>;
   clear:           () => void;
 
@@ -48,6 +48,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         receiptData:      opts.receiptData,
         receiptMimeType:  opts.receiptMimeType,
         receiptFilename:  opts.receiptFilename,
+        planId:           opts.planId,
       });
       await get().fetch(userId);
       return { ok: result.ok };

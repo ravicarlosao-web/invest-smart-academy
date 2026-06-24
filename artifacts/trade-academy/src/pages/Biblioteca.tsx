@@ -1,17 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Lock, CheckCircle2, Clock, ChevronRight, Library } from "lucide-react";
+import { BookOpen, Lock, CheckCircle2, Clock, ChevronRight, Library, Crown } from "lucide-react";
 import { IconByName } from "@/components/IconByName";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/store/useAppStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { BOOKS_CATALOG as BOOKS_CATALOG_STATIC, isBookUnlocked, type BookMeta } from "@/data/books";
 import { api } from "@/lib/apiClient";
+import { PlanWall } from "@/components/PlanWall";
 
 export default function Biblioteca() {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<BookMeta[]>(BOOKS_CATALOG_STATIC);
+  const [showPlanWall, setShowPlanWall] = useState(false);
   const booksProgress = useAppStore((s) => s.booksProgress);
+  const { hasActiveSubscription } = useSubscriptionStore();
+  const isSubscribed = hasActiveSubscription();
   const completedBookIds = Object.entries(booksProgress)
     .filter(([, p]) => p.completed)
     .map(([id]) => id);
@@ -56,20 +61,35 @@ export default function Biblioteca() {
         </p>
       </div>
 
+      {/* PlanWall modal */}
+      {showPlanWall && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
+            <PlanWall onClose={() => setShowPlanWall(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Book cards */}
       <div className="space-y-4">
         {catalog.sort((a, b) => a.order - b.order).map((book) => {
           const prog    = booksProgress[book.id];
-          const unlocked = isBookUnlocked(book.id, completedBookIds);
+          const planLocked = (book as any).accessible === false;
+          const unlocked = !planLocked && isBookUnlocked(book.id, completedBookIds);
           const completed = prog?.completed ?? false;
           const scrollPct = prog?.scrollPercent ?? 0;
 
           return (
             <div
               key={book.id}
-              onClick={() => unlocked && navigate(`/biblioteca/${book.id}`)}
+              onClick={() => {
+                if (planLocked) { setShowPlanWall(true); return; }
+                if (unlocked) navigate(`/biblioteca/${book.id}`);
+              }}
               className={`group rounded-xl border transition-all duration-200 overflow-hidden ${
-                unlocked
+                planLocked
+                  ? "border-amber-500/20 bg-card hover:border-amber-500/40 hover:shadow-elev-md cursor-pointer"
+                  : unlocked
                   ? "border-border bg-card hover:border-primary/40 hover:shadow-elev-md cursor-pointer"
                   : "border-border/50 bg-card/50 cursor-not-allowed opacity-60"
               }`}
@@ -110,7 +130,9 @@ export default function Biblioteca() {
 
                     {/* Status icon */}
                     <div className="shrink-0">
-                      {completed ? (
+                      {planLocked ? (
+                        <Crown className="h-5 w-5 text-amber-500/70" />
+                      ) : completed ? (
                         <CheckCircle2 className="h-5 w-5 text-bull" />
                       ) : !unlocked ? (
                         <Lock className="h-5 w-5 text-muted-foreground/50" />
@@ -131,7 +153,13 @@ export default function Biblioteca() {
                         <BookOpen className="h-3 w-3" />
                         {book.pages} págs.
                       </span>
-                      {!unlocked && (
+                      {planLocked && (
+                        <span className="flex items-center gap-1 text-amber-500/70">
+                          <Crown className="h-3 w-3" />
+                          {isSubscribed ? "Não incluído no teu plano" : "Requer subscrição"}
+                        </span>
+                      )}
+                      {!planLocked && !unlocked && (
                         <span className="flex items-center gap-1 text-muted-foreground/60">
                           <Lock className="h-3 w-3" />
                           Complete o livro anterior para desbloquear

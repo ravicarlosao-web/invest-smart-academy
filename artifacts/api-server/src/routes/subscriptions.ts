@@ -172,6 +172,7 @@ router.get("/:userId/receipt/:id", async (req: any, res: any) => {
 router.post("/:userId/request", validate(SubscriptionRequestBody), async (req: any, res: any) => {
   try {
     const { paymentReference, receiptData, receiptMimeType, receiptFilename } = req.body;
+    const planId: string | null = typeof req.body?.planId === "string" ? req.body.planId : null;
     const now = Date.now();
 
     const existing = await db
@@ -225,6 +226,7 @@ router.post("/:userId/request", validate(SubscriptionRequestBody), async (req: a
       id,
       userId: String(req.params.userId),
       status:           "pending",
+      planId:           planId ?? null,
       amount:           priceAoa,
       paymentReference: paymentReference ?? null,
       receiptData:      receiptData ?? null,

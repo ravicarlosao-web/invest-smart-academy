@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { ExternalLink, BookOpen, Globe, Youtube, Building2, Star, TrendingUp } from "lucide-react";
+import { ExternalLink, BookOpen, Globe, Youtube, Building2, Star, TrendingUp, Lock, Crown } from "lucide-react";
 import { api } from "@/lib/apiClient";
+import { PlanWall } from "@/components/PlanWall";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 
 interface Resource {
   name: string;
@@ -66,7 +68,10 @@ function Stars({ count }: { count: number }) {
 }
 
 export default function Recursos() {
-  const [sections, setSections] = useState<Section[]>(STATIC_SECTIONS);
+  const [sections, setSections]     = useState<Section[]>(STATIC_SECTIONS);
+  const [showPlanWall, setShowPlanWall] = useState(false);
+  const { hasActiveSubscription } = useSubscriptionStore();
+  const isSubscribed = hasActiveSubscription();
 
   useEffect(() => {
     api.content.resources()
@@ -76,6 +81,15 @@ export default function Recursos() {
 
   return (
     <div className="min-h-full p-4 sm:p-6">
+      {/* PlanWall modal */}
+      {showPlanWall && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
+            <PlanWall onClose={() => setShowPlanWall(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-1">
@@ -108,13 +122,42 @@ export default function Recursos() {
       <div className="space-y-12">
         {sections.map((section) => {
           const SectionIcon = ICON_MAP[section.icon] ?? TrendingUp;
+          const sectionPlanLocked = (section as any).accessible === false;
           return (
             <section key={section.id} id={section.id}>
               <div className="flex items-center gap-2.5 mb-4">
-                <SectionIcon className={`h-5 w-5 ${section.color}`} />
+                <SectionIcon className={`h-5 w-5 ${sectionPlanLocked ? "text-amber-500/70" : section.color}`} />
                 <h3 className="text-base font-semibold">{section.title}</h3>
+                {sectionPlanLocked && (
+                  <span className="ml-1 flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-500/80">
+                    <Crown className="h-3 w-3" />
+                    {isSubscribed ? "Não incluído no plano" : "Requer subscrição"}
+                  </span>
+                )}
               </div>
 
+              {sectionPlanLocked ? (
+                <div
+                  className="relative rounded-xl border border-amber-500/20 bg-surface-1/50 p-8 text-center cursor-pointer hover:border-amber-500/40 transition-colors"
+                  onClick={() => setShowPlanWall(true)}
+                >
+                  <Lock className="mx-auto h-8 w-8 text-amber-500/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {isSubscribed
+                      ? "Esta secção não está incluída no teu plano."
+                      : "Esta secção requer uma subscrição ativa."}
+                  </p>
+                  {!isSubscribed && (
+                    <button
+                      type="button"
+                      className="mt-3 rounded-md bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-500 hover:bg-amber-500/25 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setShowPlanWall(true); }}
+                    >
+                      Ver Planos
+                    </button>
+                  )}
+                </div>
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {section.items.map((item) => (
                   <div
@@ -167,6 +210,7 @@ export default function Recursos() {
                   </div>
                 ))}
               </div>
+              )}
             </section>
           );
         })}

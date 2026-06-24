@@ -1,0 +1,113 @@
+Passo 5 — Frontend: Migrar lógica de acesso para o novo sistema de planos
+
+Contexto actual:
+- O Aprender.tsx tem lógica hardcoded: 
+  "intermediario" e "avancado" = premium, "iniciante" = gratuito
+- O backend agora serve accessible: true/false em cada lição
+  via GET /api/content/curriculum (autenticado)
+- O endpoint GET /api/plans/my-plan retorna o plano activo 
+  do utilizador + lista de content_ids a que tem acesso
+- O PaymentWall actual é genérico — não sabe qual plano existe
+
+Preciso que faças 4 coisas:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE A — Aprender.tsx: remover lógica hardcoded
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+No Aprender.tsx, a lógica actual é:
+
+  PREMIUM_DIFFICULTIES = ["intermediario", "avancado"]
+  isPremiumLevel = difficulty ∈ PREMIUM_DIFFICULTIES
+  needsPayment = isPremiumLevel && !isSubscribed
+
+Substituir por:
+
+  A acessibilidade de cada lição vem do campo accessible
+  retornado pelo backend em GET /api/content/curriculum.
+  
+  Nova lógica:
+  - lesson.accessible === false && utilizador sem sub activa
+    → mostra botão "Ver Planos" → abre PlanWall (novo componente)
+  - lesson.accessible === false && utilizador com sub activa
+    → mostra "Não incluído no teu plano" (sem botão de pagamento)
+  - lesson.accessible === true
+    → comportamento normal (desbloqueio sequencial mantido)
+
+  IMPORTANTE: O desbloqueio sequencial mantém-se:
+  Mesmo que accessible = true, a lição só é navegável
+  se o nível anterior estiver completo (lógica existente preservada).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE B — Novo componente PlanWall.tsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Substitui o PaymentWall actual para o contexto de planos.
+O PlanWall deve:
+
+1. Chamar GET /api/admin/plans para listar os planos activos
+   (filtrando is_active = 1 e is_default = 0 — só planos pagos)
+
+2. Mostrar os planos disponíveis em cards:
+   ┌──────────────────────────┐
+   │  Plano Mensal            │
+   │  15.000 AOA / 30 dias    │
+   │  ✓ X lições incluídas    │
+   │  ✓ X livros incluídos    │
+   │  [Subscrever este plano] │
+   └──────────────────────────┘
+
+3. Ao clicar "Subscrever este plano":
+   → Abre o PaymentWall existente (reutiliza o componente actual)
+   → Passa o planId seleccionado como prop
+   → O PaymentWall envia o planId no POST /api/subscription/:userId/request
+
+4. Se só existir 1 plano pago → não mostra lista, vai directo 
+   para o PaymentWall com esse planId
+
+5. Se não existir nenhum plano pago activo → mostra mensagem:
+   "Não existem planos disponíveis de momento. 
+    Contacta o administrador."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE C — Actualizar PaymentWall para receber planId
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O PaymentWall actual não envia planId no pedido de subscrição.
+
+Alterações necessárias:
+1. Aceitar prop: planId?: string
+2. No POST /api/subscription/:userId/request → incluir planId no body
+3. Mostrar o nome e preço do plano seleccionado no topo do PaymentWall
+   (buscar de GET /api/admin/plans/:id se planId for passado,
+    ou de GET /api/plan-config como fallback para compatibilidade)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE D — Outras páginas com accessible
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Nas páginas de Livros, Estratégias, Vídeos e Recursos:
+
+1. Cada item agora tem accessible: true/false vindo do backend
+2. Items com accessible = false:
+   → Mostrar com overlay de cadeado
+   → Ao clicar → abre PlanWall
+   → NÃO remover da lista — mostrar bloqueado mas visível
+3. Items com accessible = true → comportamento normal
+
+Nota: Se o campo accessible não vier do backend (conteúdo 
+sem permissões definidas) → tratar como accessible = true
+(regra de transição — não quebrar conteúdo existente)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE — Mostra-me no final:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. O novo componente PlanWall.tsx completo
+2. As alterações no Aprender.tsx 
+   (só a secção da lógica de acesso — não o ficheiro todo)
+3. As alterações no PaymentWall 
+   (só as partes alteradas)
+4. Confirma quais páginas foram actualizadas 
+   com o overlay de cadeado (Parte D)
+5. Servidor frontend + API sem erros

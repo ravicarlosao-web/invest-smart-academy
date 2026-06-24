@@ -272,6 +272,24 @@ adminRouter.delete("/:id/permissions/:permId", requireAdminFull, async (req: any
  * ════════════════════════════════════════════════════════════════════════════ */
 
 /**
+ * GET /api/plans — lista planos activos para o utilizador escolher
+ */
+userRouter.get("/", async (req: any, res: any) => {
+  try {
+    const plans = await db
+      .select()
+      .from(plansTable)
+      .where(eq(plansTable.isActive, 1))
+      .orderBy(asc(plansTable.createdAt))
+      .all();
+    res.json(plans);
+  } catch (err) {
+    req.log?.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/**
  * GET /api/plans/my-plan
  * Retorna o plano activo do utilizador + lista de content_ids acessíveis.
  */

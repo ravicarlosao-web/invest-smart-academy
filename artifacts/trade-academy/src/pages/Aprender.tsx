@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,7 @@ import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscriptionStore } from "@/store/useSubscriptionStore";
-import { PaymentWall } from "@/components/PaymentWall";
+import { PlanWall } from "@/components/PlanWall";
 import { Check, Lock, Sparkles, ChevronRight, BookMarked, RotateCcw, Crown, Clock } from "lucide-react";
 
 const difficultyLabel = {
@@ -18,13 +17,9 @@ const difficultyLabel = {
   avancado: "Avançado",
 } as const;
 
-/** Níveis que requerem subscrição paga */
-const PREMIUM_DIFFICULTIES: string[] = ["intermediario", "avancado"];
-
 const EMPTY: string[] = [];
 
 export default function Aprender() {
-  const { priceAoa } = usePlanConfig();
   const completed   = useAppStore((s) => s.progress.completedLessons);
   const reviewQueue = useAppStore((s) => s.progress.reviewQueue ?? EMPTY);
   const removeFromReview = useAppStore((s) => s.removeFromReview);
@@ -32,7 +27,7 @@ export default function Aprender() {
   const { subscription, fetch: fetchSub, hasActiveSubscription } = useSubscriptionStore();
 
   const [levels, setLevels] = useState<LevelDef[]>(LEVELS_STATIC);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const [showPlanWall, setShowPlanWall] = useState(false);
 
   useEffect(() => {
     if (user) fetchSub(user.id);
@@ -46,23 +41,11 @@ export default function Aprender() {
 
   const isSubscribed = hasActiveSubscription();
 
-  // Verifica se um nível precisa de subscrição
-  const isPremiumLevel = (difficulty: string) => PREMIUM_DIFFICULTIES.includes(difficulty);
-
-  // Bloqueio sequencial (só se aplica a níveis gratuitos)
+  // Bloqueio sequencial
   const levelUnlocked = (idx: number): boolean => {
     if (idx === 0) return true;
     const prev = levels[idx - 1];
     return prev.lessons.every((l) => completed.includes(l.id));
-  };
-
-  // Nível premium: sempre mostra paywall se sem subscrição (independente do progresso sequencial)
-  // Nível gratuito: aplica bloqueio sequencial
-  const levelAccessible = (idx: number): boolean => {
-    if (isPremiumLevel(levels[idx].difficulty)) {
-      return isSubscribed && levelUnlocked(idx);
-    }
-    return levelUnlocked(idx);
   };
 
   // Review lessons
@@ -116,17 +99,17 @@ export default function Aprender() {
               A tua subscrição expira em {Math.ceil((subscription.expiresAt - Date.now()) / (24 * 60 * 60 * 1000))} dias.
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setShowPaywall(true)}>
+          <Button size="sm" variant="outline" onClick={() => setShowPlanWall(true)}>
             Renovar
           </Button>
         </div>
       )}
 
-      {/* ── Modal de pagamento ── */}
-      {showPaywall && (
+      {/* ── Modal de planos ── */}
+      {showPlanWall && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
-            <PaymentWall onClose={() => setShowPaywall(false)} />
+            <PlanWall onClose={() => setShowPlanWall(false)} />
           </div>
         </div>
       )}
@@ -176,16 +159,17 @@ export default function Aprender() {
       <div className="space-y-4">
         {levels.map((level, idx) => {
           const sequentialUnlocked = levelUnlocked(idx);
-          const accessible = levelAccessible(idx);
-          // Premium levels always show paywall (even if sequentially locked)
-          const needsPayment = isPremiumLevel(level.difficulty) && !isSubscribed;
+          // accessible === false → plano não permite este nível
+          const levelPlanAccessible = (level as any).accessible !== false;
+          const needsPayment = !levelPlanAccessible && !isSubscribed;
+          const notInPlan    = !levelPlanAccessible && isSubscribed;
           const doneCount = level.lessons.filter((l) => completed.includes(l.id)).length;
           const pct = Math.round((doneCount / level.lessons.length) * 100);
 
           return (
             <Card
               key={level.id}
-              className={`overflow-hidden ${(!sequentialUnlocked && !needsPayment) ? "opacity-60" : ""}`}
+              className={`overflow-hidden ${(!sequentialUnlocked && !needsPayment && !notInPlan) ? "opacity-60" : ""}`}
             >
               <div className="flex items-center justify-between border-b border-border bg-surface-1 px-5 py-3">
                 <div className="flex items-center gap-3">
@@ -197,9 +181,9 @@ export default function Aprender() {
                       <h3 className="font-semibold">{level.title}</h3>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] uppercase ${needsPayment ? "border-amber-500/50 text-amber-500" : ""}`}
+                        className={`text-[10px] uppercase ${needsPayment ? "border-amber-500/50 text-amber-500" : notInPlan ? "border-muted-foreground/30 text-muted-foreground" : ""}`}
                       >
-                        {needsPayment ? "Premium" : difficultyLabel[level.difficulty]}
+                        {needsPayment ? "Plano Premium" : notInPlan ? "Não incluído" : difficultyLabel[level.difficulty as keyof typeof difficultyLabel]}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{level.subtitle}</p>
@@ -210,11 +194,13 @@ export default function Aprender() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                    onClick={() => setShowPaywall(true)}
+                    className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10 shrink-0"
+                    onClick={() => setShowPlanWall(true)}
                   >
-                    Subscrever — {priceAoa.toLocaleString("pt-AO")} AOA/mês
+                    Ver Planos
                   </Button>
+                ) : notInPlan ? (
+                  <p className="text-xs text-muted-foreground text-right shrink-0">Não incluído<br />no teu plano</p>
                 ) : (
                   <div className="text-right">
                     <p className="font-mono text-sm font-semibold">{pct}%</p>
@@ -227,9 +213,12 @@ export default function Aprender() {
 
               <div className="divide-y divide-border">
                 {level.lessons.map((lesson) => {
-                  const isDone    = completed.includes(lesson.id);
-                  const isLocked  = !accessible;
-                  const isPremium = needsPayment;
+                  const isDone = completed.includes(lesson.id);
+                  const isLocked = !sequentialUnlocked;
+                  // accessible === false → plano não inclui esta lição
+                  const lessonPlanAccessible = (lesson as any).accessible !== false;
+                  const lessonNeedsPayment = !lessonPlanAccessible && !isSubscribed;
+                  const lessonNotInPlan    = !lessonPlanAccessible && isSubscribed;
                   return (
                     <LessonRow
                       key={lesson.id}
@@ -238,9 +227,10 @@ export default function Aprender() {
                       xp={lesson.xp}
                       done={isDone}
                       locked={isLocked}
-                      premium={isPremium}
+                      needsPayment={lessonNeedsPayment}
+                      notInPlan={lessonNotInPlan}
                       to={`/aprender/${lesson.id}`}
-                      onPaywall={() => setShowPaywall(true)}
+                      onPaywall={() => setShowPlanWall(true)}
                     />
                   );
                 })}
@@ -254,41 +244,45 @@ export default function Aprender() {
 }
 
 function LessonRow({
-  title, summary, xp, done, locked, premium, to, onPaywall,
+  title, summary, xp, done, locked, needsPayment, notInPlan, to, onPaywall,
 }: {
   title: string; summary: string; xp: number; done: boolean; locked: boolean;
-  premium: boolean; to: string; onPaywall: () => void;
+  needsPayment: boolean; notInPlan: boolean; to: string; onPaywall: () => void;
 }) {
   const content = (
     <div className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-surface-1">
       <div className="flex min-w-0 items-center gap-3">
         <span
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-            done    ? "bg-bull/15 text-bull"
-            : locked ? "bg-surface-2 text-muted-foreground"
-            : premium ? "bg-amber-500/15 text-amber-500"
+            done          ? "bg-bull/15 text-bull"
+            : locked      ? "bg-surface-2 text-muted-foreground"
+            : needsPayment ? "bg-amber-500/15 text-amber-500"
+            : notInPlan   ? "bg-surface-2 text-muted-foreground"
             : "bg-primary/15 text-primary"
           }`}
         >
-          {done    ? <Check className="h-4 w-4" />
-           : locked  ? <Lock className="h-3.5 w-3.5" />
-           : premium ? <Crown className="h-3.5 w-3.5" />
+          {done          ? <Check className="h-4 w-4" />
+           : locked      ? <Lock className="h-3.5 w-3.5" />
+           : needsPayment ? <Crown className="h-3.5 w-3.5" />
+           : notInPlan   ? <Lock className="h-3.5 w-3.5" />
            : <Sparkles className="h-4 w-4" />}
         </span>
         <div className="min-w-0">
-          <p className={`truncate text-sm font-medium ${premium ? "text-muted-foreground" : ""}`}>{title}</p>
-          <p className="truncate text-xs text-muted-foreground">{summary}</p>
+          <p className={`truncate text-sm font-medium ${(needsPayment || notInPlan) ? "text-muted-foreground" : ""}`}>{title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {notInPlan ? "Não incluído no teu plano" : summary}
+          </p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        <span className={`font-mono text-xs font-semibold ${premium ? "text-amber-500/60" : "text-primary"}`}>+{xp} XP</span>
-        {!locked && !premium && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-        {premium && <Lock className="h-3.5 w-3.5 text-amber-500/60" />}
+        <span className={`font-mono text-xs font-semibold ${needsPayment ? "text-amber-500/60" : notInPlan ? "text-muted-foreground/40" : "text-primary"}`}>+{xp} XP</span>
+        {!locked && !needsPayment && !notInPlan && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        {(needsPayment || notInPlan) && <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />}
       </div>
     </div>
   );
 
-  if (locked) return <div>{content}</div>;
-  if (premium) return <button className="w-full text-left" onClick={onPaywall}>{content}</button>;
+  if (locked || notInPlan) return <div>{content}</div>;
+  if (needsPayment) return <button type="button" className="w-full text-left" onClick={onPaywall}>{content}</button>;
   return <Link to={to}>{content}</Link>;
 }

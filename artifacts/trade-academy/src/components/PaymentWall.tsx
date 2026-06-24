@@ -27,13 +27,20 @@ interface ReceiptFile {
 }
 
 interface Props {
-  onClose?: () => void;
+  onClose?:         () => void;
+  onBack?:          () => void;
+  planId?:          string;
+  planName?:        string;
+  planPriceAoa?:    number;
+  planDurationDays?: number;
 }
 
-export function PaymentWall({ onClose }: Props) {
+export function PaymentWall({ onClose, onBack, planId, planName, planPriceAoa, planDurationDays }: Props) {
   const { priceAoa } = usePlanConfig();
   const user         = useAuthStore((s) => s.user);
   const { subscription, requestPayment, updateReference, loading } = useSubscriptionStore();
+
+  const displayPrice = planPriceAoa ?? priceAoa;
 
   const [step, setStep]           = useState<"info" | "form" | "done">("info");
   const [reference, setReference] = useState("");
@@ -98,6 +105,7 @@ export function PaymentWall({ onClose }: Props) {
       receiptData:     receipt?.data,
       receiptMimeType: receipt?.mimeType,
       receiptFilename: receipt?.filename,
+      planId:          planId,
     };
 
     let result;
@@ -299,12 +307,16 @@ export function PaymentWall({ onClose }: Props) {
           <CreditCard className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <h3 className="font-semibold">Subscrição Premium</h3>
-          <p className="text-xs text-muted-foreground">Acesso a Intermediário e Avançado</p>
+          <h3 className="font-semibold">{planName ?? "Subscrição Premium"}</h3>
+          <p className="text-xs text-muted-foreground">
+            {planDurationDays ? `Acesso por ${planDurationDays} dias` : "Acesso a Intermediário e Avançado"}
+          </p>
         </div>
         <div className="ml-auto text-right">
-          <p className="text-lg font-bold text-primary">{priceAoa.toLocaleString("pt-AO")} AOA</p>
-          <p className="text-xs text-muted-foreground">/mês</p>
+          <p className="text-lg font-bold text-primary">{displayPrice.toLocaleString("pt-AO")} AOA</p>
+          <p className="text-xs text-muted-foreground">
+            {planDurationDays ? `/${planDurationDays} dias` : "/mês"}
+          </p>
         </div>
       </div>
 
@@ -368,9 +380,14 @@ export function PaymentWall({ onClose }: Props) {
         Confirmar pagamento
       </Button>
 
-      {onClose && (
-        <Button variant="ghost" size="sm" onClick={onClose} className="w-full">
-          Agora não
+      {(onBack || onClose) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack ?? onClose}
+          className="w-full"
+        >
+          {onBack ? "Voltar aos planos" : "Agora não"}
         </Button>
       )}
     </div>

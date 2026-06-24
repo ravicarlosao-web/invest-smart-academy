@@ -6,7 +6,7 @@ import {
   Volume1, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2,
   Search, X, Users, Tag, BookOpen,
   TrendingUp, Activity, BarChart3, Shield, Brain, Globe,
-  ArrowLeftRight, Coins, Building2,
+  ArrowLeftRight, Coins, Building2, Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 import { api } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
+import { PlanWall } from "@/components/PlanWall";
 import {
   type VideoLesson,
   extractYouTubeId,
@@ -358,8 +359,8 @@ function useVideos() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.videos
-      .list()
+    api.content
+      .videos()
       .then((raw) => {
         const migrated = (raw as any[]).map((v) => ({
           ...v,
@@ -410,22 +411,28 @@ function CatIcon({ cat, className }: { cat: string; className?: string }) {
 }
 
 function VideoCard({
-  v, videos, userXp, watchedVideos, navigate,
+  v, videos, userXp, watchedVideos, navigate, onPlanWall,
 }: {
   v: VideoLesson; videos: VideoLesson[]; userXp: number; watchedVideos: string[];
-  navigate: ReturnType<typeof useNavigate>;
+  navigate: ReturnType<typeof useNavigate>; onPlanWall?: () => void;
 }) {
-  const globalIdx = videos.indexOf(v);
-  const unlocked  = isUnlocked(v, globalIdx, videos, userXp, watchedVideos);
-  const watched   = watchedVideos.includes(v.id);
-  const videoId   = extractYouTubeId(v.videoUrl);
+  const globalIdx    = videos.indexOf(v);
+  const planLocked   = (v as any).accessible === false;
+  const unlocked     = !planLocked && isUnlocked(v, globalIdx, videos, userXp, watchedVideos);
+  const watched      = watchedVideos.includes(v.id);
+  const videoId      = extractYouTubeId(v.videoUrl);
 
   return (
     <button
-      onClick={() => unlocked && navigate(`/video-aulas/${v.id}`)}
+      onClick={() => {
+        if (planLocked) { onPlanWall?.(); return; }
+        if (unlocked) navigate(`/video-aulas/${v.id}`);
+      }}
       className={cn(
         "group relative rounded-xl overflow-hidden border text-left transition-all w-full",
-        unlocked
+        planLocked
+          ? "border-amber-500/20 hover:border-amber-500/40 cursor-pointer"
+          : unlocked
           ? "border-border/60 hover:border-primary/40 hover:shadow-glow cursor-pointer"
           : "border-border/30 cursor-not-allowed opacity-60",
       )}
@@ -441,9 +448,15 @@ function VideoCard({
         )}
         <div className={cn(
           "absolute inset-0 flex items-center justify-center transition-opacity",
-          unlocked ? "bg-black/30 opacity-0 group-hover:opacity-100" : "bg-black/60 opacity-100",
+          planLocked
+            ? "bg-black/50 opacity-100"
+            : unlocked ? "bg-black/30 opacity-0 group-hover:opacity-100" : "bg-black/60 opacity-100",
         )}>
-          {unlocked ? (
+          {planLocked ? (
+            <div className="flex flex-col items-center gap-1.5">
+              <Crown className="h-6 w-6 text-amber-400" />
+            </div>
+          ) : unlocked ? (
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg">
               <Play className="h-5 w-5 text-black fill-black ml-0.5" />
             </div>
@@ -502,6 +515,7 @@ function GalleryView({ videos, loading }: { videos: VideoLesson[]; loading: bool
   const navigate      = useNavigate();
   const userXp        = useAppStore((s) => s.progress.xp);
   const watchedVideos = useAppStore((s) => s.watchedVideos);
+  const [showPlanWall, setShowPlanWall] = useState(false);
   const [search, setSearch]               = useState("");
   const [activeCategory, setActiveCategory] = useState("Todos");
   const [activeCreator, setActiveCreator]   = useState("Todos");
@@ -575,6 +589,15 @@ function GalleryView({ videos, loading }: { videos: VideoLesson[]; loading: bool
 
   return (
     <div className="space-y-6">
+      {/* PlanWall modal */}
+      {showPlanWall && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
+            <PlanWall onClose={() => setShowPlanWall(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Disclaimer */}
       <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4">
         <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
@@ -705,7 +728,7 @@ function GalleryView({ videos, loading }: { videos: VideoLesson[]; loading: bool
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {groupVideos.map((v) => (
                 <VideoCard key={v.id} v={v} videos={videos} userXp={userXp}
-                  watchedVideos={watchedVideos} navigate={navigate} />
+                  watchedVideos={watchedVideos} navigate={navigate} onPlanWall={() => setShowPlanWall(true)} />
               ))}
             </div>
           </section>

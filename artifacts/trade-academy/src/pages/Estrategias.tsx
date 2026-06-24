@@ -17,10 +17,12 @@ import {
   LogOut,
   Zap,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { STRATEGIES as STRATEGIES_STATIC, type Strategy, type RiskLevel } from "@/data/strategies";
 import { IconByName } from "@/components/IconByName";
 import { api } from "@/lib/apiClient";
+import { PlanWall } from "@/components/PlanWall";
 
 /* ── helpers ─────────────────────────────────────────── */
 const RISK_COLOR: Record<RiskLevel, string> = {
@@ -85,19 +87,28 @@ function BulletList({ items, variant = "neutral" }: { items: string[]; variant?:
   );
 }
 
-function StrategyCard({ strategy, defaultOpen }: { strategy: Strategy; defaultOpen?: boolean }) {
+function StrategyCard({
+  strategy, defaultOpen, planLocked, onPlanWall,
+}: {
+  strategy: Strategy; defaultOpen?: boolean; planLocked?: boolean; onPlanWall?: () => void;
+}) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
   return (
     <div
       className={`rounded-xl border transition-all duration-200 overflow-hidden ${
-        open ? "border-primary/40 bg-card shadow-glow/5" : "border-border bg-card hover:border-primary/30"
+        planLocked
+          ? "border-amber-500/20 bg-card/80"
+          : open ? "border-primary/40 bg-card shadow-glow/5" : "border-border bg-card hover:border-primary/30"
       }`}
     >
       {/* Header — always visible */}
       <button
         className="w-full text-left p-4 sm:p-5"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (planLocked) { onPlanWall?.(); return; }
+          setOpen((o) => !o);
+        }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -124,7 +135,9 @@ function StrategyCard({ strategy, defaultOpen }: { strategy: Strategy; defaultOp
             </div>
           </div>
           <div className="shrink-0 mt-0.5 text-muted-foreground">
-            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {planLocked
+              ? <Lock className="h-4 w-4 text-amber-500/60" />
+              : open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
 
@@ -244,6 +257,7 @@ export default function Estrategias() {
   const [riskFilter,   setRiskFilter]   = useState<RiskLevel | "Todos">("Todos");
   const [diffFilter,   setDiffFilter]   = useState("Todos");
   const [search,       setSearch]       = useState("");
+  const [showPlanWall, setShowPlanWall] = useState(false);
 
   useEffect(() => {
     api.content.strategies()
@@ -325,6 +339,15 @@ export default function Estrategias() {
         </p>
       )}
 
+      {/* PlanWall modal */}
+      {showPlanWall && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
+            <PlanWall onClose={() => setShowPlanWall(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Strategy cards */}
       {filtered.length === 0 ? (
         <div className="py-16 text-center">
@@ -338,9 +361,18 @@ export default function Estrategias() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((s, i) => (
-            <StrategyCard key={s.id} strategy={s} defaultOpen={i === 0 && filtered.length === 1} />
-          ))}
+          {filtered.map((s, i) => {
+            const stratPlanLocked = (s as any).accessible === false;
+            return (
+              <StrategyCard
+                key={s.id}
+                strategy={s}
+                defaultOpen={i === 0 && filtered.length === 1 && !stratPlanLocked}
+                planLocked={stratPlanLocked}
+                onPlanWall={() => setShowPlanWall(true)}
+              />
+            );
+          })}
         </div>
       )}
 

@@ -327,13 +327,6 @@ export const api = {
   },
   leaderboard: () =>
     request<{ rank: number; userId: string; name: string; xp: number }[]>("GET", "/leaderboard"),
-  content: {
-    glossary:   () => request<unknown[]>("GET", "/glossary"),
-    strategies: () => request<unknown[]>("GET", "/strategies"),
-    books:      () => request<unknown[]>("GET", "/books"),
-    resources:  () => request<unknown[]>("GET", "/resources"),
-    curriculum: () => request<unknown[]>("GET", "/curriculum"),
-  },
 
   /* ---------- Subscrições (aluno) ---------- */
   subscription: {
@@ -341,7 +334,7 @@ export const api = {
       authRequest<{ subscription: SubscriptionData | null }>("GET", `/subscription/${userId}`),
     history: (userId: string) =>
       authRequest<{ subscriptions: SubscriptionData[] }>("GET", `/subscription/${userId}/history`),
-    request: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
+    request: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string; planId?: string }) =>
       authRequest<{ ok: boolean; id: string }>("POST", `/subscription/${userId}/request`, body),
     updateReference: (userId: string, body: { paymentReference?: string; receiptData?: string; receiptMimeType?: string; receiptFilename?: string }) =>
       authRequest<{ ok: boolean }>("PATCH", `/subscription/${userId}/reference`, body),
@@ -349,6 +342,11 @@ export const api = {
       authRequest<{ receiptData: string; receiptMimeType: string; receiptFilename: string }>("GET", `/subscription/${userId}/receipt/${subId}`),
     getBankConfig: () =>
       authRequest<BankConfig>("GET", "/bank-config"),
+  },
+
+  /* ---------- Planos (utilizador — lista activos para subscrição) ---------- */
+  plans: {
+    list: () => authRequest<AdminPlan[]>("GET", "/plans"),
   },
 
   /* ---------- Planos (admin) ---------- */
@@ -371,13 +369,14 @@ export const api = {
       adminRequest<{ ok: boolean }>("DELETE", `/admin/plans/${planId}/permissions/${permId}`),
   },
 
-  /* ---------- Conteúdo (autenticado — usado pelo painel de planos) ---------- */
+  /* ---------- Conteúdo (autenticado — retorna campo accessible por item) ---------- */
   content: {
-    curriculum: () => adminRequest<any[]>("GET", "/content/curriculum"),
-    books:       () => adminRequest<any[]>("GET", "/content/books"),
-    strategies:  () => adminRequest<any[]>("GET", "/content/strategies"),
-    videos:      () => adminRequest<any[]>("GET", "/content/videos"),
-    resources:   () => adminRequest<any[]>("GET", "/content/resources"),
+    curriculum: () => authRequest<any[]>("GET", "/content/curriculum"),
+    books:       () => authRequest<any[]>("GET", "/content/books"),
+    strategies:  () => authRequest<any[]>("GET", "/content/strategies"),
+    videos:      () => authRequest<any[]>("GET", "/content/videos"),
+    resources:   () => authRequest<any[]>("GET", "/content/resources"),
+    glossary:    () => authRequest<any[]>("GET", "/glossary"),
   },
 
   /* ---------- Subscrições (admin) ---------- */
