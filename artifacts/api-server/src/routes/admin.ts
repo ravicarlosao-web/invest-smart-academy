@@ -19,6 +19,7 @@ import {
   curriculumLevelsTable,
   curriculumLessonsTable,
   professorLogsTable,
+  videosTable,
   eq,
   desc,
   asc,
@@ -819,14 +820,61 @@ router.get("/videos", async (req: any, res: any) => {
 
 router.put("/videos", async (req: any, res: any) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [];
+    const items: any[] = Array.isArray(req.body) ? req.body : [];
     const prevVideos: any[] = await getSetting("content.videos", []);
     const prevVideoCount = prevVideos.length;
+
+    // 1. Guarda em admin_settings (fonte do painel admin)
     await setSetting("content.videos", items);
+
+    // 2. Sincroniza com videosTable (fonte dos alunos)
+    const now = Date.now();
+    const incomingIds = new Set<string>(items.map((v: any) => String(v.id)).filter(Boolean));
+
+    // Upsert de cada vídeo
+    for (let i = 0; i < items.length; i++) {
+      const v = items[i];
+      if (!v?.id || !v?.title) continue;
+      await db.run(sql.raw(
+        `INSERT INTO videos (id, creator, title, level, category, tags, video_url, description, sort_order, created_at, updated_at)
+         VALUES (
+           '${String(v.id).replace(/'/g,"''")}',
+           '${String(v.creator ?? "Desconhecido").replace(/'/g,"''")}',
+           '${String(v.title).replace(/'/g,"''")}',
+           '${String(v.level ?? "Iniciante").replace(/'/g,"''")}',
+           '${String(v.category ?? "Geral").replace(/'/g,"''")}',
+           '${JSON.stringify(Array.isArray(v.tags) ? v.tags : []).replace(/'/g,"''")}',
+           '${String(v.videoUrl ?? v.youtubeUrl ?? "").replace(/'/g,"''")}',
+           ${v.description ? `'${String(v.description).replace(/'/g,"''")}'` : "NULL"},
+           ${Number.isFinite(v.order) ? v.order : i},
+           ${now}, ${now}
+         )
+         ON CONFLICT(id) DO UPDATE SET
+           creator     = excluded.creator,
+           title       = excluded.title,
+           level       = excluded.level,
+           category    = excluded.category,
+           tags        = excluded.tags,
+           video_url   = excluded.video_url,
+           description = excluded.description,
+           sort_order  = excluded.sort_order,
+           updated_at  = excluded.updated_at`
+      ));
+    }
+
+    // Remove vídeos apagados pelo admin
+    const allInTable = await db.select({ id: videosTable.id }).from(videosTable).all();
+    for (const row of allInTable) {
+      if (!incomingIds.has(row.id)) {
+        await db.delete(videosTable).where(eq(videosTable.id, row.id));
+      }
+    }
+
     const diffVid = items.length - prevVideoCount;
-    if (diffVid > 0)         logAction(req, "added",   "video", `${diffVid} vídeo(s)`, `Total: ${items.length}`);
-    else if (diffVid < 0)    logAction(req, "removed", "video", `${Math.abs(diffVid)} vídeo(s)`, `Total: ${items.length}`);
+    if (diffVid > 0)           logAction(req, "added",   "video", `${diffVid} vídeo(s)`, `Total: ${items.length}`);
+    else if (diffVid < 0)      logAction(req, "removed", "video", `${Math.abs(diffVid)} vídeo(s)`, `Total: ${items.length}`);
     else if (items.length > 0) logAction(req, "updated", "video", `${items.length} vídeo(s)`);
+
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
