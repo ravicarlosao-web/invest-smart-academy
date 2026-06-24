@@ -1,0 +1,72 @@
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+/**
+ * plans
+ * Planos dinâmicos criados pelo admin/master.
+ * O plano gratuito tem price_aoa = 0 e is_default = 1.
+ * Fluxo de permissões: plan → plan_permissions → conteúdo específico
+ */
+export const plansTable = sqliteTable("plans", {
+  id:           text("id").primaryKey(),           // "plan_<ts>_<rand>"
+  name:         text("name").notNull(),            // ex: "Plano Gratuito", "Plano Mensal"
+  description:  text("description"),              // descrição visível ao aluno
+  priceAoa:     integer("price_aoa").notNull().default(0), // 0 = gratuito
+  durationDays: integer("duration_days").notNull().default(30), // 7 | 30 | 90 | 180 | 365 | custom
+  isActive:     integer("is_active").notNull().default(1),    // 0/1 — plano visível/disponível
+  isDefault:    integer("is_default").notNull().default(0),   // 0/1 — só 1 plano pode ser default (gratuito)
+  createdBy:    text("created_by").notNull(),      // userId ou "master"
+  createdAt:    integer("created_at").notNull(),
+  updatedAt:    integer("updated_at").notNull(),
+});
+
+/**
+ * plan_permissions
+ * Define exactamente que conteúdo cada plano desbloqueia.
+ * Uma row = um conteúdo permitido num plano.
+ *
+ * content_type: "lesson" | "level" | "book" | "strategy" | "video" | "resource_section"
+ * content_id:   ID do conteúdo correspondente
+ *
+ * Exemplo:
+ *   planId="plan_123", contentType="lesson",   contentId="intro-trading"
+ *   planId="plan_123", contentType="book",      contentId="book_456"
+ *   planId="plan_123", contentType="level",     contentId="1"  ← desbloqueia nível inteiro
+ */
+export const planPermissionsTable = sqliteTable("plan_permissions", {
+  id:          text("id").primaryKey(),            // "perm_<ts>_<rand>"
+  planId:      text("plan_id").notNull(),          // FK → plans.id
+  contentType: text("content_type").notNull(),     // "lesson"|"level"|"book"|"strategy"|"video"|"resource_section"
+  contentId:   text("content_id").notNull(),       // ID do conteúdo
+  createdAt:   integer("created_at").notNull(),
+});
+
+/**
+ * videos
+ * Migração de data/videos.ts para a BD.
+ * Permite associar vídeos a planos via plan_permissions.
+ */
+export const videosTable = sqliteTable("videos", {
+  id:          text("id").primaryKey(),
+  creator:     text("creator").notNull(),
+  title:       text("title").notNull(),
+  level:       text("level").notNull(),            // "Iniciante" | "Intermediário" | "Avançado"
+  category:    text("category").notNull(),
+  tags:        text("tags").notNull().default("[]"), // JSON array
+  videoUrl:    text("video_url").notNull(),
+  description: text("description"),
+  sortOrder:   integer("sort_order").notNull().default(0),
+  createdAt:   integer("created_at").notNull(),
+  updatedAt:   integer("updated_at").notNull(),
+});
+
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+export const insertPlanSchema = (createInsertSchema(plansTable) as any).omit({ id: true });
+export const insertPlanPermissionSchema = (createInsertSchema(planPermissionsTable) as any).omit({ id: true });
+export const insertVideoSchema = (createInsertSchema(videosTable) as any).omit({ id: true });
+
+export type Plan           = typeof plansTable.$inferSelect;
+export type InsertPlan     = z.infer<typeof insertPlanSchema>;
+export type PlanPermission = typeof planPermissionsTable.$inferSelect;
+export type Video          = typeof videosTable.$inferSelect;

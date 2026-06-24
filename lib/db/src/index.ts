@@ -215,6 +215,43 @@ export async function initDb(): Promise<void> {
       password_hash TEXT NOT NULL,
       created_at    INTEGER NOT NULL
     )`),
+
+    /* ── Plans & permissions ──────────────────────────────────────────────── */
+    sql.raw(`CREATE TABLE IF NOT EXISTS plans (
+      id            TEXT PRIMARY KEY,
+      name          TEXT NOT NULL,
+      description   TEXT,
+      price_aoa     INTEGER NOT NULL DEFAULT 0,
+      duration_days INTEGER NOT NULL DEFAULT 30,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      is_default    INTEGER NOT NULL DEFAULT 0,
+      created_by    TEXT NOT NULL,
+      created_at    INTEGER NOT NULL,
+      updated_at    INTEGER NOT NULL
+    )`),
+
+    sql.raw(`CREATE TABLE IF NOT EXISTS plan_permissions (
+      id           TEXT PRIMARY KEY,
+      plan_id      TEXT NOT NULL,
+      content_type TEXT NOT NULL,
+      content_id   TEXT NOT NULL,
+      created_at   INTEGER NOT NULL
+    )`),
+
+    /* ── Videos (migração de data/videos.ts para BD) ─────────────────────── */
+    sql.raw(`CREATE TABLE IF NOT EXISTS videos (
+      id          TEXT PRIMARY KEY,
+      creator     TEXT NOT NULL,
+      title       TEXT NOT NULL,
+      level       TEXT NOT NULL,
+      category    TEXT NOT NULL,
+      tags        TEXT NOT NULL DEFAULT '[]',
+      video_url   TEXT NOT NULL,
+      description TEXT,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
@@ -234,6 +271,9 @@ export async function initDb(): Promise<void> {
     `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'aluno'`,
     `ALTER TABLE ai_usage ADD COLUMN chart_analysis_count INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE ai_usage ADD COLUMN trade_feedback_count INTEGER NOT NULL DEFAULT 0`,
+    // subscriptions — novos campos para sistema de planos
+    `ALTER TABLE subscriptions ADD COLUMN plan_id TEXT`,
+    `ALTER TABLE subscriptions ADD COLUMN duration_days INTEGER`,
   ];
   for (const stmt of alterStatements) {
     try {
