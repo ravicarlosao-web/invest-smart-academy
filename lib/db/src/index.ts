@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/libsql/http";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import * as schema from "./schema/index.js";
 
 const rawUrl    = process.env["TURSO_DATABASE_URL"];
@@ -281,6 +281,31 @@ export async function initDb(): Promise<void> {
     } catch {
       // Column already exists — ignore
     }
+  }
+
+  /* ── Seed: garantir que existe sempre um plano gratuito default ─────────── */
+  const freeDefaults = await db
+    .select({ id: schema.plansTable.id })
+    .from(schema.plansTable)
+    .where(eq(schema.plansTable.isDefault, 1))
+    .limit(1)
+    .all();
+
+  if (freeDefaults.length === 0) {
+    const now = Date.now();
+    await db.insert(schema.plansTable).values({
+      id:           "plan_free_default",
+      name:         "Plano Gratuito",
+      description:  "Acesso gratuito à plataforma",
+      priceAoa:     0,
+      durationDays: 36500,
+      isActive:     1,
+      isDefault:    1,
+      createdBy:    "system",
+      createdAt:    now,
+      updatedAt:    now,
+    });
+    console.info("[seed] Plano gratuito default criado.");
   }
 }
 

@@ -8,6 +8,7 @@ import notificationsRouter from "./notifications.js";
 import duelosRouter        from "./duelos.js";
 import adminRouter         from "./admin.js";
 import subscriptionsRouter from "./subscriptions.js";
+import { plansAdminRouter, plansUserRouter } from "./plans.js";
 import { requireAuth, requireEmailVerified } from "../middlewares/auth.js";
 import {
   db, asc, desc, eq, and, gt, sql,
@@ -34,6 +35,8 @@ router.use("/trades",        requireAuth, requireEmailVerified, tradesRouter);
 router.use("/notifications", requireAuth, requireEmailVerified, notificationsRouter);
 router.use("/duelos",        requireAuth, requireEmailVerified, duelosRouter);
 router.use("/admin",         adminRouter);
+router.use("/admin/plans",   requireAuth, requireEmailVerified, plansAdminRouter);
+router.use("/plans",         requireAuth, requireEmailVerified, plansUserRouter);
 router.use("/subscription",  requireAuth, requireEmailVerified, subscriptionsRouter);
 
 /* ── Public content routes — no auth required ─────────────────────────── */

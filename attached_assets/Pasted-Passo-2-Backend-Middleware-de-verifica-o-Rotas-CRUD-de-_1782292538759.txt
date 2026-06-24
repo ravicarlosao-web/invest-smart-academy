@@ -1,0 +1,114 @@
+Passo 2 — Backend: Middleware de verificação + Rotas CRUD de Planos
+
+Contexto do projecto:
+- Stack: Express 5 + Drizzle ORM + Turso (libSQL/SQLite) + JWT
+- As novas tabelas já existem: plans, plan_permissions, videos
+- subscriptions agora tem plan_id e duration_days
+- NÃO existe middleware de subscrição no backend — a verificação 
+  é feita APENAS no frontend (Aprender.tsx). Isto tem de mudar.
+
+Preciso que faças 3 coisas:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE A — Middleware: apps/api/src/middleware/planAccess.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cria um middleware checkPlanAccess(contentType, contentId) que:
+
+1. Lê o userId do JWT (req.user.id)
+2. Busca a subscrição activa do utilizador:
+   SELECT * FROM subscriptions 
+   WHERE user_id = ? AND status = 'active' AND expires_at > now
+   ORDER BY created_at DESC LIMIT 1
+3. Se não tiver subscrição activa → busca o plano default:
+   SELECT * FROM plans WHERE is_default = 1 LIMIT 1
+4. Com o planId (da sub activa OU do plano default):
+   Verifica se existe em plan_permissions:
+   SELECT * FROM plan_permissions 
+   WHERE plan_id = ? AND content_type = ? AND content_id = ?
+   
+   OU se existe permissão de nível inteiro:
+   SELECT * FROM plan_permissions
+   WHERE plan_id = ? AND content_type = 'level' AND content_id = ?
+   (busca o levelId da lição se contentType for 'lesson')
+
+5. Se tiver permissão → next()
+6. Se não tiver → res.status(403).json({ 
+     error: "PLAN_ACCESS_DENIED",
+     contentType,
+     contentId 
+   })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE B — Rotas de Planos: apps/api/src/routes/plans.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cria as seguintes rotas (acesso: admin + master):
+
+// PLANOS
+GET    /api/admin/plans              → lista todos os planos com contagem de permissões
+GET    /api/admin/plans/:id          → plano + todas as suas permissões
+POST   /api/admin/plans              → criar plano novo
+PUT    /api/admin/plans/:id          → editar plano (nome, preço, duração, isActive)
+DELETE /api/admin/plans/:id          → só se não tiver subscrições activas ligadas
+
+// PERMISSÕES
+GET    /api/admin/plans/:id/permissions         → lista permissões do plano
+POST   /api/admin/plans/:id/permissions         → adicionar permissão
+DELETE /api/admin/plans/:id/permissions/:permId → remover permissão
+
+// PLANO DEFAULT
+PATCH  /api/admin/plans/:id/set-default  → define este como plano default 
+                                           (remove is_default dos outros)
+
+// PÚBLICO — usado pelo frontend
+GET    /api/plans/my-plan   → retorna o plano activo do utilizador autenticado
+                              + lista de content_ids a que tem acesso
+
+Regras de negócio:
+- Ao criar plano: id = "plan_<timestamp>_<4 chars random>"
+- Ao criar permissão: id = "perm_<timestamp>_<4 chars random>"  
+- Não permitir apagar o plano default (is_default = 1)
+- Não permitir desactivar o plano default
+- POST /api/admin/plans → campo isDefault: se true, 
+  fazer UPDATE plans SET is_default = 0 WHERE is_default = 1
+  antes de inserir o novo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARTE C — Seed do Plano Gratuito
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+No initDb() em lib/db/src/index.ts, depois de todas as CREATE TABLE 
+e ALTER TABLE, adiciona este bloco de seed:
+
+// Garante que existe sempre um plano gratuito default
+const existingDefault = await db
+  .select()
+  .from(plansTable)
+  .where(eq(plansTable.isDefault, 1))
+  .limit(1);
+
+if (existingDefault.length === 0) {
+  await db.insert(plansTable).values({
+    id: "plan_free_default",
+    name: "Plano Gratuito",
+    description: "Acesso gratuito à plataforma",
+    priceAoa: 0,
+    durationDays: 36500, // ~100 anos = ilimitado
+    isActive: 1,
+    isDefault: 1,
+    createdBy: "system",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANTE — Mostra-me no final:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. O ficheiro apps/api/src/middleware/planAccess.ts completo
+2. O ficheiro apps/api/src/routes/plans.ts completo
+3. Confirma que o seed do plano gratuito foi adicionado ao initDb()
+4. Mostra onde e como o router de plans.ts foi registado 
+   no ficheiro principal (app.ts ou index.ts da API)
