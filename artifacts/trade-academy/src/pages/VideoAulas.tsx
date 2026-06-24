@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Play, Pause, Lock, CheckCircle2, ChevronLeft, ChevronRight,
   AlertCircle, Video, Loader2, Star, ArrowLeft,
-  Volume1, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2,
+  Volume1, Volume2, VolumeX, RotateCcw, RotateCw, Maximize2, Minimize2,
   Search, X, Users, Tag, BookOpen,
   TrendingUp, Activity, BarChart3, Shield, Brain, Globe,
   ArrowLeftRight, Coins, Building2, Crown,
@@ -74,6 +74,7 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
   const [showCtrls,    setShowCtrls]    = useState(false);
   const [showVolSlider,setShowVolSlider]= useState(false);
   const [buffering,    setBuffering]    = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // YT states: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
   const isPlaying = ytState === 1;
@@ -189,6 +190,12 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
       playerRef.current?.mute();
     }
   }
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
   function toggleFullscreen() {
     const el = containerRef.current;
     if (!el) return;
@@ -338,11 +345,14 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
               {fmtTime(duration)}
             </span>
             <button
-              onClick={toggleFullscreen}
-              className="text-white/70 hover:text-white transition-colors ml-1 shrink-0"
-              title="Ecrã inteiro"
+              onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+              className="text-white/80 hover:text-white transition-all hover:scale-110 ml-1 shrink-0"
+              title={isFullscreen ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
             >
-              <Maximize2 className="h-3.5 w-3.5" />
+              {isFullscreen
+                ? <Minimize2 className="h-5 w-5" />
+                : <Maximize2 className="h-5 w-5" />
+              }
             </button>
           </div>
         </div>
