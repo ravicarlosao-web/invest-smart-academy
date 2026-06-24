@@ -479,38 +479,15 @@ function SettingsTab() {
   type BankCfg = { banco: string; conta: string; titular: string; iban: string; descricao: string };
   const BANK_EMPTY: BankCfg = { banco: "", conta: "", titular: "", iban: "", descricao: "" };
 
-  const [cfg, setCfg]             = useState<{ priceAoa: number; planName: string } | null>(null);
-  const [editPrice, setEditPrice] = useState("");
-  const [editName, setEditName]   = useState("");
-  const [saving, setSaving]       = useState(false);
-  const [loading, setLoading]     = useState(true);
-
   const [bank, setBank]             = useState<BankCfg | null>(null);
   const [bankEdit, setBankEdit]     = useState<BankCfg>(BANK_EMPTY);
   const [savingBank, setSavingBank] = useState(false);
 
   useEffect(() => {
-    api.admin.getPlanConfig()
-      .then((c) => { setCfg(c); setEditPrice(String(c.priceAoa)); setEditName(c.planName); setLoading(false); })
-      .catch(() => { toast.error("Erro ao carregar configurações"); setLoading(false); });
     api.admin.getBankConfig()
       .then((c) => { setBank(c as BankCfg); setBankEdit(c as BankCfg); })
       .catch(() => {});
   }, []);
-
-  async function save() {
-    const price = Number(editPrice);
-    if (isNaN(price) || price <= 0) { toast.error("Preço inválido"); return; }
-    setSaving(true);
-    try {
-      await api.admin.savePlanConfig({ priceAoa: price, planName: editName.trim() || "Plano Mensal" });
-      setCfg({ priceAoa: price, planName: editName.trim() || "Plano Mensal" });
-      toast.success("Configurações do plano guardadas");
-    } catch { toast.error("Falha ao guardar"); }
-    finally { setSaving(false); }
-  }
-
-  const dirty = cfg ? (Number(editPrice) !== cfg.priceAoa || editName !== cfg.planName) : false;
 
   async function saveBank() {
     setSavingBank(true);
@@ -528,95 +505,6 @@ function SettingsTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h2 className="text-xl font-bold">Configurações do Plano</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Define o preço e o nome do plano de subscrição. Reflecte-se em todo o sistema.
-        </p>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">A carregar…</p>
-      ) : (
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Banknote className="h-4 w-4 text-primary" /> Plano de Subscrição Mensal
-            </CardTitle>
-            <CardDescription>
-              O preço é apresentado nas páginas de pagamento e nas notificações enviadas aos alunos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="plan-name">Nome do Plano</Label>
-              <Input
-                id="plan-name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Plano Mensal"
-                className="max-w-sm"
-              />
-              <p className="text-[11px] text-muted-foreground">Aparece nos e-mails e notificações para os alunos.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="plan-price">Preço Mensal (AOA)</Label>
-              <div className="flex items-center gap-2 max-w-sm">
-                <Input
-                  id="plan-price"
-                  type="number"
-                  min={1}
-                  step={100}
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  placeholder="5000"
-                  className="flex-1"
-                />
-                <span className="text-sm font-medium text-muted-foreground">AOA / mês</span>
-              </div>
-              {Number(editPrice) > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  Equivalente a <span className="font-semibold text-foreground">{Number(editPrice).toLocaleString("pt-AO")} AOA</span> por mês.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-2 flex items-center gap-3">
-              <Button onClick={save} disabled={saving || !dirty}>
-                <Save className="mr-1.5 h-3.5 w-3.5" />
-                {saving ? "A guardar…" : "Guardar alterações"}
-              </Button>
-              {!dirty && cfg && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-bull" /> Guardado
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Info about impact */}
-      <Card className="border-border/40 bg-muted/30">
-        <CardContent className="p-4 space-y-2">
-          <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Onde este preço aparece</p>
-          <ul className="space-y-1.5 text-sm text-muted-foreground">
-            {[
-              "Página de pagamento — valor que os alunos vêem ao subscrever",
-              "Notificação de aprovação enviada ao aluno",
-              "Dashboard financeiro do administrador (cálculo de MRR e receita)",
-              "Registo de cada pedido de subscrição aprovado",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-bull shrink-0" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
       {/* ── Dados Bancários ─────────────────────────────────────────────── */}
       <div className="pt-2">
         <h2 className="text-xl font-bold">Dados Bancários</h2>
