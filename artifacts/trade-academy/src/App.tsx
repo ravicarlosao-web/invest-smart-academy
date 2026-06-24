@@ -43,6 +43,7 @@ const BookReader   = lazy(() => import("./pages/BookReader"));
 const Estrategias  = lazy(() => import("./pages/Estrategias"));
 const VideoAulas   = lazy(() => import("./pages/VideoAulas"));
 const Financeiro   = lazy(() => import("./pages/Financeiro"));
+const Planos       = lazy(() => import("./pages/Planos"));
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/video-aulas"           element={<VideoAulas />} />
                 <Route path="/video-aulas/:videoId"  element={<VideoAulas />} />
                 <Route path="/financeiro"            element={<Financeiro />} />
+                <Route path="/planos"                element={<Planos />} />
               </Route>
             </Route>
 

@@ -347,6 +347,12 @@ export const api = {
   /* ---------- Planos (utilizador — lista activos para subscrição) ---------- */
   plans: {
     list: () => authRequest<AdminPlan[]>("GET", "/plans"),
+    myPlan: () => authRequest<{
+      plan: AdminPlan | null;
+      isDefault: boolean;
+      subscription: { id: string; status: string; expiresAt: number | null } | null;
+      permissions: string[];
+    }>("GET", "/plans/my-plan"),
   },
 
   /* ---------- Planos (admin) ---------- */
