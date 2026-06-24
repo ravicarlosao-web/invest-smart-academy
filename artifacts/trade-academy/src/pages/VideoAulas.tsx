@@ -753,9 +753,8 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
   const prevVid = idx > 0 ? videos[idx - 1] : null;
   const nextVid = idx < videos.length - 1 ? videos[idx + 1] : null;
 
-  const isWatched    = watchedVideos.includes(vid);
-  const nextUnlocked = nextVid ? isUnlocked(nextVid, idx + 1, videos, userXp, watchedVideos) : false;
-  const canGoNext    = Boolean(nextVid) && (isWatched || markedDone || nextUnlocked);
+  const isWatched = watchedVideos.includes(vid);
+  const canGoNext = Boolean(nextVid);
 
   // Reset when navigating
   useEffect(() => { setMarkedDone(false); }, [vid]);
@@ -765,7 +764,7 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
     markWatched(vid);
     setMarkedDone(true);
     toast.success("Vídeo concluído!", {
-      description: nextVid ? "Próximo vídeo desbloqueado." : "Parabéns, completaste todos os vídeos!",
+      description: nextVid ? "Podes continuar para o próximo." : "Parabéns, completaste todos os vídeos!",
     });
   }
 
@@ -898,10 +897,6 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
                 key={v.id}
                 onClick={() => {
                   if (!unlocked) return;
-                  if (!isActive && !isWatched && !markedDone) {
-                    toast.warning("Termina o vídeo actual antes de avançar.");
-                    return;
-                  }
                   goTo(v);
                 }}
                 className={cn(
