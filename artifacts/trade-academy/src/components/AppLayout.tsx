@@ -105,7 +105,7 @@ export default function AppLayout() {
           </header>
 
           {/* Page content — extra bottom padding on mobile for the BottomNav */}
-          <main className="flex-1 animate-fade-in-up pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <main className="flex-1 animate-fade-in-up pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-x-hidden">
             <Outlet />
           </main>
         </div>
