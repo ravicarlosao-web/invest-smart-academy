@@ -10,6 +10,7 @@ import {
   duelosTable,
   adminSettingsTable,
   subscriptionsTable,
+  plansTable,
   strategiesTable,
   glossaryTermsTable,
   booksTable,
@@ -928,18 +929,43 @@ router.get("/subscriptions/stats", requireAdminFull, async (req: any, res: any) 
   }
 });
 
-/** PATCH /api/admin/subscriptions/:id/approve — aprova e ativa por 30 dias */
+/** PATCH /api/admin/subscriptions/:id/approve — aprova com planId opcional */
 router.patch("/subscriptions/:id/approve", requireAdminFull, async (req: any, res: any) => {
   try {
-    const now             = Date.now();
-    const expiresAt       = now + 30 * 24 * 60 * 60 * 1000; // +30 dias
-    const receiptPurgeAt  = addBusinessDays(now, 2);          // comprovativo eliminado após 2 dias úteis
+    const now            = Date.now();
+    const receiptPurgeAt = addBusinessDays(now, 2);
 
     const sub = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, String(req.params.id))).get();
     if (!sub) return res.status(404).json({ error: "not_found" });
 
+    /* Resolve planId — vem do body ou detecta o plano pago mais recente */
+    let resolvedPlanId: string | null = req.body?.planId ?? null;
+    if (!resolvedPlanId) {
+      const paidPlan = await db
+        .select({ id: plansTable.id })
+        .from(plansTable)
+        .where(and(eq(plansTable.isActive, 1), eq(plansTable.isDefault, 0)))
+        .orderBy(desc(plansTable.createdAt))
+        .limit(1)
+        .get();
+      resolvedPlanId = paidPlan?.id ?? null;
+    }
+
+    /* Calcula expiresAt usando durationDays do plano (fallback: 30 dias) */
+    let durationDays = 30;
+    if (resolvedPlanId) {
+      const plan = await db
+        .select({ durationDays: plansTable.durationDays })
+        .from(plansTable)
+        .where(eq(plansTable.id, resolvedPlanId))
+        .get();
+      if (plan) durationDays = plan.durationDays;
+    }
+    const expiresAt = now + durationDays * 24 * 60 * 60 * 1000;
+
     await db.update(subscriptionsTable).set({
       status:          "active",
+      planId:          resolvedPlanId,
       approvedAt:      now,
       expiresAt,
       receiptPurgeAt,

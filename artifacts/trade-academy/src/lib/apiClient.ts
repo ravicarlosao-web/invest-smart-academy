@@ -351,6 +351,35 @@ export const api = {
       authRequest<BankConfig>("GET", "/bank-config"),
   },
 
+  /* ---------- Planos (admin) ---------- */
+  adminPlans: {
+    list: () =>
+      adminRequest<AdminPlan[]>("GET", "/admin/plans"),
+    get: (id: string) =>
+      adminRequest<AdminPlanWithPerms>("GET", `/admin/plans/${id}`),
+    create: (data: { name: string; description?: string | null; priceAoa: number; durationDays: number; isDefault?: number }) =>
+      adminRequest<AdminPlan>("POST", "/admin/plans", data),
+    update: (id: string, data: { name?: string; description?: string | null; priceAoa?: number; durationDays?: number; isActive?: number }) =>
+      adminRequest<AdminPlan>("PUT", `/admin/plans/${id}`, data),
+    remove: (id: string) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/plans/${id}`),
+    setDefault: (id: string) =>
+      adminRequest<{ ok: boolean }>("PATCH", `/admin/plans/${id}/set-default`),
+    addPermission: (planId: string, contentType: string, contentId: string) =>
+      adminRequest<AdminPlanPermission>("POST", `/admin/plans/${planId}/permissions`, { contentType, contentId }),
+    removePermission: (planId: string, permId: string) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/plans/${planId}/permissions/${permId}`),
+  },
+
+  /* ---------- Conteúdo (autenticado — usado pelo painel de planos) ---------- */
+  content: {
+    curriculum: () => adminRequest<any[]>("GET", "/content/curriculum"),
+    books:       () => adminRequest<any[]>("GET", "/content/books"),
+    strategies:  () => adminRequest<any[]>("GET", "/content/strategies"),
+    videos:      () => adminRequest<any[]>("GET", "/content/videos"),
+    resources:   () => adminRequest<any[]>("GET", "/content/resources"),
+  },
+
   /* ---------- Subscrições (admin) ---------- */
   adminSubscriptions: {
     list: (status?: string) =>
@@ -362,8 +391,8 @@ export const api = {
       adminRequest<{ pending: number; active: number; expired: number; rejected: number; total: number }>(
         "GET", "/admin/subscriptions/stats",
       ),
-    approve: (id: string) =>
-      adminRequest<{ ok: boolean; expiresAt: number }>("PATCH", `/admin/subscriptions/${id}/approve`),
+    approve: (id: string, planId?: string) =>
+      adminRequest<{ ok: boolean; expiresAt: number }>("PATCH", `/admin/subscriptions/${id}/approve`, planId ? { planId } : undefined),
     reject: (id: string, notes?: string) =>
       adminRequest<{ ok: boolean }>("PATCH", `/admin/subscriptions/${id}/reject`, { notes }),
     getReceipt: (id: string) =>
@@ -390,6 +419,31 @@ export type SubscriptionData = {
 export type SubscriptionWithUser = SubscriptionData & {
   user: { id: string; name: string; email: string };
 };
+
+export type AdminPlan = {
+  id:               string;
+  name:             string;
+  description:      string | null;
+  priceAoa:         number;
+  durationDays:     number;
+  isActive:         number;
+  isDefault:        number;
+  createdBy:        string;
+  createdAt:        number;
+  updatedAt:        number;
+  permissionsCount?: number;
+  activeSubsCount?:  number;
+};
+
+export type AdminPlanPermission = {
+  id:          string;
+  planId:      string;
+  contentType: string;
+  contentId:   string;
+  createdAt:   number;
+};
+
+export type AdminPlanWithPerms = AdminPlan & { permissions: AdminPlanPermission[] };
 
 export type BankConfig = {
   banco:     string;
