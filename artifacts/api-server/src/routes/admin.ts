@@ -838,7 +838,7 @@ router.put("/videos", async (req: any, res: any) => {
  * Subscrições — gestão manual de pagamentos (15.000 AOA/mês)
  * ------------------------------------------------------------------------- */
 
-/** GET /api/admin/subscriptions  — lista todas as subscrições com info do utilizador */
+/** GET /api/admin/subscriptions  — lista todas as subscrições com info do utilizador e plano */
 router.get("/subscriptions", requireAdminFull, async (req: any, res: any) => {
   try {
     const now    = Date.now();
@@ -858,6 +858,10 @@ router.get("/subscriptions", requireAdminFull, async (req: any, res: any) => {
     const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).all();
     const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
 
+    // Join com plans
+    const plans = await db.select({ id: plansTable.id, name: plansTable.name }).from(plansTable).all();
+    const planMap = Object.fromEntries(plans.map((p: any) => [p.id, p.name]));
+
     const result = subs
       .filter((s: any) => !status || s.status === status)
       .map((s: any) => {
@@ -865,6 +869,7 @@ router.get("/subscriptions", requireAdminFull, async (req: any, res: any) => {
         return {
           ...rest,
           hasReceipt: !!s.receiptData,
+          planName: s.planId ? (planMap[s.planId] ?? null) : null,
           user: userMap[s.userId] ?? { id: s.userId, name: "—", email: "—" },
         };
       });

@@ -428,6 +428,8 @@ export type SubscriptionData = {
 };
 
 export type SubscriptionWithUser = SubscriptionData & {
+  planId:   string | null;
+  planName: string | null;
   user: { id: string; name: string; email: string };
 };
 

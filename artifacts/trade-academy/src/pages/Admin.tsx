@@ -2718,6 +2718,11 @@ function SubscriptionsTab() {
   const [receiptModal, setReceiptModal] = useState<{ data: string; mimeType: string; filename: string } | null>(null);
   const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
 
+  /* ── Aprovar modal ────────────────────────────────────────────────────── */
+  const [approveModal, setApproveModal] = useState<{ id: string; planId: string | null } | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<import("@/lib/apiClient").AdminPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+
   async function load() {
     setLoading(true);
     try {
@@ -2736,11 +2741,26 @@ function SubscriptionsTab() {
 
   useEffect(() => { load(); }, [filterStatus]);
 
-  async function handleApprove(id: string) {
-    setBusy(id);
+  useEffect(() => {
+    api.adminPlans.list().then((plans: import("@/lib/apiClient").AdminPlan[]) => {
+      setAvailablePlans(plans.filter((p) => p.isActive === 1 && p.isDefault === 0));
+    }).catch(() => {});
+  }, []);
+
+  function openApproveModal(sub: SubscriptionWithUser) {
+    const preselect = (sub as any).planId ?? availablePlans[0]?.id ?? "";
+    setSelectedPlanId(preselect);
+    setApproveModal({ id: sub.id, planId: (sub as any).planId ?? null });
+  }
+
+  async function handleApprove() {
+    if (!approveModal) return;
+    setBusy(approveModal.id);
     try {
-      await api.adminSubscriptions.approve(id);
-      toast.success("Subscrição aprovada — acesso ativo por 30 dias");
+      const result = await api.adminSubscriptions.approve(approveModal.id, selectedPlanId || undefined);
+      const days = Math.round((result.expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
+      toast.success(`Subscrição aprovada — acesso activo por ${days} dias`);
+      setApproveModal(null);
       load();
     } catch {
       toast.error("Erro ao aprovar");
@@ -2839,6 +2859,51 @@ function SubscriptionsTab() {
         </button>
       </div>
 
+      {/* Modal de aprovação */}
+      {approveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-sm p-5 space-y-4">
+            <div>
+              <h3 className="font-semibold">Aprovar subscrição</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Escolhe o plano a atribuir ao aluno.</p>
+            </div>
+            {availablePlans.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label>Plano</Label>
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona um plano…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePlans.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} — {p.priceAoa.toLocaleString("pt-AO")} AOA · {p.durationDays} dias
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+                Sem planos pagos activos. O sistema usará a duração padrão (30 dias).
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setApproveModal(null)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-bull hover:bg-bull/90"
+                disabled={!!busy || (availablePlans.length > 0 && !selectedPlanId)}
+                onClick={handleApprove}
+              >
+                {busy ? "A aprovar…" : "Confirmar aprovação"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Modal de rejeição */}
       {rejectId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -2877,6 +2942,7 @@ function SubscriptionsTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Aluno</TableHead>
+                <TableHead>Plano</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Ref. Pagamento</TableHead>
                 <TableHead>Comprovativo</TableHead>
@@ -2894,6 +2960,12 @@ function SubscriptionsTab() {
                       <p className="font-medium text-sm">{sub.user.name}</p>
                       <p className="text-xs text-muted-foreground">{sub.user.email}</p>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {(sub as any).planName
+                      ? <span className="rounded-full px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary">{(sub as any).planName}</span>
+                      : <span className="rounded-full px-2 py-0.5 text-xs font-semibold bg-muted text-muted-foreground">Legado</span>
+                    }
                   </TableCell>
                   <TableCell>{statusBadge(sub.status)}</TableCell>
                   <TableCell>
@@ -2934,7 +3006,7 @@ function SubscriptionsTab() {
                             size="sm"
                             className="h-7 text-xs bg-bull hover:bg-bull/90"
                             disabled={busy === sub.id}
-                            onClick={() => handleApprove(sub.id)}
+                            onClick={() => openApproveModal(sub)}
                           >
                             {busy === sub.id ? "…" : "Aprovar"}
                           </Button>
