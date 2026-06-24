@@ -14,7 +14,7 @@ import {
   Save, X, ArrowUpRight, Activity, ClipboardList,
   Mail, Send, CheckCircle, AlertTriangle, Plug, Copy,
   ToggleLeft, ToggleRight, Share2, Brain, Lock, Loader2,
-  Wifi, WifiOff, Image,
+  Wifi, WifiOff, Image, CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { ProfessorLogsTab } from "./ProfessorLogsTab";
+import { PlanosTab } from "./PlanosTab";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
-type MasterNav = "overview" | "equipa" | "utilizadores" | "plataforma" | "logs" | "email" | "seo" | "social" | "integracoes" | "aluka-ia";
+type MasterNav = "overview" | "equipa" | "utilizadores" | "plataforma" | "logs" | "planos" | "email" | "seo" | "social" | "integracoes" | "aluka-ia";
 type MUser = Awaited<ReturnType<typeof api.admin.users>>[number];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -1805,6 +1806,7 @@ const MASTER_NAV: Array<{ id: MasterNav; label: string; icon: React.ElementType;
   { id: "utilizadores", label: "Utilizadores",        icon: Shield,        sub: "Gestão de roles",        group: "geral" },
   { id: "plataforma",   label: "Plataforma",          icon: Building2,     sub: "White-label",            group: "geral" },
   { id: "logs",         label: "Logs de Professores", icon: ClipboardList, sub: "Actividade de conteúdo", group: "geral" },
+  { id: "planos",       label: "Planos",              icon: CreditCard,    sub: "Subscrições & acessos",  group: "geral" },
   { id: "email",        label: "Email / SendGrid",    icon: Mail,          sub: "Gmail SMTP",             group: "sistema" },
   { id: "seo",          label: "SEO & Domínio",       icon: Globe,         sub: "Meta & PWA",             group: "sistema" },
   { id: "social",       label: "Redes Sociais",       icon: Share2,        sub: "Links de perfil",        group: "sistema" },
@@ -1832,6 +1834,7 @@ export default function MasterPanel() {
     utilizadores: <UtilizadoresTab />,
     plataforma:   <PlataformaTab />,
     logs:         <ProfessorLogsTab />,
+    planos:       <PlanosTab />,
     email:        <EmailConfigTab />,
     seo:          <SeoSettingsTab />,
     social:       <SocialTab />,
