@@ -73,7 +73,7 @@ function AdminGateLogin() {
     const masterResult = await masterLogin(email, password);
     setLoading(false);
     if (!masterResult.ok) {
-      toast.error(result.error ?? "Credenciais inválidas.");
+      toast.error(masterResult.error ?? result.error ?? "Credenciais inválidas.");
     }
     // Se masterLogin ok, o componente re-renderiza com role="master" e mostra o painel
   }
