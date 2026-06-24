@@ -100,14 +100,17 @@ export default function Licao() {
   }
 
   const { level, lesson } = found;
-  const totalSteps = lesson.content.length + lesson.questions.length;
-  const currentStep = phase === "content" ? contentIdx : lesson.content.length + qIdx;
-  const stepProgress = ((currentStep + (phase === "result" ? 1 : 0)) / totalSteps) * 100;
+  const content   = lesson.content   ?? [];
+  const questions = lesson.questions ?? [];
+
+  const totalSteps = content.length + questions.length;
+  const currentStep = phase === "content" ? contentIdx : content.length + qIdx;
+  const stepProgress = ((currentStep + (phase === "result" ? 1 : 0)) / Math.max(totalSteps, 1)) * 100;
 
   const advanceContent = () => {
-    if (contentIdx < lesson.content.length - 1) {
+    if (contentIdx < content.length - 1) {
       setContentIdx(contentIdx + 1);
-    } else if (lesson.questions.length > 0) {
+    } else if (questions.length > 0) {
       setPhase("quiz");
     } else {
       // No questions — complete lesson directly
@@ -118,21 +121,20 @@ export default function Licao() {
   };
 
   const submitAnswer = () => {
-    const q = lesson.questions[qIdx];
-    if (selected === null) return;
+    const q = questions[qIdx];
+    if (!q || selected === null) return;
     setRevealed(true);
     if (isCorrect(q, selected)) setCorrectCount((c) => c + 1);
   };
 
   const nextQuestion = () => {
-    if (qIdx < lesson.questions.length - 1) {
+    if (qIdx < questions.length - 1) {
       setQIdx(qIdx + 1);
       setSelected(null);
       setRevealed(false);
     } else {
-      // Resultado
-      const finalCorrect = correctCount; // já incluído
-      const scorePct = Math.round((finalCorrect / lesson.questions.length) * 100);
+      const finalCorrect = correctCount;
+      const scorePct = questions.length > 0 ? Math.round((finalCorrect / questions.length) * 100) : 100;
       const earnedXp = scorePct >= 50 ? lesson.xp : Math.round(lesson.xp * 0.4);
       completeLesson(lesson.id, earnedXp, scorePct);
       toast.success(`+${earnedXp} XP`, { description: `Aula concluída com ${scorePct}% de acerto.` });
@@ -188,25 +190,25 @@ export default function Licao() {
         </Card>
       )}
 
-      {phase === "content" && lesson.content[contentIdx] && (
+      {phase === "content" && content[contentIdx] && (
         <ContentStep
-          item={lesson.content[contentIdx]}
-          stepLabel={`${contentIdx + 1}/${lesson.content.length}`}
+          item={content[contentIdx]}
+          stepLabel={`${contentIdx + 1}/${content.length}`}
           onNext={advanceContent}
-          isLast={contentIdx === lesson.content.length - 1}
+          isLast={contentIdx === content.length - 1}
         />
       )}
 
-      {phase === "quiz" && lesson.questions[qIdx] && (
+      {phase === "quiz" && questions[qIdx] && (
         <QuizStep
-          question={lesson.questions[qIdx]}
-          stepLabel={`Pergunta ${qIdx + 1}/${lesson.questions.length}`}
+          question={questions[qIdx]}
+          stepLabel={`Pergunta ${qIdx + 1}/${questions.length}`}
           selected={selected}
           revealed={revealed}
           onSelect={setSelected}
           onSubmit={submitAnswer}
           onNext={nextQuestion}
-          isLast={qIdx === lesson.questions.length - 1}
+          isLast={qIdx === questions.length - 1}
         />
       )}
 
@@ -214,7 +216,7 @@ export default function Licao() {
         <ResultStep
           xp={lesson.xp}
           correct={correctCount}
-          total={lesson.questions.length}
+          total={questions.length}
           onContinue={() => navigate("/aprender")}
           onSimulate={() => navigate("/simular")}
         />
