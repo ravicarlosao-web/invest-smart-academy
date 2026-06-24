@@ -842,28 +842,33 @@ function PlayerView({ videoId: vid, videos }: { videoId: string; videos: VideoLe
         )}
 
         {/* Navegação */}
-        <div className="flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" disabled={!prevVid}
-            onClick={() => prevVid && goTo(prevVid)}>
-            <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Anterior
-          </Button>
-
+        <div className="flex flex-col gap-2">
+          {/* Botão principal — Marcar como assistido */}
           {!isWatched && !markedDone ? (
-            <Button size="sm" onClick={handleMarkDone}
-              className="bg-bull/90 hover:bg-bull text-white">
-              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Marcar como assistido
+            <Button onClick={handleMarkDone}
+              className="w-full bg-bull/90 hover:bg-bull text-white h-11 text-sm font-semibold">
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Marcar como assistido
             </Button>
           ) : (
-            <div className="flex items-center gap-1.5 text-sm text-bull font-medium">
+            <div className="flex items-center justify-center gap-2 h-11 rounded-lg bg-bull/10 text-bull font-semibold text-sm">
               <CheckCircle2 className="h-4 w-4" /> Concluído
             </div>
           )}
 
-          <Button variant="outline" size="sm"
-            disabled={!canGoNext}
-            onClick={() => canGoNext && nextVid && goTo(nextVid)}>
-            Próximo <ChevronRight className="ml-1 h-3.5 w-3.5" />
-          </Button>
+          {/* Anterior / Próximo */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={!prevVid}
+              onClick={() => prevVid && goTo(prevVid)}
+              className="flex-1 h-10">
+              <ChevronLeft className="mr-1 h-4 w-4" /> Anterior
+            </Button>
+            <Button variant="outline" size="sm"
+              disabled={!canGoNext}
+              onClick={() => canGoNext && nextVid && goTo(nextVid)}
+              className="flex-1 h-10">
+              Próximo <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Info do vídeo */}
