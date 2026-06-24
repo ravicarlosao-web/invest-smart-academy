@@ -102,6 +102,14 @@ export async function requireEmailVerified(req: Request, res: Response, next: Ne
     return;
   }
 
+  // master, administrador e professor não passam pela tabela users —
+  // o email deles é sempre considerado verificado.
+  const role = req.userRole ?? "aluno";
+  if (role !== "aluno") {
+    next();
+    return;
+  }
+
   const row = await db
     .select({ emailVerified: usersTable.emailVerified })
     .from(usersTable)
