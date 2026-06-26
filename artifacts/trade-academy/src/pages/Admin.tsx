@@ -36,7 +36,7 @@ import { LEVELS } from "@/data/curriculum";
 import { STRATEGIES, type Strategy, type RiskLevel } from "@/data/strategies";
 import { BOOKS_CATALOG, type BookMeta } from "@/data/books";
 import { GLOSSARY, type GlossaryTerm, type GlossaryCategory, CATEGORY_COLORS } from "@/data/glossary";
-import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS, VIDEO_CATEGORIES } from "@/data/videos";
+import { type VideoLesson, extractYouTubeId, thumbnailUrl, LEVEL_COLORS } from "@/data/videos";
 import { ProfessorLogsTab } from "./ProfessorLogsTab";
 import { PlanosTab } from "./PlanosTab";
 
@@ -2328,6 +2328,8 @@ const BLANK_VIDEO: Omit<VideoLesson, "id"> = {
   videoUrl: "", description: "", requiredXp: undefined, order: 99, duration: "",
 };
 
+type DynCategory = { id: string; name: string; sortOrder: number };
+
 export function VideosTab() {
   const [videos, setVideos]   = useState<VideoLesson[]>([]);
   const [loaded, setLoaded]   = useState(false);
@@ -2338,11 +2340,24 @@ export function VideosTab() {
   const [filterSearch, setFilterSearch] = useState("");
   const [filterCat, setFilterCat]       = useState("Todas");
 
+  /* ── Dynamic categories ── */
+  const [categories,      setCategories]      = useState<DynCategory[]>([]);
+  const [showCatDialog,   setShowCatDialog]   = useState(false);
+  const [newCatName,      setNewCatName]      = useState("");
+  const [savingCat,       setSavingCat]       = useState(false);
+  const [deletingCatId,   setDeletingCatId]   = useState<string | null>(null);
+
   /* ── Plans + permissions state ── */
   const [availablePlans,  setAvailablePlans]  = useState<import("@/lib/apiClient").AdminPlan[]>([]);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
   const [existingPerms,   setExistingPerms]   = useState<Record<string, string>>({}); // planId → permId
   const [loadingPerms,    setLoadingPerms]    = useState(false);
+
+  function loadCategories() {
+    api.admin.getVideoCategories()
+      .then(setCategories)
+      .catch(() => { toast.error("Erro ao carregar categorias"); });
+  }
 
   useEffect(() => {
     api.admin.getVideos()
@@ -2357,6 +2372,7 @@ export function VideosTab() {
         setLoaded(true);
       })
       .catch(() => { toast.error("Erro ao carregar vídeos"); setLoaded(true); });
+    loadCategories();
   }, []);
 
   useEffect(() => {
@@ -2408,6 +2424,42 @@ export function VideosTab() {
       setSelectedPlanIds(selected);
     } catch { /* silently ignore */ }
     finally { setLoadingPerms(false); }
+  }
+
+  async function handleAddCategory() {
+    const name = newCatName.trim();
+    if (!name) return;
+    setSavingCat(true);
+    try {
+      await api.admin.addVideoCategory(name);
+      toast.success(`Categoria "${name}" adicionada`);
+      setNewCatName("");
+      setShowCatDialog(false);
+      loadCategories();
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (msg.includes("duplicate") || msg.includes("409")) {
+        toast.error("Já existe uma categoria com este nome.");
+      } else {
+        toast.error("Erro ao adicionar categoria");
+      }
+    } finally {
+      setSavingCat(false);
+    }
+  }
+
+  async function handleDeleteCategory(cat: DynCategory) {
+    if (!window.confirm(`Eliminar a categoria "${cat.name}"? Os vídeos nesta categoria não serão eliminados.`)) return;
+    setDeletingCatId(cat.id);
+    try {
+      await api.admin.deleteVideoCategory(cat.id);
+      toast.success(`Categoria "${cat.name}" eliminada`);
+      loadCategories();
+    } catch {
+      toast.error("Erro ao eliminar categoria");
+    } finally {
+      setDeletingCatId(null);
+    }
   }
 
   async function handleCommit() {
@@ -2469,10 +2521,72 @@ export function VideosTab() {
             {videos.length} vídeo{videos.length !== 1 ? "s" : ""} · Adiciona aulas de qualquer plataforma (YouTube, Vimeo, etc.)
           </p>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo vídeo
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setShowCatDialog((v) => !v); setNewCatName(""); }}>
+            <Tag className="mr-1.5 h-3.5 w-3.5" /> Categorias
+          </Button>
+          <Button onClick={openNew}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo vídeo
+          </Button>
+        </div>
       </div>
+
+      {/* ── Category Manager ── */}
+      {showCatDialog && (
+        <Card className="border-border/60 bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              Gerir Categorias
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowCatDialog(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Adiciona ou elimina categorias de vídeo aulas. As categorias são partilhadas por todos os vídeos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Add new category */}
+            <div className="flex gap-2">
+              <Input
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="Nome da nova categoria..."
+                className="h-8 text-xs flex-1"
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddCategory(); }}
+              />
+              <Button size="sm" className="h-8" onClick={handleAddCategory} disabled={savingCat || !newCatName.trim()}>
+                {savingCat ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                <span className="ml-1.5 text-xs">Adicionar</span>
+              </Button>
+            </div>
+            {/* Existing categories */}
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic py-2 text-center">Nenhuma categoria encontrada</p>
+              ) : (
+                categories.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between rounded-md border border-border/40 px-3 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <CatIcon cat={cat.name} className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium">{cat.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive"
+                      disabled={deletingCatId === cat.id}
+                      onClick={() => handleDeleteCategory(cat)}
+                    >
+                      {deletingCatId === cat.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Trash2 className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Editor */}
       {editing && (
@@ -2512,13 +2626,20 @@ export function VideosTab() {
                 <Select value={editing.category || "Geral"} onValueChange={(v) => setEditing({ ...editing, category: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {VIDEO_CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        <span className="flex items-center gap-1.5">
-                          <CatIcon cat={c} className="h-3.5 w-3.5" />{c}
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const cats = categories.length > 0 ? categories : [{ id: "geral", name: "Geral", sortOrder: 0 }];
+                      // Ensure the current value is always in the list (handles orphaned/legacy categories)
+                      const currentCat = editing.category || "Geral";
+                      const inList = cats.some((c) => c.name === currentCat);
+                      const allCats = inList ? cats : [{ id: `_orphan_${currentCat}`, name: currentCat, sortOrder: -1 }, ...cats];
+                      return allCats.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          <span className="flex items-center gap-1.5">
+                            <CatIcon cat={c.name} className="h-3.5 w-3.5" />{c.name}
+                          </span>
+                        </SelectItem>
+                      ));
+                    })()}
                   </SelectContent>
                 </Select>
               </div>

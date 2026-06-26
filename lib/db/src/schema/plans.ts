@@ -61,12 +61,28 @@ export const videosTable = sqliteTable("videos", {
   updatedAt:   integer("updated_at").notNull(),
 });
 
+/**
+ * video_categories
+ * Categorias dinâmicas de vídeo aulas geridas pelo admin.
+ * Substitui a lista estática VIDEO_CATEGORIES em data/videos.ts.
+ */
+export const videoCategoriesTable = sqliteTable("video_categories", {
+  id:        text("id").primaryKey(),
+  name:      text("name").notNull().unique(),
+  iconKey:   text("icon_key").notNull().default("Video"), // Lucide icon name
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 export const insertPlanSchema = (createInsertSchema(plansTable) as any).omit({ id: true });
 export const insertPlanPermissionSchema = (createInsertSchema(planPermissionsTable) as any).omit({ id: true });
 export const insertVideoSchema = (createInsertSchema(videosTable) as any).omit({ id: true });
+export const insertVideoCategorySchema = (createInsertSchema(videoCategoriesTable) as any).omit({ id: true });
 
 export type Plan           = typeof plansTable.$inferSelect;
 export type InsertPlan     = z.infer<typeof insertPlanSchema>;
 export type PlanPermission = typeof planPermissionsTable.$inferSelect;
 export type Video          = typeof videosTable.$inferSelect;
+export type VideoCategory  = typeof videoCategoriesTable.$inferSelect;

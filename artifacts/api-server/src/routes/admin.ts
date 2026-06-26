@@ -20,6 +20,7 @@ import {
   curriculumLessonsTable,
   professorLogsTable,
   videosTable,
+  videoCategoriesTable,
   eq,
   desc,
   asc,
@@ -799,6 +800,93 @@ router.put("/resources", async (req: any, res: any) => {
     else if (diffRes < 0)   logAction(req, "removed", "resource", `${Math.abs(diffRes)} recurso(s)`, `Secções: ${sections.length}`);
     else if (newResCount > 0) logAction(req, "updated", "resource", `${newResCount} recurso(s)`);
     res.json({ ok: true, sections: sections.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* ---------------------------------------------------------------------------
+ * Video Categories — CRUD para categorias dinâmicas de vídeo aulas
+ * ------------------------------------------------------------------------- */
+/* GET — professores também podem ler as categorias (necessário no editor de vídeos) */
+router.get("/video-categories", async (req: any, res: any) => {
+  try {
+    const rows = await db
+      .select()
+      .from(videoCategoriesTable)
+      .orderBy(asc(videoCategoriesTable.sortOrder))
+      .all();
+    res.json(rows.map((r: any) => ({
+      id:        r.id,
+      name:      r.name,
+      sortOrder: r.sortOrder,
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+/* POST/DELETE — apenas master e administrador podem gerir categorias globais */
+router.post("/video-categories", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const { name } = req.body ?? {};
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "missing_name", message: "O nome da categoria é obrigatório." });
+    }
+    const trimmed = name.trim();
+
+    // Check duplicate
+    const existing = await db
+      .select({ id: videoCategoriesTable.id })
+      .from(videoCategoriesTable)
+      .where(eq(videoCategoriesTable.name, trimmed))
+      .get();
+    if (existing) {
+      return res.status(409).json({ error: "duplicate", message: "Já existe uma categoria com este nome." });
+    }
+
+    const now = Date.now();
+    const maxRow: any = await db.select({ m: sql`MAX(sort_order)` }).from(videoCategoriesTable).get();
+    const nextOrder = ((maxRow?.m ?? 0) as number) + 1;
+    const id = `vcat_${now}_${Math.random().toString(36).slice(2, 8)}`;
+
+    await db.insert(videoCategoriesTable).values({
+      id,
+      name:      trimmed,
+      iconKey:   "Video",
+      sortOrder: nextOrder,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    logAction(req, "added", "video_category", trimmed);
+    res.status(201).json({ ok: true, id });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+router.delete("/video-categories/:id", requireAdminFull, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const cat = await db
+      .select({ name: videoCategoriesTable.name })
+      .from(videoCategoriesTable)
+      .where(eq(videoCategoriesTable.id, id))
+      .get();
+    if (!cat) return res.status(404).json({ error: "not_found" });
+
+    // Reassign all videos in this category to "Geral" before deleting
+    await db.run(sql.raw(
+      `UPDATE videos SET category = 'Geral', updated_at = ${Date.now()} WHERE category = '${cat.name.replace(/'/g, "''")}'`
+    ));
+
+    await db.delete(videoCategoriesTable).where(eq(videoCategoriesTable.id, id));
+    logAction(req, "removed", "video_category", cat.name);
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "internal" });

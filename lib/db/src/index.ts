@@ -252,6 +252,16 @@ export async function initDb(): Promise<void> {
       created_at  INTEGER NOT NULL,
       updated_at  INTEGER NOT NULL
     )`),
+
+    /* ── Video categories (categorias dinâmicas geridas pelo admin) ───────── */
+    sql.raw(`CREATE TABLE IF NOT EXISTS video_categories (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL UNIQUE,
+      icon_key   TEXT NOT NULL DEFAULT 'Video',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`),
   ];
 
   for (const stmt of statements) {
@@ -281,6 +291,40 @@ export async function initDb(): Promise<void> {
     } catch {
       // Column already exists — ignore
     }
+  }
+
+  /* ── Seed: categorias de vídeo padrão ───────────────────────────────────── */
+  const existingCats = await db
+    .select({ id: schema.videoCategoriesTable.id })
+    .from(schema.videoCategoriesTable)
+    .limit(1)
+    .all();
+
+  if (existingCats.length === 0) {
+    const now = Date.now();
+    const defaultCategories = [
+      { name: "Análise Técnica",       iconKey: "TrendingUp",     sortOrder: 0 },
+      { name: "Análise de Velas",      iconKey: "BarChart3",      sortOrder: 1 },
+      { name: "Price Action",          iconKey: "Activity",       sortOrder: 2 },
+      { name: "Gestão de Risco",       iconKey: "Shield",         sortOrder: 3 },
+      { name: "Psicologia de Trading", iconKey: "Brain",          sortOrder: 4 },
+      { name: "Macroeconomia",         iconKey: "Globe",          sortOrder: 5 },
+      { name: "Forex",                 iconKey: "ArrowLeftRight", sortOrder: 6 },
+      { name: "Criptomoedas",          iconKey: "Coins",          sortOrder: 7 },
+      { name: "Acções & Índices",      iconKey: "Building2",      sortOrder: 8 },
+      { name: "Fundamentos",           iconKey: "BookOpen",       sortOrder: 9 },
+      { name: "Geral",                 iconKey: "Video",          sortOrder: 10 },
+    ];
+    for (const cat of defaultCategories) {
+      const id = `vcat_${now}_${Math.random().toString(36).slice(2, 8)}`;
+      try {
+        await db.insert(schema.videoCategoriesTable).values({
+          id, name: cat.name, iconKey: cat.iconKey,
+          sortOrder: cat.sortOrder, createdAt: now, updatedAt: now,
+        });
+      } catch { /* duplicate — ignore */ }
+    }
+    console.info("[seed] Categorias de vídeo padrão criadas.");
   }
 
   /* ── Seed: garantir que existe sempre um plano gratuito default ─────────── */

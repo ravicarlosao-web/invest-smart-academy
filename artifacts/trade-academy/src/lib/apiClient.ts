@@ -236,6 +236,17 @@ export const api = {
     getVideos:  () => adminRequest<unknown[]>("GET", "/admin/videos"),
     saveVideos: (items: unknown[]) => adminRequest<{ ok: boolean }>("PUT", "/admin/videos", items),
 
+    getVideoCategories: () =>
+      adminRequest<{ id: string; name: string; sortOrder: number }[]>(
+        "GET", "/admin/video-categories",
+      ),
+    addVideoCategory: (name: string) =>
+      adminRequest<{ ok: boolean; id: string }>(
+        "POST", "/admin/video-categories", { name },
+      ),
+    deleteVideoCategory: (id: string) =>
+      adminRequest<{ ok: boolean }>("DELETE", `/admin/video-categories/${id}`),
+
     getPlanConfig: () =>
       adminRequest<{ priceAoa: number; planName: string }>("GET", "/admin/plan-config"),
     savePlanConfig: (cfg: { priceAoa: number; planName: string }) =>
