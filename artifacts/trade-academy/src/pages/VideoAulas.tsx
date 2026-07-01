@@ -75,6 +75,12 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
   const [showVolSlider,setShowVolSlider]= useState(false);
   const [buffering,    setBuffering]    = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [iosFullscreen, setIosFullscreen] = useState(false);
+
+  const isIOS = useCallback(() =>
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  , []);
 
   // YT states: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
   const isPlaying = ytState === 1;
@@ -190,6 +196,12 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
       playerRef.current?.mute();
     }
   }
+  /* ── Cleanup iOS fullscreen on unmount ────────────────────────────── */
+  useEffect(() => {
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  /* ── Native fullscreen change (non-iOS) ───────────────────────────── */
   useEffect(() => {
     const onFsChange = () => {
       const fsEl = document.fullscreenElement ?? (document as any).webkitFullscreenElement;
@@ -206,6 +218,17 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
   function toggleFullscreen() {
     const el = containerRef.current;
     if (!el) return;
+
+    /* iOS Safari cannot fullscreen arbitrary divs — use CSS simulation */
+    if (isIOS()) {
+      const next = !iosFullscreen;
+      setIosFullscreen(next);
+      setIsFullscreen(next);
+      document.body.style.overflow = next ? "hidden" : "";
+      return;
+    }
+
+    /* Desktop / Android — use Fullscreen API with webkit fallback */
     const fsEl = document.fullscreenElement ?? (document as any).webkitFullscreenElement;
     if (!fsEl) {
       if (el.requestFullscreen) {
@@ -233,8 +256,13 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-xl bg-black select-none"
-      style={{ aspectRatio: "16/9" }}
+      className={cn(
+        "relative w-full overflow-hidden bg-black select-none",
+        iosFullscreen
+          ? "fixed inset-0 z-[9999] rounded-none"
+          : "rounded-xl",
+      )}
+      style={iosFullscreen ? {} : { aspectRatio: "16/9" }}
       onMouseMove={revealControls}
       onMouseLeave={() => { setShowCtrls(false); setShowVolSlider(false); }}
       onTouchStart={revealControls}
