@@ -229,22 +229,22 @@ router.get("/bank-config", requireAuth, async (_req: any, res: any) => {
 router.get("/plan-config", async (_req: any, res: any) => {
   try {
     const paidPlan = await db
-      .select({ priceAoa: plansTable.priceAoa, name: plansTable.name })
+      .select({ priceAoa: plansTable.priceAoa, name: plansTable.name, durationDays: plansTable.durationDays })
       .from(plansTable)
       .where(and(eq(plansTable.isActive, 1), eq(plansTable.isDefault, 0)))
       .orderBy(asc(plansTable.priceAoa))
       .limit(1)
       .get();
     if (paidPlan) {
-      res.json({ priceAoa: paidPlan.priceAoa, planName: paidPlan.name });
+      res.json({ priceAoa: paidPlan.priceAoa, planName: paidPlan.name, durationDays: paidPlan.durationDays });
     } else {
       // fallback: legado admin_settings
       const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
       const cfg = row ? (() => { try { return JSON.parse(row.value); } catch { return {}; } })() : {};
-      res.json({ priceAoa: cfg.priceAoa ?? 15000, planName: cfg.planName ?? "Plano Mensal" });
+      res.json({ priceAoa: cfg.priceAoa ?? 15000, planName: cfg.planName ?? "Plano Mensal", durationDays: 30 });
     }
   } catch {
-    res.json({ priceAoa: 15000, planName: "Plano Mensal" });
+    res.json({ priceAoa: 15000, planName: "Plano Mensal", durationDays: 30 });
   }
 });
 

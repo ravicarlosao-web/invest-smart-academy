@@ -43,7 +43,7 @@ const statusInfo = (status: string) => {
 };
 
 export default function Financeiro() {
-  const { priceAoa } = usePlanConfig();
+  const { priceAoa, durationDays } = usePlanConfig();
   const user = useAuthStore((s) => s.user);
   const {
     subscription,
@@ -285,7 +285,7 @@ export default function Financeiro() {
           </li>
           <li className="flex gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">3</span>
-            O admin confirma e activa o acesso por <strong className="text-foreground">30 dias</strong>.
+            O admin confirma e activa o acesso por <strong className="text-foreground">{durationDays} dias</strong>.
           </li>
           <li className="flex gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">4</span>

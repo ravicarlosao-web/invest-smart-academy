@@ -78,7 +78,7 @@ export const api = {
   /* ---------- Public (no auth) ---------- */
   public: {
     getPlanConfig: () =>
-      request<{ priceAoa: number; planName: string }>("GET", "/plan-config"),
+      request<{ priceAoa: number; planName: string; durationDays: number }>("GET", "/plan-config"),
   },
 
   /* ---------- Auth ---------- */

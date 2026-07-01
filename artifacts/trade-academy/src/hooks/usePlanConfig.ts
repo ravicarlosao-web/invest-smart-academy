@@ -1,22 +1,17 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/apiClient";
 
-let _cache: { priceAoa: number; planName: string } | null = null;
-let _promise: Promise<{ priceAoa: number; planName: string }> | null = null;
+type PlanConfig = { priceAoa: number; planName: string; durationDays: number };
 
-const DEFAULT = { priceAoa: 15000, planName: "Plano Mensal" };
+const DEFAULT: PlanConfig = { priceAoa: 15000, planName: "Plano Mensal", durationDays: 30 };
 
-export function usePlanConfig() {
-  const [config, setConfig] = useState<{ priceAoa: number; planName: string }>(
-    _cache ?? DEFAULT,
-  );
+export function usePlanConfig(): PlanConfig {
+  const [config, setConfig] = useState<PlanConfig>(DEFAULT);
 
   useEffect(() => {
-    if (_cache) { setConfig(_cache); return; }
-    if (!_promise) {
-      _promise = api.public.getPlanConfig().catch(() => DEFAULT);
-    }
-    _promise.then((cfg) => { _cache = cfg; setConfig(cfg); });
+    api.public.getPlanConfig()
+      .then((cfg) => setConfig(cfg))
+      .catch(() => { /* mantém DEFAULT */ });
   }, []);
 
   return config;
