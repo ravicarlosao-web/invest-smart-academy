@@ -191,16 +191,35 @@ function CustomYTPlayer({ videoId, title, thumbnail, onEnded }: CustomYTPlayerPr
     }
   }
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const onFsChange = () => {
+      const fsEl = document.fullscreenElement ?? (document as any).webkitFullscreenElement;
+      setIsFullscreen(!!fsEl);
+    };
     document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("webkitfullscreenchange", onFsChange);
+    };
   }, []);
 
   function toggleFullscreen() {
     const el = containerRef.current;
     if (!el) return;
-    if (!document.fullscreenElement) el.requestFullscreen?.();
-    else document.exitFullscreen?.();
+    const fsEl = document.fullscreenElement ?? (document as any).webkitFullscreenElement;
+    if (!fsEl) {
+      if (el.requestFullscreen) {
+        el.requestFullscreen();
+      } else if ((el as any).webkitRequestFullscreen) {
+        (el as any).webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
   }
 
   function fmtTime(s: number) {
