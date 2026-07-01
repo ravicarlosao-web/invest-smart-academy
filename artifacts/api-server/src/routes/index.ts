@@ -25,6 +25,7 @@ import {
   progressTable,
   subscriptionsTable,
   aiUsageTable,
+  plansTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -224,12 +225,24 @@ router.get("/bank-config", requireAuth, async (_req: any, res: any) => {
   }
 });
 
-/* ── Public plan config — LEGADO: substituído por tabela plans ────────── */
+/* ── Public plan config — lê da tabela plans (plano pago activo mais barato) */
 router.get("/plan-config", async (_req: any, res: any) => {
   try {
-    const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
-    const cfg = row ? (() => { try { return JSON.parse(row.value); } catch { return {}; } })() : {};
-    res.json({ priceAoa: cfg.priceAoa ?? 15000, planName: cfg.planName ?? "Plano Mensal" });
+    const paidPlan = await db
+      .select({ priceAoa: plansTable.priceAoa, name: plansTable.name })
+      .from(plansTable)
+      .where(and(eq(plansTable.isActive, 1), eq(plansTable.isDefault, 0)))
+      .orderBy(asc(plansTable.priceAoa))
+      .limit(1)
+      .get();
+    if (paidPlan) {
+      res.json({ priceAoa: paidPlan.priceAoa, planName: paidPlan.name });
+    } else {
+      // fallback: legado admin_settings
+      const row = await db.select().from(adminSettingsTable).where(eq(adminSettingsTable.key, "plan.config")).get();
+      const cfg = row ? (() => { try { return JSON.parse(row.value); } catch { return {}; } })() : {};
+      res.json({ priceAoa: cfg.priceAoa ?? 15000, planName: cfg.planName ?? "Plano Mensal" });
+    }
   } catch {
     res.json({ priceAoa: 15000, planName: "Plano Mensal" });
   }
